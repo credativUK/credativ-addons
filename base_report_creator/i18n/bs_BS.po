@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenERP Server 5.0.0_rc3\n"
 "Report-Msgid-Bugs-To: support@openerp.com\n"
-"POT-Creation-Date: 2009-01-03 02:00:15+0000\n"
-"PO-Revision-Date: 2009-01-03 02:00:15+0000\n"
+"POT-Creation-Date: 2009-01-03 02:17:41+0000\n"
+"PO-Revision-Date: 2009-01-03 02:17:41+0000\n"
 "Last-Translator: <>\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -199,7 +199,7 @@ msgstr ""
 #. module: base_report_creator
 #: constraint:ir.ui.view:0
 msgid "Invalid XML for View Architecture!"
-msgstr ""
+msgstr "Neodgovarajući XML za arhitekturu prikaza!"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_graph_orientation:0
