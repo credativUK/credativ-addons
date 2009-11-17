@@ -4,11 +4,11 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: OpenERP Server 5.0.0\n"
+"Project-Id-Version: OpenERP Server 5.0.4\n"
 "Report-Msgid-Bugs-To: support@openerp.com\n"
 "POT-Creation-Date: 2009-08-28 16:01+0000\n"
-"PO-Revision-Date: 2009-09-08 16:18+0000\n"
-"Last-Translator: Pedro_Maschio <pedro.bicudo@tgtconsult.com.br>\n"
+"PO-Revision-Date: 2009-02-03 12:16+0000\n"
+"Last-Translator: Fabien (Open ERP) <fp@tinyerp.com>\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -111,12 +111,12 @@ msgstr ""
 #. module: base_report_creator
 #: wizard_view:base_report_creator.report.menu.create,init:0
 msgid "Menu Information"
-msgstr ""
+msgstr "Menu informacji"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,group_method:0
 msgid "Sum"
-msgstr ""
+msgstr "Suma"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,model_ids:0
@@ -136,17 +136,17 @@ msgstr ""
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "State"
-msgstr ""
+msgstr "Stan"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,state:0
 msgid "Valid"
-msgstr ""
+msgstr "Prawidłowy"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Add filter"
-msgstr ""
+msgstr "Dodaj filtr"
 
 #. module: base_report_creator
 #: model:ir.actions.wizard,name:base_report_creator.wizard_menu_create
@@ -182,7 +182,7 @@ msgstr ""
 #. module: base_report_creator
 #: constraint:ir.ui.view:0
 msgid "Invalid XML for View Architecture!"
-msgstr "Invalido XML para Arquitetura da View"
+msgstr "XML niewłaściwy dla tej architektury wyświetlania!"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_type1:0
@@ -209,7 +209,7 @@ msgstr ""
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Security"
-msgstr ""
+msgstr "Zabezpieczenia"
 
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report.menu.create,init,menu_name:0
@@ -254,12 +254,12 @@ msgstr ""
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report_filter.fields,set_value_select_field,field_id:0
 msgid "Field Name"
-msgstr ""
+msgstr "Nazwa pola"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,state:0
 msgid "Draft"
-msgstr ""
+msgstr "Roboczy"
 
 #. module: base_report_creator
 #: wizard_view:base_report_creator.report_filter.fields,set_value_select_field:0
@@ -365,8 +365,8 @@ msgstr ""
 msgid ""
 "The Object name must start with x_ and not contain any special character !"
 msgstr ""
-"O nome do objeto precisa iniciar com x_ e não conter nenhum caracter "
-"especial!"
+"Nazwa obiektu musi zaczynać się od x_ oraz nie może zawierać znaków "
+"specjalnych !"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,view_type1:0
@@ -376,12 +376,12 @@ msgstr ""
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,calendar_mode:0
 msgid "Delay"
-msgstr ""
+msgstr "Opóźnienie"
 
 #. module: base_report_creator
 #: field:base_report_creator.report.fields,field_id:0
 msgid "Field"
-msgstr ""
+msgstr "Pole"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
@@ -489,4 +489,4 @@ msgstr ""
 #: view:base_report_creator.report:0
 #: field:base_report_creator.report,filter_ids:0
 msgid "Filters"
-msgstr ""
+msgstr "Filtry"
