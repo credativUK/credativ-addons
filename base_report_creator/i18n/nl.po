@@ -4,42 +4,45 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: OpenERP Server 5.0.4\n"
+"Project-Id-Version: OpenERP Server 5.0.0\n"
 "Report-Msgid-Bugs-To: support@openerp.com\n"
-"POT-Creation-Date: 2009-08-28 15:40:25+0000\n"
-"PO-Revision-Date: 2009-08-28 15:40:25+0000\n"
-"Last-Translator: <>\n"
+"POT-Creation-Date: 2009-08-28 16:01+0000\n"
+"PO-Revision-Date: 2009-09-28 07:55+0000\n"
+"Last-Translator: Fabien (Open ERP) <fp@tinyerp.com>\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: \n"
-"Plural-Forms: \n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Launchpad-Export-Date: 2009-11-17 05:13+0000\n"
+"X-Generator: Launchpad (build Unknown)\n"
 
 #. module: base_report_creator
 #: help:base_report_creator.report.filter,expression:0
-msgid "Provide an expression for the field based on which you want to filter the records.\n"
+msgid ""
+"Provide an expression for the field based on which you want to filter the "
+"records.\n"
 " e.g. res_partner.id=3"
 msgstr ""
 
 #. module: base_report_creator
 #: field:base_report_creator.report,view_graph_type:0
 msgid "Graph Type"
-msgstr "Graphik Typ"
+msgstr "Grafiek Type"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Used View"
-msgstr "genutzte Ansicht"
+msgstr "Gebruikte Weergave"
 
 #. module: base_report_creator
 #: wizard_view:base_report_creator.report_filter.fields,set_value_select_field:0
 msgid "Filter Values"
-msgstr "Filter Werte"
+msgstr "Filterwaarden"
 
 #. module: base_report_creator
 #: field:base_report_creator.report.fields,graph_mode:0
 msgid "Graph Mode"
-msgstr "Graphikmodus"
+msgstr "Grafiek Modus"
 
 #. module: base_report_creator
 #: constraint:ir.actions.act_window:0
@@ -49,39 +52,39 @@ msgstr ""
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Graph View"
-msgstr "Graphische Ansicht"
+msgstr "Grafiek Weergave"
 
 #. module: base_report_creator
 #: field:base_report_creator.report.filter,expression:0
 msgid "Value"
-msgstr "Wert"
+msgstr "Waarde"
 
 #. module: base_report_creator
 #: model:ir.actions.wizard,name:base_report_creator.wizard_set_filter_fields
 msgid "Set Filter Fields"
-msgstr "Setze zu filternede Felder"
+msgstr "Filter Velden Ingeven"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,calendar_mode:0
 msgid "Ending Date"
-msgstr "Ende Datum"
+msgstr "Einddatum"
 
 #. module: base_report_creator
 #: model:ir.model,name:base_report_creator.model_base_report_creator_report_filter
 msgid "Report Filters"
-msgstr "Filter in Berichten"
+msgstr "Rapport Filters"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 #: field:base_report_creator.report,sql_query:0
 msgid "SQL Query"
-msgstr "SQL Abfrage"
+msgstr "SQL Query"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 #: wizard_button:base_report_creator.report.menu.create,init,create_menu:0
 msgid "Create Menu"
-msgstr "Erzeuge Menü"
+msgstr "Menu Aanmaken"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,group_method:0
@@ -91,44 +94,44 @@ msgstr "Minimum"
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report_filter.fields,set_value_select_field,operator:0
 msgid "Operator"
-msgstr "Operatoren"
+msgstr "Operator"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.filter,condition:0
 #: selection:base_report_creator.report_filter.fields,set_value_select_field,condition:0
 msgid "OR"
-msgstr "ODER"
+msgstr "OF"
 
 #. module: base_report_creator
 #: model:ir.ui.menu,name:base_report_creator.menu_base_report_creator_action
 #: model:ir.ui.menu,name:base_report_creator.menu_base_report_creator_action_config
 msgid "Custom Reports"
-msgstr "Individuelle Reports"
+msgstr "Aangepaste Rapporten"
 
 #. module: base_report_creator
 #: wizard_view:base_report_creator.report.menu.create,init:0
 msgid "Menu Information"
-msgstr "Menu Information"
+msgstr "Menu Informatie"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,group_method:0
 msgid "Sum"
-msgstr "Summe"
+msgstr "Som"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,model_ids:0
 msgid "Reported Objects"
-msgstr "Objekte in Report"
+msgstr "Gerapporteerde Objecten"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Field List"
-msgstr "Felder in Reports"
+msgstr "Velden Lijst"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,type:0
 msgid "Report Type"
-msgstr "Report Type"
+msgstr "Rapport Type"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
@@ -138,17 +141,17 @@ msgstr "Status"
 #. module: base_report_creator
 #: selection:base_report_creator.report,state:0
 msgid "Valid"
-msgstr "Gültig"
+msgstr "Geldig"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Add filter"
-msgstr "Setze Filter"
+msgstr "Filter toevoegen"
 
 #. module: base_report_creator
 #: model:ir.actions.wizard,name:base_report_creator.wizard_menu_create
 msgid "Create Menu for Report"
-msgstr "Erzeuge Menü für Report"
+msgstr "Menu voor rapport aanmaken"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_type1:0
@@ -169,70 +172,70 @@ msgstr "/"
 #: field:base_report_creator.report.filter,report_id:0
 #: model:ir.model,name:base_report_creator.model_base_report_creator_report
 msgid "Report"
-msgstr "Bericht"
+msgstr "Rapport"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,calendar_mode:0
 msgid "Starting Date"
-msgstr "Start Datum:"
+msgstr "Begindatum"
 
 #. module: base_report_creator
 #: constraint:ir.ui.view:0
 msgid "Invalid XML for View Architecture!"
-msgstr "Fehlerhafter xml Code für diese Ansicht!"
+msgstr "Ongeldige XML voor overzicht"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_type1:0
 #: selection:base_report_creator.report,view_type2:0
 #: selection:base_report_creator.report,view_type3:0
 msgid "Tree"
-msgstr "Baum"
+msgstr "Boomstructuur"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,group_ids:0
 msgid "Authorized Groups"
-msgstr "Zugelassene Gruppen"
+msgstr "Geautoriseerde Groepen"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,view_graph_orientation:0
 msgid "Graph Orientation"
-msgstr "Druck Ausrichtung"
+msgstr "Grafiek Oriëntatie"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Authorized Groups (empty for all)"
-msgstr "zugelassene Gruppen (frei für alle)"
+msgstr "Geautoriseerde Groepen (leeg voor iedereen)"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Security"
-msgstr "Sicherheit"
+msgstr "Beveiliging"
 
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report.menu.create,init,menu_name:0
 msgid "Menu Name"
-msgstr "Menü Bezeichnung"
+msgstr "Menunaam"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.filter,condition:0
 #: selection:base_report_creator.report_filter.fields,set_value_select_field,condition:0
 msgid "AND"
-msgstr "UND"
+msgstr "EN"
 
 #. module: base_report_creator
 #: field:base_report_creator.report.fields,calendar_mode:0
 msgid "Calendar Mode"
-msgstr "Modus Kalender"
+msgstr "Kalender Modus"
 
 #. module: base_report_creator
 #: model:ir.model,name:base_report_creator.model_base_report_creator_report_fields
 msgid "Display Fields"
-msgstr "FAnzeige Felder"
+msgstr "Velden Weergeven"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,graph_mode:0
 msgid "Y Axis"
-msgstr "Y Axis"
+msgstr "Y-as"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_type1:0
@@ -246,22 +249,22 @@ msgstr "Kalender"
 #: selection:base_report_creator.report,view_type2:0
 #: selection:base_report_creator.report,view_type3:0
 msgid "Graph"
-msgstr "Graphik"
+msgstr "Grafiek"
 
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report_filter.fields,set_value_select_field,field_id:0
 msgid "Field Name"
-msgstr "Feldbezeichnung"
+msgstr "Veldnaam"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,state:0
 msgid "Draft"
-msgstr "Entwurf"
+msgstr "Concept"
 
 #. module: base_report_creator
 #: wizard_view:base_report_creator.report_filter.fields,set_value_select_field:0
 msgid "Set Filter Values"
-msgstr "Setze Filter"
+msgstr "Filterwaarden ingeven"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,state:0
@@ -271,162 +274,164 @@ msgstr "Status"
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_graph_orientation:0
 msgid "Vertical"
-msgstr "Vertikal"
+msgstr "Verticaal"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,type:0
 msgid "Rows And Columns Report"
-msgstr "Zeilen und Spalten"
+msgstr "Rijen en Kolommen Rapport"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "General Configuration"
-msgstr "Grundkonfiguration"
+msgstr "Algemene instellingen"
 
 #. module: base_report_creator
 #: wizard_view:base_report_creator.report_filter.fields,init:0
 msgid "Select Field to filter"
-msgstr "Wähle Filter für Filter"
+msgstr "Selecteer het veld om op te filteren"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,active:0
 msgid "Active"
-msgstr "Aktiv"
+msgstr "Actief"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_graph_orientation:0
 msgid "Horizontal"
-msgstr "Horizontal"
+msgstr "Horizontaal"
 
 #. module: base_report_creator
 #: field:base_report_creator.report.fields,group_method:0
 msgid "Grouping Method"
-msgstr "Methode Gruppierung"
+msgstr "Groeperingsmethode"
 
 #. module: base_report_creator
 #: field:base_report_creator.report.filter,condition:0
 #: wizard_field:base_report_creator.report_filter.fields,set_value_select_field,condition:0
 msgid "Condition"
-msgstr "Bedingung"
+msgstr "Voorwaarde"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,group_method:0
 msgid "Count"
-msgstr "Anzahl"
+msgstr "Aantal"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,graph_mode:0
 msgid "X Axis"
-msgstr "X Axis"
+msgstr "X-as"
 
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report.menu.create,init,menu_parent_id:0
 msgid "Parent Menu"
-msgstr "Obermenü"
+msgstr "Bovenliggend Menu"
 
 #. module: base_report_creator
 #: wizard_button:base_report_creator.report_filter.fields,set_value_select_field,set_value:0
 msgid "Confirm Filter"
-msgstr "Konten filtern"
+msgstr "Bevestig Filter"
 
 #. module: base_report_creator
 #: field:base_report_creator.report.filter,name:0
 msgid "Filter Name"
-msgstr "Filterbezeichnung"
+msgstr "Filter Naam"
 
 #. module: base_report_creator
 #: model:ir.actions.wizard,name:base_report_creator.wizard_report_open
 msgid "Open Report"
-msgstr "Öffne Bericht"
+msgstr "Open Rapport"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,group_method:0
 msgid "Grouped"
-msgstr "Gruppiert"
+msgstr "Gegroepeerd"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 #: model:ir.module.module,shortdesc:base_report_creator.module_meta_information
 msgid "Report Creator"
-msgstr "Report Creator"
+msgstr "Rapport Ontwerper"
 
 #. module: base_report_creator
 #: wizard_button:base_report_creator.report.menu.create,init,end:0
 #: wizard_button:base_report_creator.report_filter.fields,init,end:0
 #: wizard_button:base_report_creator.report_filter.fields,set_value_select_field,end:0
 msgid "Cancel"
-msgstr "Abbrechen"
+msgstr "Annuleren"
 
 #. module: base_report_creator
 #: constraint:ir.model:0
-msgid "The Object name must start with x_ and not contain any special character !"
-msgstr "Der Objekt Name muss mit einem x_ starten und darf keine Sonderzeichen beinhalten"
+msgid ""
+"The Object name must start with x_ and not contain any special character !"
+msgstr ""
+"De objectnaam moet beginnen met x_ en mag geen speciale karakters bevatten !"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,view_type1:0
 msgid "First View"
-msgstr "Erste Ansicht"
+msgstr "Eerste Weergave"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,calendar_mode:0
 msgid "Delay"
-msgstr "Verzögerung"
+msgstr "Vertraging"
 
 #. module: base_report_creator
 #: field:base_report_creator.report.fields,field_id:0
 msgid "Field"
-msgstr "Feld"
+msgstr "Veld"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Filters on Fields"
-msgstr "Filter auf Datenfelder"
+msgstr "Filters op Velden"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_graph_type:0
 msgid "Pie Chart"
-msgstr "Pie Chart"
+msgstr "Cirkeldiagram"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,view_type3:0
 msgid "Third View"
-msgstr "Third View"
+msgstr "Derde Weergave"
 
 #. module: base_report_creator
 #: model:ir.module.module,description:base_report_creator.module_meta_information
-msgid "This modules allows you to create any statistic\n"
+msgid ""
+"This modules allows you to create any statistic\n"
 "report on several object. It's a SQL query builder and browser\n"
 "for and users.\n"
 "\n"
 "After installing the module, it adds a menu to define custom report in\n"
 "the \"Dashboard\" menu.\n"
-""
 msgstr ""
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,calendar_mode:0
 msgid "Uniq Colors"
-msgstr "Uni Farben"
+msgstr "Unieke Kleuren"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,name:0
 msgid "Report Name"
-msgstr "Berichtsname"
+msgstr "Rapport Naam"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Fields"
-msgstr "Felder"
+msgstr "Velden"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,group_method:0
 msgid "Average"
-msgstr "Mittelwert"
+msgstr "Gemiddeld"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Reports"
-msgstr "Berichte"
+msgstr "Rapporten"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,group_method:0
@@ -436,52 +441,51 @@ msgstr "Maximum"
 #. module: base_report_creator
 #: wizard_button:base_report_creator.report_filter.fields,init,set_value_select_field:0
 msgid "Continue"
-msgstr "Weiter"
+msgstr "Doorgaan"
 
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report_filter.fields,set_value_select_field,value:0
 msgid "Values"
-msgstr "Werte"
+msgstr "Waarden"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_graph_type:0
 msgid "Bar Chart"
-msgstr "Bar Chart"
+msgstr "Staafgrafiek"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,view_type2:0
 msgid "Second View"
-msgstr "Zweite Ansicht"
+msgstr "Tweede Weergave"
 
 #. module: base_report_creator
 #: wizard_view:base_report_creator.report.menu.create,init:0
 msgid "Create Menu For This Report"
-msgstr "Erzeuge Menü  für diesen Bericht."
+msgstr "Menu Voor Dit Rapport Aanmaken"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "View parameters"
-msgstr "Parameter Ansicht"
+msgstr "Weergave parameters"
 
 #. module: base_report_creator
 #: field:base_report_creator.report.fields,sequence:0
 msgid "Sequence"
-msgstr "Sequenzer"
+msgstr "Volgorde"
 
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report_filter.fields,init,field_id:0
 msgid "Filter Field"
-msgstr "Filter Feld"
+msgstr "Filterveld"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 #: field:base_report_creator.report,field_ids:0
 msgid "Fields to Display"
-msgstr "Anzuzeigende Felder"
+msgstr "Weer te geven velden"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 #: field:base_report_creator.report,filter_ids:0
 msgid "Filters"
-msgstr "Filter"
-
+msgstr "Filters"
