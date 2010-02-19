@@ -1,19 +1,20 @@
-# Translation of OpenERP Server.
-# This file contains the translation of the following modules:
-# 	* base_report_creator
+# Slovak translation for openobject-addons
+# Copyright (c) 2009 Rosetta Contributors and Canonical Ltd 2009
+# This file is distributed under the same license as the openobject-addons package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2009.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: OpenERP Server 5.0.4\n"
-"Report-Msgid-Bugs-To: support@openerp.com\n"
+"Project-Id-Version: openobject-addons\n"
+"Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2009-08-28 16:01+0000\n"
-"PO-Revision-Date: 2010-02-14 21:32+0000\n"
-"Last-Translator: Fabien (Open ERP) <fp@tinyerp.com>\n"
-"Language-Team: \n"
+"PO-Revision-Date: 2009-12-01 08:02+0000\n"
+"Last-Translator: Radoslav Sloboda <rado.sloboda@gmail.com>\n"
+"Language-Team: Slovak <sk@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2010-02-17 04:56+0000\n"
+"X-Launchpad-Export-Date: 2009-12-16 05:21+0000\n"
 "X-Generator: Launchpad (build Unknown)\n"
 
 #. module: base_report_creator
@@ -27,7 +28,7 @@ msgstr ""
 #. module: base_report_creator
 #: field:base_report_creator.report,view_graph_type:0
 msgid "Graph Type"
-msgstr ""
+msgstr "Typ grafu"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
@@ -57,7 +58,7 @@ msgstr ""
 #. module: base_report_creator
 #: field:base_report_creator.report.filter,expression:0
 msgid "Value"
-msgstr "Değer"
+msgstr ""
 
 #. module: base_report_creator
 #: model:ir.actions.wizard,name:base_report_creator.wizard_set_filter_fields
@@ -67,7 +68,7 @@ msgstr ""
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,calendar_mode:0
 msgid "Ending Date"
-msgstr "Bitiş Tarihi"
+msgstr ""
 
 #. module: base_report_creator
 #: model:ir.model,name:base_report_creator.model_base_report_creator_report_filter
@@ -78,159 +79,159 @@ msgstr ""
 #: view:base_report_creator.report:0
 #: field:base_report_creator.report,sql_query:0
 msgid "SQL Query"
-msgstr ""
+msgstr "SQL Query"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 #: wizard_button:base_report_creator.report.menu.create,init,create_menu:0
 msgid "Create Menu"
-msgstr "Menü Oluştur"
+msgstr "Vytvorenie ponuky"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,group_method:0
 msgid "Minimum"
-msgstr ""
+msgstr "Minimum"
 
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report_filter.fields,set_value_select_field,operator:0
 msgid "Operator"
-msgstr ""
+msgstr "Operátor"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.filter,condition:0
 #: selection:base_report_creator.report_filter.fields,set_value_select_field,condition:0
 msgid "OR"
-msgstr ""
+msgstr "OR"
 
 #. module: base_report_creator
 #: model:ir.ui.menu,name:base_report_creator.menu_base_report_creator_action
 #: model:ir.ui.menu,name:base_report_creator.menu_base_report_creator_action_config
 msgid "Custom Reports"
-msgstr "Özel Raporlar"
+msgstr "Vlastné reporty"
 
 #. module: base_report_creator
 #: wizard_view:base_report_creator.report.menu.create,init:0
 msgid "Menu Information"
-msgstr "Menü Bilgisi"
+msgstr "Informácia ponuky"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,group_method:0
 msgid "Sum"
-msgstr ""
+msgstr "Suma"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,model_ids:0
 msgid "Reported Objects"
-msgstr ""
+msgstr "Report objektov"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Field List"
-msgstr ""
+msgstr "Zoznam polí"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,type:0
 msgid "Report Type"
-msgstr "Rapor Tipi"
+msgstr "Typ výkazu"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "State"
-msgstr "Durum"
+msgstr "Štát"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,state:0
 msgid "Valid"
-msgstr "Geçerli"
+msgstr "Platný"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Add filter"
-msgstr ""
+msgstr "Pridať filter"
 
 #. module: base_report_creator
 #: model:ir.actions.wizard,name:base_report_creator.wizard_menu_create
 msgid "Create Menu for Report"
-msgstr ""
+msgstr "Vytvoriť ponuku pre výkaz"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_type1:0
 #: selection:base_report_creator.report,view_type2:0
 #: selection:base_report_creator.report,view_type3:0
 msgid "Form"
-msgstr "Form"
+msgstr "Formulár"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_type3:0
 #: selection:base_report_creator.report.fields,calendar_mode:0
 #: selection:base_report_creator.report.fields,graph_mode:0
 msgid "/"
-msgstr ""
+msgstr "/"
 
 #. module: base_report_creator
 #: field:base_report_creator.report.fields,report_id:0
 #: field:base_report_creator.report.filter,report_id:0
 #: model:ir.model,name:base_report_creator.model_base_report_creator_report
 msgid "Report"
-msgstr ""
+msgstr "Výkaz"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,calendar_mode:0
 msgid "Starting Date"
-msgstr "Başlangıç Tarihi"
+msgstr "Počiatočný dátum"
 
 #. module: base_report_creator
 #: constraint:ir.ui.view:0
 msgid "Invalid XML for View Architecture!"
-msgstr "Görüntüleme mimarisi için Geçersiz XML"
+msgstr "Neplatný súbor XML pre zobrazenie architektúry!"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_type1:0
 #: selection:base_report_creator.report,view_type2:0
 #: selection:base_report_creator.report,view_type3:0
 msgid "Tree"
-msgstr ""
+msgstr "Stromová štruktúra"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,group_ids:0
 msgid "Authorized Groups"
-msgstr ""
+msgstr "Autorizované skupiny"
 
 #. module: base_report_creator
 #: field:base_report_creator.report,view_graph_orientation:0
 msgid "Graph Orientation"
-msgstr ""
+msgstr "Orientácia grafu"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Authorized Groups (empty for all)"
-msgstr ""
+msgstr "Autorizované skupiny (ponechať prázdne pre všetky)"
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Security"
-msgstr "Güvenlik"
+msgstr ""
 
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report.menu.create,init,menu_name:0
 msgid "Menu Name"
-msgstr "Menü Adı"
+msgstr "Názov ponuky"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.filter,condition:0
 #: selection:base_report_creator.report_filter.fields,set_value_select_field,condition:0
 msgid "AND"
-msgstr ""
+msgstr "AND"
 
 #. module: base_report_creator
 #: field:base_report_creator.report.fields,calendar_mode:0
 msgid "Calendar Mode"
-msgstr ""
+msgstr "Režim kalandára"
 
 #. module: base_report_creator
 #: model:ir.model,name:base_report_creator.model_base_report_creator_report_fields
 msgid "Display Fields"
-msgstr ""
+msgstr "Zobraziť polia"
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,graph_mode:0
@@ -242,24 +243,24 @@ msgstr ""
 #: selection:base_report_creator.report,view_type2:0
 #: selection:base_report_creator.report,view_type3:0
 msgid "Calendar"
-msgstr "Takvim"
+msgstr ""
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_type1:0
 #: selection:base_report_creator.report,view_type2:0
 #: selection:base_report_creator.report,view_type3:0
 msgid "Graph"
-msgstr "Grafiksel"
+msgstr ""
 
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report_filter.fields,set_value_select_field,field_id:0
 msgid "Field Name"
-msgstr "Alan Adı"
+msgstr ""
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,state:0
 msgid "Draft"
-msgstr "Taslak"
+msgstr ""
 
 #. module: base_report_creator
 #: wizard_view:base_report_creator.report_filter.fields,set_value_select_field:0
@@ -269,7 +270,7 @@ msgstr ""
 #. module: base_report_creator
 #: field:base_report_creator.report,state:0
 msgid "Status"
-msgstr "Durum"
+msgstr ""
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_graph_orientation:0
@@ -294,7 +295,7 @@ msgstr ""
 #. module: base_report_creator
 #: field:base_report_creator.report,active:0
 msgid "Active"
-msgstr "Aktif"
+msgstr ""
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_graph_orientation:0
@@ -310,7 +311,7 @@ msgstr ""
 #: field:base_report_creator.report.filter,condition:0
 #: wizard_field:base_report_creator.report_filter.fields,set_value_select_field,condition:0
 msgid "Condition"
-msgstr "Koşul"
+msgstr ""
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,group_method:0
@@ -325,7 +326,7 @@ msgstr ""
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report.menu.create,init,menu_parent_id:0
 msgid "Parent Menu"
-msgstr "Ana Menü"
+msgstr ""
 
 #. module: base_report_creator
 #: wizard_button:base_report_creator.report_filter.fields,set_value_select_field,set_value:0
@@ -340,12 +341,12 @@ msgstr ""
 #. module: base_report_creator
 #: model:ir.actions.wizard,name:base_report_creator.wizard_report_open
 msgid "Open Report"
-msgstr "Raporu Aç"
+msgstr ""
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,group_method:0
 msgid "Grouped"
-msgstr "Gruplanmış"
+msgstr ""
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
@@ -358,7 +359,7 @@ msgstr ""
 #: wizard_button:base_report_creator.report_filter.fields,init,end:0
 #: wizard_button:base_report_creator.report_filter.fields,set_value_select_field,end:0
 msgid "Cancel"
-msgstr "İptal"
+msgstr ""
 
 #. module: base_report_creator
 #: constraint:ir.model:0
@@ -374,7 +375,7 @@ msgstr ""
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,calendar_mode:0
 msgid "Delay"
-msgstr "Gecikme"
+msgstr ""
 
 #. module: base_report_creator
 #: field:base_report_creator.report.fields,field_id:0
@@ -389,7 +390,7 @@ msgstr ""
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_graph_type:0
 msgid "Pie Chart"
-msgstr "Pasta Grafiği"
+msgstr ""
 
 #. module: base_report_creator
 #: field:base_report_creator.report,view_type3:0
@@ -415,12 +416,12 @@ msgstr ""
 #. module: base_report_creator
 #: field:base_report_creator.report,name:0
 msgid "Report Name"
-msgstr "Rapor Adı"
+msgstr ""
 
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Fields"
-msgstr "Alanlar"
+msgstr ""
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,group_method:0
@@ -430,7 +431,7 @@ msgstr ""
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "Reports"
-msgstr "Raporlar"
+msgstr ""
 
 #. module: base_report_creator
 #: selection:base_report_creator.report.fields,group_method:0
@@ -440,17 +441,17 @@ msgstr ""
 #. module: base_report_creator
 #: wizard_button:base_report_creator.report_filter.fields,init,set_value_select_field:0
 msgid "Continue"
-msgstr "Devam"
+msgstr ""
 
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report_filter.fields,set_value_select_field,value:0
 msgid "Values"
-msgstr "Değerler"
+msgstr ""
 
 #. module: base_report_creator
 #: selection:base_report_creator.report,view_graph_type:0
 msgid "Bar Chart"
-msgstr "Çubuk Grafiği"
+msgstr ""
 
 #. module: base_report_creator
 #: field:base_report_creator.report,view_type2:0
@@ -465,12 +466,12 @@ msgstr ""
 #. module: base_report_creator
 #: view:base_report_creator.report:0
 msgid "View parameters"
-msgstr "Parametreleri Göster"
+msgstr ""
 
 #. module: base_report_creator
 #: field:base_report_creator.report.fields,sequence:0
 msgid "Sequence"
-msgstr "Sıra No"
+msgstr ""
 
 #. module: base_report_creator
 #: wizard_field:base_report_creator.report_filter.fields,init,field_id:0
@@ -487,4 +488,4 @@ msgstr ""
 #: view:base_report_creator.report:0
 #: field:base_report_creator.report,filter_ids:0
 msgid "Filters"
-msgstr "Filtreler"
+msgstr ""
