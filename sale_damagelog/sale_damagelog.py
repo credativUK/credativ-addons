@@ -13,6 +13,12 @@ class sale_damagelog(osv.osv):
             res[id] = attachment_obj.search(cr, uid, [('res_id','=',id)], context=context, count=True)
         return res
     
+    def check_qty(self, cr, uid, ids, parent=None):
+        damage_rec = self.browse(cr, uid, ids[0])
+        if damage_rec.product_qty > damage_rec.stock_move_id.product_qty:
+            return False
+        return True
+    
     _columns = {
                 'ticket_id':fields.char('Ticket ID',size=16),
                 'stock_move_id':fields.many2one('stock.move', 'Stock Move', required=True),
@@ -41,6 +47,11 @@ class sale_damagelog(osv.osv):
                  'log_uid': lambda self,cr,uid,ctx : uid,
                  }
     
+    _constraints = [
+        (check_qty, 'You can not have damaged quantity greater than shipped quantity.', ['product_qty'])
+    ]
+
+    
     def onchange_stock_move(self, cr, uid, ids, stock_move_id):
         value = {}
         stock_move_rec = self.pool.get('stock.move').browse(cr, uid, stock_move_id)
@@ -48,6 +59,7 @@ class sale_damagelog(osv.osv):
         value['product_id'] =  stock_move_rec.product_id.id
         value['product_uom'] = stock_move_rec.product_uom.id
         value['product_qty'] = stock_move_rec.product_qty
+        value['product_supplier'] = stock_move_rec.product_id.seller_ids and stock_move_rec.product_id.seller_ids[0].name.id or False
         return {'value':value}
     
     def create_refund(self, cr, uid, ids, context=None):
@@ -73,15 +85,14 @@ class sale_damagelog(osv.osv):
                         'partner_id':damagelog_rec.partner_id.id,
                         'address_invoice_id':damagelog_rec.sale_order_id.partner_invoice_id.id,
                         'account_id':partner_acc_id,
-                        'company_id':damagelog_rec.sale_order_id.user_id.company_id and damagelog_rec.sale_order_id.user_id.company_id.id,
                         'type':'out_refund',
                         'invoice_line':[(6,0,[inv_line_id])]
                       }
+        
         inv_id = invoice_obj.create(cr, uid, refund_vals, context=context)
         self.write(cr, uid, ids, {'customer_refund_id':inv_id}, context=context)
-        
-sale_damagelog()
 
+sale_damagelog()
 
 class crm_case(osv.osv):
     
@@ -92,3 +103,4 @@ class crm_case(osv.osv):
                 }
     
 crm_case()
+

@@ -87,6 +87,7 @@
                     <field name="log_date"/>
                     <field name="log_uid"/>
                		<field name="ticket_id"/>
+			<field name="product_id"/>
                		<field name="product_sku"/>
                		<field name="product_supplier"/>
                		<field name="customer_refund_amount"/>
