@@ -28,7 +28,7 @@ class sale_damagelog(osv.osv):
                 'customer_refund_id':fields.many2one('account.invoice','Customer Refund'),
                 'customer_refund_amount':fields.related('customer_refund_id','amount_total',type='float',string='Refund Amount'),
                 'issue_description':fields.text('Comments'),
-                'num_attachments':fields.function(_get_attachments_count,method=True,type='integer',string='#Attachments'),
+                'num_attachments':fields.function(_get_attachments_count,method=True,type='integer',string='#Attachments', store=True),
                 'flag_transport':fields.boolean('Transport'),
                 'flag_product_quality':fields.boolean('Product Quality'),
                 'product_supplier':fields.many2one('res.partner','Product Supplier'),
