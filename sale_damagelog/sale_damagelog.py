@@ -10,7 +10,7 @@ class sale_damagelog(osv.osv):
         res = {}
         attachment_obj = self.pool.get('ir.attachment')
         for id in ids: 
-            res[id] = attachment_obj.search(cr, uid, [('res_id','=',id)], context=context, count=True)
+            res[id] = attachment_obj.search(cr, uid, [('res_id','=',id),('res_model','=','sale.damagelog')], context=context, count=True)
         return res
     
     def check_qty(self, cr, uid, ids, parent=None):
@@ -22,19 +22,19 @@ class sale_damagelog(osv.osv):
     _columns = {
                 'ticket_id':fields.char('Ticket ID',size=16),
                 'stock_move_id':fields.many2one('stock.move', 'Stock Move', required=True),
-                'sale_line_id':fields.related('stock_move_id','sale_line_id',type='many2one',relation='sale.order.line',string='Sale Order Line'),
+                'sale_line_id':fields.related('stock_move_id','sale_line_id',type='many2one',relation='sale.order.line',string='Sale Order Line', readonly=True),
                 'sale_order_id':fields.related('sale_line_id', 'order_id', type='many2one', relation='sale.order',string='Order Reference', required=True),
-                'partner_id':fields.related('sale_order_id', 'partner_id', type='many2one', relation='res.partner',string='Customer'),
+                'partner_id':fields.related('sale_order_id', 'partner_id', type='many2one', relation='res.partner',string='Customer', readonly=True),
                 'product_id':fields.related('stock_move_id', 'product_id', type='many2one', relation='product.product',string='Product', required=True),
-                'product_sku': fields.related('product_id', 'default_code',type='char',size=16, string='Product Code'),
-                'dispatch_date' : fields.related('stock_move_id', 'date_planned', type='datetime', string='Order Date'),
-                'log_date':fields.datetime('Date Created', required=True),
-                'log_uid':fields.many2one('res.users','Created By'),
+                'product_sku': fields.related('product_id', 'default_code',type='char',size=16, string='Product Code', readonly=True),
+                'dispatch_date' : fields.related('stock_move_id', 'date_planned', type='datetime', string='Order Date',readonly=True),
+                'log_date':fields.datetime('Date Created', readonly=True),
+                'log_uid':fields.many2one('res.users','Created By', readonly=True),
                 'claim_ids':fields.one2many('crm.case','damagelog_id','Claims'),
                 'customer_refund_id':fields.many2one('account.invoice','Customer Refund'),
                 'customer_refund_amount':fields.related('customer_refund_id','amount_total',type='float',string='Refund Amount'),
                 'issue_description':fields.text('Comments'),
-                'num_attachments':fields.function(_get_attachments_count,method=True,type='integer',string='#Attachments', store=True),
+                'num_attachments':fields.function(_get_attachments_count,method=True,type='integer',string='#Attachments'),
                 'flag_transport':fields.boolean('Transport'),
                 'flag_product_quality':fields.boolean('Product Quality'),
                 'product_supplier':fields.many2one('res.partner','Product Supplier'),
@@ -54,12 +54,17 @@ class sale_damagelog(osv.osv):
     
     def onchange_stock_move(self, cr, uid, ids, stock_move_id):
         value = {}
-        stock_move_rec = self.pool.get('stock.move').browse(cr, uid, stock_move_id)
-        value['sale_order_id'] = stock_move_rec.sale_line_id and stock_move_rec.sale_line_id.order_id.id or False
-        value['product_id'] =  stock_move_rec.product_id.id
-        value['product_uom'] = stock_move_rec.product_uom.id
-        value['product_qty'] = stock_move_rec.product_qty
-        value['product_supplier'] = stock_move_rec.product_id.seller_ids and stock_move_rec.product_id.seller_ids[0].name.id or False
+        if stock_move_id:
+            stock_move_rec = self.pool.get('stock.move').browse(cr, uid, stock_move_id)
+            value['sale_order_id'] = stock_move_rec.sale_line_id.order_id.id or False
+            value['product_id'] =  stock_move_rec.product_id.id
+            value['product_sku'] =  stock_move_rec.product_id.default_code
+            value['product_uom'] = stock_move_rec.product_uom.id
+            value['product_qty'] = stock_move_rec.product_qty
+            value['product_supplier'] = stock_move_rec.product_id.seller_ids and stock_move_rec.product_id.seller_ids[0].name.id or False
+            value['sale_line_id'] = stock_move_rec.sale_line_id.id
+            value['dispatch_date'] = stock_move_rec.date_planned
+            value['partner_id'] = stock_move_rec.sale_line_id.order_id.partner_id.id or False
         return {'value':value}
     
     def create_refund(self, cr, uid, ids, context=None):
@@ -93,6 +98,7 @@ class sale_damagelog(osv.osv):
         self.write(cr, uid, ids, {'customer_refund_id':inv_id}, context=context)
 
 sale_damagelog()
+
 
 class crm_case(osv.osv):
     

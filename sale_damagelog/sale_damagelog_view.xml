@@ -50,14 +50,14 @@
 							<field name="issue_description" colspan="4" nolabel="1"/>
 						</page>
 						<page string="Claims Details">
-							<field name="claim_ids" colspan="4" nolabel="1" string="claims"/>
+							<field name="claim_ids" colspan="4" nolabel="1" string="claims" default_get="{'partner_id':parent.partner_id}"/>
 						</page>
 						<page string="Other Info">
 							<separator string="Refund Details:" colspan="4"/>
 							<group colspan="4">
 								<group colspan="3">
-									<field name="customer_refund_id" select="2" attrs="{'readonly':[('customer_refund_id','!=',False)]}"/>
-									<field name="customer_refund_amount" select="2" attrs="{'readonly':[('customer_refund_id','!=',False)]}"/>
+									<field name="customer_refund_id" select="2" readonly="1"/>
+									<field name="customer_refund_amount" select="2" readonly="1"/>
 								</group>
 								<group colspan="1">
 									<button name="create_refund" string="Create Refund" type="object" attrs="{'readonly':[('customer_refund_id','!=',False)]}"/>
@@ -87,7 +87,7 @@
                     <field name="log_date"/>
                     <field name="log_uid"/>
                		<field name="ticket_id"/>
-			<field name="product_id"/>
+               		<field name="product_id"/>
                		<field name="product_sku"/>
                		<field name="product_supplier"/>
                		<field name="customer_refund_amount"/>
@@ -106,7 +106,16 @@
             <field name="view_type">form</field>
             <field name="view_mode">tree,form</field>
             <field name="view_id" ref="view_sale_damagelog_tree"/>
-        </record>	    
+        </record>
+        
+       	<record id="action_sale_damagelog_form" model="ir.actions.act_window">
+            <field name="name">Sale Damage Log</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">sale.damagelog</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_sale_damagelog_form"/>
+        </record>
         
         <!-- Menu for Damage Log -->
         

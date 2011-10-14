@@ -13,8 +13,9 @@ def _create_damage_log(self, cr, uid, data, context=None):
     mod_obj = pool.get('ir.model.data')
     act_obj = pool.get('ir.actions.act_window')
     damagelog_obj = pool.get('sale.damagelog')
-    move = pool.get('stock.move').read(cr, uid, data['form']['stock_move_id'], ['product_qty'], context=context)
-    damagelog_id = damagelog_obj.create(cr,uid,{'stock_move_id':data['form']['stock_move_id'],'product_qty':move['product_qty']},context=context)
+    move = pool.get('stock.move').browse(cr, uid, data['form']['stock_move_id'], context=context)
+    product_supplier = move.product_id.seller_ids and move.product_id.seller_ids[0].name.id or False 
+    damagelog_id = damagelog_obj.create(cr,uid,{'stock_move_id':data['form']['stock_move_id'],'product_qty':move.product_qty, 'product_uom':move.product_uom.id, 'product_supplier':product_supplier},context=context)
     return {
             'name': 'Damage Log',
             'view_type': 'form',
@@ -25,6 +26,7 @@ def _create_damage_log(self, cr, uid, data, context=None):
             'type': 'ir.actions.act_window',
             }
 
+
  
      
 
@@ -34,7 +36,7 @@ class create_damagelog_from_saleorder(wizard.interface):\
         self.states[state]['result']['arch'] = """<?xml version="1.0"?>
                                                 <form string="Create Damage Log">
                                                     <separator colspan="4" string="Select a stock move for the damagelog" />
-                                                    <field name="stock_move_id" domain="[('sale_line_id.order_id','=',""" + str(context.get('active_id',False)) + """)]"/>
+                                                    <field name="stock_move_id" domain="[('sale_line_id.order_id','=',""" + str(context.get('active_id',False)) + """),('sale_line_id','!=',False)]"/>
                                                 </form>
                                                 """
         return super(create_damagelog_from_saleorder, self).execute_cr(cr, uid, data, state=state, context=context)
