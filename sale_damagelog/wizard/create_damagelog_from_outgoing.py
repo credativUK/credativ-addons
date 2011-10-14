@@ -15,12 +15,15 @@ def _create_damage_log(self, cr, uid, data, context=None):
     damagelog_obj = pool.get('sale.damagelog')
     move = pool.get('stock.move').read(cr, uid, data['form']['stock_move_id'], ['product_qty'], context=context)
     damagelog_id = damagelog_obj.create(cr,uid,{'stock_move_id':data['form']['stock_move_id'],'product_qty':move['product_qty']},context=context)
-    xml_id='action_sale_damagelog_tree'
-    result = mod_obj._get_id(cr, uid, 'sale_damagelog', xml_id)
-    id = mod_obj.read(cr, uid, result, ['res_id'])['res_id']
-    result = act_obj.read(cr, uid, id)
-    result['domain'] = [('id','=',damagelog_id)]
-    return result
+    return {
+            'name': 'Damage Log',
+            'view_type': 'form',
+            'view_mode': 'form,tree',
+            'res_model': 'sale.damagelog',
+            'view_id': False,
+            'res_id': damagelog_id,
+            'type': 'ir.actions.act_window',
+            }
 
  
      
