@@ -15,7 +15,7 @@ class sale_damagelog(osv.osv):
     
     def check_qty(self, cr, uid, ids, parent=None):
         damage_rec = self.browse(cr, uid, ids[0])
-        if damage_rec.product_qty > damage_rec.stock_move_id.product_qty:
+        if damage_rec.product_qty > 0 and damage_rec.product_qty > damage_rec.stock_move_id.product_qty:
             return False
         return True
     
@@ -48,7 +48,7 @@ class sale_damagelog(osv.osv):
                  }
     
     _constraints = [
-        (check_qty, 'You can not have damaged quantity greater than shipped quantity.', ['product_qty'])
+        (check_qty, 'You can not have damaged quantity greater than shipped quantity and It should have a positive value!', ['product_qty'])
     ]
 
     

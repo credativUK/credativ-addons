@@ -17,7 +17,7 @@
                     <group colspan="4">
 	                    <separator colspan="4"/>
 	                    <field name="stock_move_id" domain="[('sale_line_id','!=',False)]" on_change="onchange_stock_move(stock_move_id)" select="2"/>
-	                    <field name="sale_order_id" select="1"/>
+	                    <field name="sale_order_id" select="1" readonly="1"/>
 	                    <field name="dispatch_date" select="1"/>
 	                    <field name="sale_line_id" select="2"/>
 	                </group> 
@@ -36,7 +36,7 @@
 						<page string="Damage Details">
 							<group colspan="4">
 			                    <field name="product_sku" select="1"/>
-								<field name="product_id" select="1"/>
+								<field name="product_id" select="1" readonly="1"/>
 							</group>
 							<group colspan="2">
 								<field name="product_qty" select="2"/>

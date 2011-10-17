@@ -36,7 +36,7 @@ class create_damagelog_from_saleorder(wizard.interface):\
         self.states[state]['result']['arch'] = """<?xml version="1.0"?>
                                                 <form string="Create Damage Log">
                                                     <separator colspan="4" string="Select a stock move for the damagelog" />
-                                                    <field name="stock_move_id" domain="[('sale_line_id.order_id','=',""" + str(context.get('active_id',False)) + """),('sale_line_id','!=',False)]"/>
+                                                    <field name="stock_move_id" domain="[('picking_id','=',""" + str(data.get('id',False)) + """),('sale_line_id','!=',False)]"/>
                                                 </form>
                                                 """
         return super(create_damagelog_from_saleorder, self).execute_cr(cr, uid, data, state=state, context=context)
