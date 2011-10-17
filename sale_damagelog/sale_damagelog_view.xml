@@ -50,7 +50,7 @@
 							<field name="issue_description" colspan="4" nolabel="1"/>
 						</page>
 						<page string="Claims Details">
-							<field name="claim_ids" colspan="4" nolabel="1" string="claims" default_get="{'partner_id':parent.partner_id}"/>
+							<field name="claim_ids" colspan="4" nolabel="1" string="claims" context="{'default_partner_id':partner_id}"/>
 						</page>
 						<page string="Other Info">
 							<separator string="Refund Details:" colspan="4"/>
