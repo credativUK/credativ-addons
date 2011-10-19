@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+    <wizard
+        id="create_dispatch"
+        model="stock.move"
+        multi="True"
+        name="stock.move.create_dispatch"
+        string="Create Dispatch"/>
+    </data>
+</openerp>
