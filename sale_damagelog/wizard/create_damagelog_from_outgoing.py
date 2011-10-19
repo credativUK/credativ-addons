@@ -36,8 +36,8 @@ class create_damagelog_from_outgoing(wizard.interface):
         self.states[state]['result']['arch'] = """<?xml version="1.0"?>
                                                 <form string="Create Damage Log">
                                                     <separator colspan="4" string="Select a stock move for the damagelog" />
-                                                    <field name="stock_move_id" domain="[('picking_id','=',""" + str(data.get('id',False)) + """),('sale_line_id','!=',False)]"/>                                                </form>
-                                                """
+                                                    <field name="stock_move_id" domain="[('picking_id','=',%d),('sale_line_id','!=',False)]"/>
+                                                </form>""" % (data.get('id',False))
         return super(create_damagelog_from_outgoing, self).execute_cr(cr, uid, data, state=state, context=context)
      
     states = {
