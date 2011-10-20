@@ -8,6 +8,7 @@
     'depends': ['sale','crm_configuration'],
     'init_xml': [],
     'update_xml': [
+        'security/ir.model.access.csv',
         'sale_damagelog_view.xml'
     ],
     'demo_xml': [],

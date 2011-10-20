@@ -15,7 +15,7 @@ class sale_damagelog(osv.osv):
     
     def check_qty(self, cr, uid, ids, parent=None):
         damage_rec = self.browse(cr, uid, ids[0])
-        if damage_rec.product_qty > 0 and damage_rec.product_qty > damage_rec.stock_move_id.product_qty:
+        if damage_rec.product_qty <= 0 or damage_rec.product_qty > damage_rec.stock_move_id.product_qty:
             return False
         return True
     
@@ -91,7 +91,8 @@ class sale_damagelog(osv.osv):
                         'address_invoice_id':damagelog_rec.sale_order_id.partner_invoice_id.id,
                         'account_id':partner_acc_id,
                         'type':'out_refund',
-                        'invoice_line':[(6,0,[inv_line_id])]
+                        'invoice_line':[(6,0,[inv_line_id])],
+                        'name':'Refund:%s' % (damagelog_rec.sale_order_id.name),
                       }
         
         inv_id = invoice_obj.create(cr, uid, refund_vals, context=context)
