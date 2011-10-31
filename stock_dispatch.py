@@ -67,6 +67,8 @@ class stock_dispatch(osv.osv):
                 result['warning'] = {'title': 'Cannot add all stock moves',
                                      'message': 'One or more moves are already part of another dispatch and' \
                                      ' have not been added:%s' % (move_string)}
+            if sorted(stock_moves[0][2]) == sorted(move_list):
+              return {} # Prevent update when there is no actual change
             return result
         return {}
 
