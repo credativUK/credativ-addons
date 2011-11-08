@@ -14,14 +14,14 @@
             <field name="flow_start">True</field>
             <field name="name">dispatch_draft</field>
             <field name="kind">function</field>
-            <field name="action">write({'state': 'draft'})</field>
+            <field name="action">action_draft()</field>
         </record>
 
         <record id="act_dispatch_confirmed" model="workflow.activity">
             <field name="wkf_id" ref="dispatch_wkf"/>
             <field name="name">dispatch_confirmed</field>
             <field name="kind">function</field>
-            <field name="action">write({'state': 'confirmed'})</field>
+            <field name="action">action_confirm()</field>
         </record>
 
         <record id="act_dispatch_done" model="workflow.activity">
@@ -45,6 +45,12 @@
             <field name="act_from" ref="act_dispatch_draft"/>
             <field name="act_to" ref="act_dispatch_confirmed"/>
             <field name="signal">confirmed</field>
+        </record>
+
+        <record id="trans_dispatch_confirmed_draft" model="workflow.transition">
+            <field name="act_from" ref="act_dispatch_confirmed"/>
+            <field name="act_to" ref="act_dispatch_draft"/>
+            <field name="signal">draft</field>
         </record>
 
         <record id="trans_dispatch_confirmed_done" model="workflow.transition">

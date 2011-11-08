@@ -31,7 +31,7 @@ class stock_dispatch(osv.osv):
     _description = 'Stock Dispatch'
     _rec_name = 'id'
     _columns = {
-        'stock_moves': fields.one2many('stock.move', 'dispatch_id', 'Stock Moves', required=True, select=True,
+        'stock_moves': fields.one2many('stock.move', 'dispatch_id', 'Stock Moves', select=True,
                         domain=[('state', '=', 'assigned'), ('picking_type', '=', 'out')], readonly=True, states={'draft':[('readonly',False)]}),
         'carrier_id': fields.many2one('res.partner', 'Carrier', required=True, select=True, readonly=True, states={'draft':[('readonly',False)]}),
         'complete_uid': fields.many2one('res.users', 'Completed User', readonly=True),
@@ -110,6 +110,19 @@ class stock_dispatch(osv.osv):
             move_ids = [x.id for x in dispatch.stock_moves]
             self.pool.get('stock.move').write(cr, uid, move_ids, {'dispatch_id': False})
         self.write(cr, uid, ids, {'state': 'cancel'})
+        return True
+
+    def action_draft(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, {'state': 'draft'})
+        return True
+
+    def action_confirm(self, cr, uid, ids, context=None):
+        for dispatch in self.browse(cr, uid, ids):
+            move_ids = [x.id for x in dispatch.stock_moves]
+            if len(move_ids) == 0:
+                raise osv.except_osv('Could not confirm dispatch',
+                      'A dispatch must have atleast one stock move assigned to it')
+        self.write(cr, uid, ids, {'state': 'confirmed'})
         return True
 
     def unlink(self, cr, uid, ids, context=None):
