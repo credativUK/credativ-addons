@@ -27,10 +27,11 @@
                         <field name="date"/>
                         <field name="complete_date"/>
                     </group>
-                    <group col="5" colspan="4">
+                    <group col="6" colspan="4">
                         <field name="state"/>
-                        <button name="cancel" states="draft,confirmed" string="Cancel" icon="gtk-execute"/>
+                        <button name="cancel" states="draft" string="Cancel Dispatch" icon="gtk-execute"/>
                         <button name="confirmed" states="draft" string="Confirm Dispatch" icon="gtk-execute"/>
+                        <button name="draft" states="confirmed" string="Edit Dispatch" icon="gtk-execute"/>
                         <button name="done" states="confirmed" string="Dispatch Complete" icon="gtk-execute"/>
                     </group>
                     <separator string="Stock Moves" colspan="4" />
