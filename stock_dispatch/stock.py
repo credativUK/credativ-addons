@@ -46,4 +46,10 @@ class stock_move(osv.osv):
         
         return super(stock_move, self).action_done(cr, uid, ids, context)
 
+    def copy_data(self, cr, uid, id, default=None, context=None):
+        if not default:
+            default = {}
+        default['dispatch_id'] = False
+        return super(stock_move, self).copy_data(cr, uid, id, default, context)
+        
 stock_move()
