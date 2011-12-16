@@ -10,6 +10,7 @@
             <field name="type">form</field>
             <field name="arch" type="xml">
                 <form string="Sale Damage Log">
+                    <field name="name" select="2" invisible="True"/>
                     <group colspan="4">
                         <field name="ticket_id" select="2"/>
                         <field name="partner_id" select="1"/>
@@ -80,6 +81,7 @@
             <field name="type">tree</field>
             <field name="arch" type="xml">
                 <tree string="Sale Damage Log">
+                    <field name="name"/>
                     <field name="partner_id"/>
                     <field name="sale_order_id"/>
                     <field name="dispatch_date"/>

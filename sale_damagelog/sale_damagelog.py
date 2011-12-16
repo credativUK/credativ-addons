@@ -13,6 +13,12 @@ class sale_damagelog(osv.osv):
             res[id] = attachment_obj.search(cr, uid, [('res_id','=',id),('res_model','=','sale.damagelog')], context=context, count=True)
         return res
     
+    def _get_name(self, cr, uid, ids, name, arg, context={}):
+        res = {}
+        for id in ids: 
+            res[id] = 'LOG%06d' % (id,)
+        return res
+    
     def check_qty(self, cr, uid, ids, parent=None):
         damage_rec = self.browse(cr, uid, ids[0])
         if damage_rec.product_qty <= 0 or damage_rec.product_qty > damage_rec.stock_move_id.product_qty:
@@ -20,6 +26,7 @@ class sale_damagelog(osv.osv):
         return True
     
     _columns = {
+                'name':fields.function(_get_name,method=True,type='char',string='Name'),
                 'ticket_id':fields.char('Ticket ID',size=16),
                 'stock_move_id':fields.many2one('stock.move', 'Stock Move', required=True),
                 'sale_line_id':fields.related('stock_move_id','sale_line_id',type='many2one',relation='sale.order.line',string='Sale Order Line', readonly=True),
