@@ -53,15 +53,7 @@ class stock_move(osv.osv):
         return super(stock_move, self).copy_data(cr, uid, id, default, context)
         
     def action_cancel(self, cr, uid, ids, context=None):
-        if context is None:
-            context = {}
-        for move in self.browse(cr, uid, ids):
-            # Do not allow cancel when part of a dispatch.
-            if move.dispatch_id:
-                raise except_orm(_('UserError'),
-                    _('This move is part of a dispatch and must first be removed'
-                    ' from the dispatch before cancelling: (name: "%s", id: %d)') %
-                (move.name, move.id) )
+        self.write(cr, uid, ids, {'dispatch_id': False})
         return super(stock_move, self).action_cancel(cr, uid, ids, context)
 
 stock_move()
