@@ -4,102 +4,103 @@
     
     <!-- Damage Log Form View -->
     
-    	<record id="view_sale_damagelog_form" model="ir.ui.view">
+        <record id="view_sale_damagelog_form" model="ir.ui.view">
             <field name="name">sale.damagelog.form</field>
             <field name="model">sale.damagelog</field>
             <field name="type">form</field>
             <field name="arch" type="xml">
                 <form string="Sale Damage Log">
+                    <field name="name" select="2" invisible="True"/>
                     <group colspan="4">
-	                    <field name="ticket_id" select="2"/>
-	                    <field name="partner_id" select="1"/>
-	                </group>
+                        <field name="ticket_id" select="2"/>
+                        <field name="partner_id" select="1"/>
+                    </group>
                     <group colspan="4">
-	                    <separator colspan="4"/>
-	                    <field name="stock_move_id" domain="[('sale_line_id','!=',False)]" on_change="onchange_stock_move(stock_move_id)" select="2"/>
-	                    <field name="sale_order_id" select="1" readonly="1"/>
-	                    <field name="dispatch_date" select="1"/>
-	                    <field name="sale_line_id" select="2"/>
-	                </group> 
+                        <separator colspan="4"/>
+                        <field name="stock_move_id" domain="[('sale_line_id','!=',False)]" on_change="onchange_stock_move(stock_move_id)" select="2"/>
+                        <field name="sale_order_id" select="1" readonly="1"/>
+                        <field name="dispatch_date" select="1"/>
+                        <field name="sale_line_id" select="2"/>
+                    </group> 
                     <separator colspan="4"/>
                     <group colspan="2">
                     </group>
                     <group colspan="2">
-                    	<group colspan="3">
-						</group>
-						<group colspan="1">
-							<field name="flag_transport" select="2"/>
-							<field name="flag_product_quality" select="2"/>
-						</group>
-					</group>
-					<notebook colspan="4">
-						<page string="Damage Details">
-							<group colspan="4">
-			                    <field name="product_sku" select="1"/>
-								<field name="product_id" select="1" readonly="1"/>
-							</group>
-							<group colspan="2">
-								<field name="product_qty" select="2"/>
-								<field name="product_uom" select="2"/>
-							</group>
-							<group colspan="2">
-								<field name="product_supplier" select="1"/>
-								<field name="num_attachments" select="2"/>
-							</group>
-							<separator string="Comments:"/>
-							<field name="issue_description" colspan="4" nolabel="1"/>
-						</page>
-						<page string="Claims Details">
-							<field name="claim_ids" colspan="4" nolabel="1" string="claims" context="{'default_partner_id':partner_id}"/>
-						</page>
-						<page string="Other Info">
-							<separator string="Refund Details:" colspan="4"/>
-							<group colspan="4">
-								<group colspan="3">
-									<field name="customer_refund_id" select="2" readonly="1"/>
-									<field name="customer_refund_amount" select="2" readonly="1"/>
-								</group>
-								<group colspan="1">
-									<button name="create_refund" string="Create Refund" type="object" attrs="{'readonly':[('customer_refund_id','!=',False)]}"/>
-								</group>
-							</group>
-							<newline/>
-							<separator string="Log Details:" colspan="4"/>
-							<field name="log_date" select="2"/>
-							<field name="log_uid" select="2"/>
-						</page>
-					</notebook>
+                        <group colspan="3"></group>
+                            <group colspan="1">
+                                <field name="flag_transport" select="2"/>
+                                <field name="flag_product_quality" select="2"/>
+                            </group>
+                        </group>
+                        <notebook colspan="4">
+                            <page string="Damage Details">
+                                <group colspan="4">
+                                    <field name="product_sku" select="1"/>
+                                    <field name="product_id" select="1" readonly="1"/>
+                                </group>
+                                <group colspan="2">
+                                    <field name="product_qty" select="2"/>
+                                    <field name="product_uom" select="2"/>
+                                </group>
+                                <group colspan="2">
+                                    <field name="product_supplier" select="1"/>
+                                    <field name="num_attachments" select="2"/>
+                                </group>
+                                <separator string="Comments:"/>
+                                <field name="issue_description" colspan="4" nolabel="1"/>
+                            </page>
+                            <page string="Claims Details">
+                                <field name="claim_ids" colspan="4" nolabel="1" string="claims" context="{'default_partner_id':partner_id}"/>
+                            </page>
+                            <page string="Other Info">
+                                <separator string="Refund Details:" colspan="4"/>
+                                <group colspan="4">
+                                    <group colspan="3">
+                                        <field name="customer_refund_id" select="2" readonly="1"/>
+                                        <field name="customer_refund_amount" select="2" readonly="1"/>
+                                    </group>
+                                    <group colspan="1">
+                                        <button name="create_refund" string="Create Refund" type="object" attrs="{'readonly':[('customer_refund_id','!=',False)]}"/>
+                                    </group>
+                                </group>
+                                <newline/>
+                                <separator string="Log Details:" colspan="4"/>
+                                <field name="log_date" select="2"/>
+                                <field name="log_uid" select="2"/>
+                            </page>
+                    </notebook>
                 </form>
             </field>
         </record>
-		
-		<!-- Damage Log Tree View -->
-		
-		<record id="view_sale_damagelog_tree" model="ir.ui.view">
+        
+        <!-- Damage Log Tree View -->
+        
+        <record id="view_sale_damagelog_tree" model="ir.ui.view">
             <field name="name">sale.damagelog.tree</field>
             <field name="model">sale.damagelog</field>
             <field name="type">tree</field>
             <field name="arch" type="xml">
                 <tree string="Sale Damage Log">
+                    <field name="name"/>
                     <field name="partner_id"/>
                     <field name="sale_order_id"/>
                     <field name="dispatch_date"/>
                     <field name="log_date"/>
                     <field name="log_uid"/>
-               		<field name="ticket_id"/>
-               		<field name="product_id"/>
-               		<field name="product_sku"/>
-               		<field name="product_supplier"/>
-               		<field name="customer_refund_amount"/>
-               		<field name="flag_transport"/>
-					<field name="flag_product_quality"/>
+                    <field name="ticket_id"/>
+                    <field name="product_id"/>
+                    <field name="product_sku"/>
+                    <field name="product_supplier"/>
+                    <field name="customer_refund_amount"/>
+                    <field name="flag_transport"/>
+                    <field name="flag_product_quality"/>
                 </tree>
             </field>
         </record>
         
         <!-- Action for the view -->
-			
-		 <record id="action_sale_damagelog_tree" model="ir.actions.act_window">
+            
+        <record id="action_sale_damagelog_tree" model="ir.actions.act_window">
             <field name="name">Sale Damage Log</field>
             <field name="type">ir.actions.act_window</field>
             <field name="res_model">sale.damagelog</field>
@@ -108,7 +109,7 @@
             <field name="view_id" ref="view_sale_damagelog_tree"/>
         </record>
         
-       	<record id="action_sale_damagelog_form" model="ir.actions.act_window">
+        <record id="action_sale_damagelog_form" model="ir.actions.act_window">
             <field name="name">Sale Damage Log</field>
             <field name="type">ir.actions.act_window</field>
             <field name="res_model">sale.damagelog</field>
@@ -120,18 +121,18 @@
         <!-- Menu for Damage Log -->
         
         <menuitem action="action_sale_damagelog_tree" id="menu_sale_damagelog" parent="sale.menu_sale_root"/>
-		
-		<!-- Link from Products to Damage Log -->
-		
-		<act_window domain="[('product_id', '=', active_id)]" id="act_product_sale_damagelog" name="Damaged Items" res_model="sale.damagelog" src_model="product.product"/>
+
+        <!-- Link from Products to Damage Log -->
+
+        <act_window domain="[('product_id', '=', active_id)]" id="act_product_sale_damagelog" name="Damaged Items" res_model="sale.damagelog" src_model="product.product"/>
     
-    	<!-- Link from Sale Orders to Damage Log -->
+        <!-- Link from Sale Orders to Damage Log -->
     
-    	<act_window domain="[('sale_order_id', '=', active_id)]" id="act_sale_order_sale_damagelog" name="Damage Log" res_model="sale.damagelog" src_model="sale.order"/>
+        <act_window domain="[('sale_order_id', '=', active_id)]" id="act_sale_order_sale_damagelog" name="Damage Log" res_model="sale.damagelog" src_model="sale.order"/>
     
-    	<!-- Wizard to create a damagelog from Products -->
+        <!-- Wizard to create a damagelog from Products -->
     
-    	<wizard
+        <wizard
             id="wizard_product_create_damagelog"
             keyword="client_action_multi"
             model="product.product"
@@ -139,9 +140,9 @@
             menu="True"
             string="Create Damage Log"/>
     
-    	<!-- Wizard to create a damagelog from Sale Orders -->
+        <!-- Wizard to create a damagelog from Sale Orders -->
     
-    	<wizard
+        <wizard
             id="wizard_saleorder_create_damagelog"
             keyword="client_action_multi"
             model="sale.order"
@@ -149,9 +150,9 @@
             menu="True"
             string="Create Damage Log"/>
     
-    	<!-- Wizard to create a damagelog from Outgoing Products(Picking) -->	
+        <!-- Wizard to create a damagelog from Outgoing Products(Picking) -->	
     
-    	<wizard
+        <wizard
             id="wizard_outgoing_create_damagelog"
             keyword="client_action_multi"
             model="stock.picking"
