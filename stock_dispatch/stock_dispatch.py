@@ -85,6 +85,10 @@ class stock_dispatch(osv.osv):
         if context is None:
             context = {}
 
+        logger = netsvc.Logger()
+        start_time = time.time()
+        logger.notifyChannel('stock.dispatch', netsvc.LOG_DEBUG, 'action_done: start %s' % ids)
+        
         for dispatch in self.browse(cr, uid, ids):
             context['from_dispatch'] = dispatch.id
             picking_obj = self.pool.get('stock.picking')
@@ -100,6 +104,7 @@ class stock_dispatch(osv.osv):
                     wkf_service.trg_write(uid, 'stock.picking', move.picking_id.id, cr)
 
         self.write(cr, uid, ids, {'state': 'done', 'complete_date': time.strftime('%Y-%m-%d %H:%M:%S'), 'complete_uid': uid})
+        logger.notifyChannel('stock.dispatch', netsvc.LOG_DEBUG, 'action_done: finished in %s' % (time.time() - start_time, ))
         return True
 
     def action_cancel(self, cr, uid, ids, context=None):
