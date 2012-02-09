@@ -141,5 +141,10 @@ class stock_dispatch(osv.osv):
         return super(stock_dispatch, self).unlink(
             cr, uid, ids, context=ctx)
 
+    def copy_data(self, cr, uid, id, default=None, context=None):
+        if not default:
+            default = {}
+        default['stock_moves'] = []
+        return super(stock_dispatch, self).copy_data(cr, uid, id, default, context)
 
 stock_dispatch()
