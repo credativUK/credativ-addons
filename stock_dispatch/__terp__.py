@@ -22,7 +22,7 @@
 ##############################################################################
 {
     'name' : 'Stock Dispatch',
-    'version' : '1.0.0.1',
+    'version' : '1.0.0.2',
     'author' : 'credativ',
     'website' : 'http://credativ.co.uk',
     'depends' : [
