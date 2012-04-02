@@ -52,6 +52,11 @@ class stock_dispatch(osv.osv):
     def name_get(self, cr, uid, ids, context={}):
         return [(i, str(i)) for i in ids]
 
+    def name_search(self, cr, uid, name='ilike', args=[], operator='=', context={}, limit=80):
+        # _rec_name is integer, hence we change ilike to '='
+        if operator=='ilike': operator='='
+        return super(stock_dispatch, self).name_search(cr, uid, name, args, operator, context, limit)
+
     def on_change_stock_moves(self, cr, uid, id, stock_moves, context=None):
         move_list = []
         move_string = ''
