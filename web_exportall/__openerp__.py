@@ -20,21 +20,20 @@
 ##############################################################################
 {
     "name": "Export All",
-    "category": "Hidden",
     "description":
         """
         OpenERP Web module which allows all rows to be exported from a search view
         """,
     "version": "1.0",
     "author" : "credativ Ltd",
-    'website' : 'http://credativ.co.uk',
-    'category' : 'Tools',
+    "website" : "http://credativ.co.uk",
+    "category" : "Tools",
     "depends" : ["web"],
-    'js' : [
+    "js": [
         "static/src/js/data_export.js",
     ],
-    'qweb' : [
+    "qweb": [
         "static/src/xml/web_exportall.xml",
     ],
-    'auto_install': False,
+    "auto_install": False,
 }
