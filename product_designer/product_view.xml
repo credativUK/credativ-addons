@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+-->
+<openerp>
+    <data>
+        <record model="ir.ui.view" id="product_designer_form_view_designer">
+            <field name="name">product.designer.form_view_designer</field>
+            <field name="model">product.product</field>
+            <field name="inherit_id" ref="stock.view_normal_stock_property_form" />
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <data>
+                <group name="status" position="inside">
+                    <field name="partner_designer" domain="[('category_id', 'child_of', [%(res_partner_category_designer)d])]" context="{'category_id': %(res_partner_category_designer)d}"/>
+                </group>
+                </data>
+            </field>
+        </record>
+    </data>
+</openerp>
