@@ -26,10 +26,9 @@ class sale_order(osv.osv):
 
     def action_ship_create(self, cr, uid, ids, *args):
         res = super(sale_order, self).action_ship_create(cr, uid, ids, *args)
-        all_pool = self.pool.get('procurement.order.compute.all')
-        id_ = all_pool.create(cr, uid, {})
-        all_pool.procure_calculation(cr, uid, [id_], {})
-        all_pool.unlink(cr, uid, [id_]) # TODO: confirm this is needed?
+        compute_all_pool = self.pool.get('procurement.order.compute.all')
+        id_ = compute_all_pool.create(cr, uid, {})
+        compute_all_pool.procure_calculation(cr, uid, [id_], {})
         return res
 
 sale_order()
