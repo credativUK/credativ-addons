@@ -1,8 +1,8 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution
-#    Copyright (C) 2011 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
+#    OpenERP, Open Source Management Solution	
+#    Copyright (C) 2012 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -19,22 +19,7 @@
 #
 ##############################################################################
 
+import sale
+import procurement
 
-{
-    'name': 'Sale Order Run Procurement Scheduler',
-    'version': '0.1',
-    'category': 'Localisation',
-    'description': """
-    Run procurement scheduler on sale order confirm
-    """,
-    'author': 'credativ',
-    'depends': [
-        'sale',
-        ],
-    'update_xml': [],
-    'demo_xml': [],
-    'test': [],
-    'installable': True,
-    'active': False,
-}
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
