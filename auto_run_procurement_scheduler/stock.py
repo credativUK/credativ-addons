@@ -29,9 +29,9 @@ class stock_move(osv.osv):
         res = super(stock_move, self).action_done(cr, uid, ids, context=context)
         run_scheduler = False
         for move in self.browse(cr, uid, ids, context=context):
-            if move.location_id.usage == 'production' and move.location_dest_id.usage == 'stock':
+            if move.location_id.usage == 'production' and move.location_dest_id.usage == 'internal':
                 run_scheduler = True
-            if move.location_id.usage == 'supplier' and move.location_dest_id.usage == 'stock':
+            if move.location_id.usage == 'supplier' and move.location_dest_id.usage == 'internal':
                 run_scheduler = True
 
         if run_scheduler:
