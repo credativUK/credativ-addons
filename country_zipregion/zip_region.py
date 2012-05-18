@@ -21,6 +21,7 @@
 ##############################################################################
 
 from osv import osv, fields
+from psycopg2 import DataError
 
 class zip_region(osv.osv):
     _name = 'res.zip_region'
@@ -34,6 +35,23 @@ class zip_region(osv.osv):
                     "(Example '^CV[[:digit:]]{1,2}[[:blank:]]*[[:digit:]][[:alpha:]]{2}' will select all UK Postcodes for the Coventry region"),
         }
     _order = 'name'
+    
+    def _validate_reg_ex(self, cr, uid, ids, vals, context):
+        if 'zip_regex' in vals:
+            try:
+                cr.execute("""select 1 where 'abc' ~ %s""", (vals['zip_regex'],))
+                cr.fetchall()
+            except DataError, e:
+                raise osv.except_osv("Error", "Invalid PostgreSQL Regular Expression\n%s: %s" % (e.pgcode, e.pgerror,))
+    
+    def write(self, cr, uid, ids, vals, context=None):
+        self._validate_reg_ex(cr, uid, ids, vals, context)
+        return super(zip_region, self).write(cr, uid, ids, vals, context)
+    
+    def create(self, cr, uid, vals, context=None):
+        self._validate_reg_ex(cr, uid, None, vals, context)
+        return super(zip_region, self).create(cr, uid, ids, vals, context)
+
 
 zip_region()
 
