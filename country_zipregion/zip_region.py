@@ -32,7 +32,6 @@ class zip_region(osv.osv):
         'zip_regex': fields.char('Zip Regular Expression', size=1024,
                     help="A PostgreSQL Regular Expression (POSIX) to select ZIP codes. Leave blank to select all."\
                     "(Example '^CV[[:digit:]]{1,2}[[:blank:]]*[[:digit:]][[:alpha:]]{2}' will select all UK Postcodes for the Coventry region"),
-        'group_ids': fields.many2many('res.zip_region_group', 'res_zip_region_rel', 'region_id', 'region_group_id', 'Zip Region Groups'),
         }
     _order = 'name'
 
@@ -49,3 +48,11 @@ class zip_region_group(osv.osv):
 
 zip_region_group()
 
+# Both sides of a many2many field must exist before it can be created
+class zip_region_2(osv.osv):
+    _inherit = 'res.zip_region'
+    _columns = {
+        'group_ids': fields.many2many('res.zip_region_group', 'res_zip_region_rel', 'region_id', 'region_group_id', 'Zip Region Groups'),
+        }
+
+zip_region_2()
