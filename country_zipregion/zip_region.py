@@ -39,7 +39,7 @@ class zip_region(osv.osv):
     def _validate_reg_ex(self, cr, uid, ids, vals, context):
         if 'zip_regex' in vals:
             try:
-                cr.execute("""select 1 where 'abc' ~ %s""", (vals['zip_regex'],))
+                cr.execute("""select 1 where 'abc' ~ %s""", (vals['zip_regex'] or '',))
                 cr.fetchall()
             except DataError, e:
                 raise osv.except_osv("Error", "Invalid PostgreSQL Regular Expression\n%s: %s" % (e.pgcode, e.pgerror,))
