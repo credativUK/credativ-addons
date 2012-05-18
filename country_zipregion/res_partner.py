@@ -31,7 +31,7 @@ class res_partner_address(osv.osv):
         for arg in args:
             if arg[0] == 'region_group_id_select':
                 cr.execute("""SELECT rpa.id FROM res_partner_address rpa
-                    INNER JOIN res_zip_region zr ON zr.country_id = rpa.country_id AND rpa.zip ~ COALESCE(zr.zip_regex, '')
+                    INNER JOIN res_zip_region zr ON zr.country_id = rpa.country_id AND rpa.zip ~* COALESCE(zr.zip_regex, '')
                     INNER JOIN res_zip_region_rel zrr ON zrr.region_id = zr.id
                     INNER JOIN res_zip_region_group zrg ON zrr.region_group_id = zrg.id
                     WHERE zrg.id = %s GROUP BY rpa.id""", (arg[2],))
@@ -54,7 +54,7 @@ class res_partner_address(osv.osv):
         
         cr.execute("""
             SELECT rpa.id, zrg.id, zrg.name FROM res_partner_address rpa
-            INNER JOIN res_zip_region zr ON zr.country_id = rpa.country_id AND rpa.zip ~ COALESCE(zr.zip_regex, '')
+            INNER JOIN res_zip_region zr ON zr.country_id = rpa.country_id AND rpa.zip ~* COALESCE(zr.zip_regex, '')
             INNER JOIN res_zip_region_rel zrr ON zrr.region_id = zr.id
             INNER JOIN res_zip_region_group zrg ON zrr.region_group_id = zrg.id
             WHERE rpa.id in %s GROUP BY rpa.id, zrg.id, zrg.name
@@ -87,7 +87,7 @@ class res_partner(osv.osv):
         for arg in args:
             if arg[0] == 'region_group_id_select':
                 cr.execute("""SELECT rpa.partner_id FROM res_partner_address rpa
-                    INNER JOIN res_zip_region zr ON zr.country_id = rpa.country_id AND rpa.zip ~ COALESCE(zr.zip_regex, '')
+                    INNER JOIN res_zip_region zr ON zr.country_id = rpa.country_id AND rpa.zip ~* COALESCE(zr.zip_regex, '')
                     INNER JOIN res_zip_region_rel zrr ON zrr.region_id = zr.id
                     INNER JOIN res_zip_region_group zrg ON zrr.region_group_id = zrg.id
                     WHERE zrg.id = %s GROUP BY rpa.partner_id""", (arg[2],))

@@ -32,7 +32,7 @@ class stock_picking(osv.osv):
             if arg[0] == 'region_group_id_select':
                 cr.execute("""SELECT sp.id FROM stock_picking sp
                     INNER JOIN res_partner_address rpa ON sp.address_id = rpa.id
-                    INNER JOIN res_zip_region zr ON zr.country_id = rpa.country_id AND rpa.zip ~ COALESCE(zr.zip_regex, '')
+                    INNER JOIN res_zip_region zr ON zr.country_id = rpa.country_id AND rpa.zip ~* COALESCE(zr.zip_regex, '')
                     INNER JOIN res_zip_region_rel zrr ON zrr.region_id = zr.id
                     INNER JOIN res_zip_region_group zrg ON zrr.region_group_id = zrg.id
                     WHERE zrg.id = %s GROUP BY sp.id""", (arg[2],))
@@ -58,7 +58,7 @@ class stock_move(osv.osv):
             if arg[0] == 'region_group_id_select':
                 cr.execute("""SELECT sm.id FROM stock_move sm
                     INNER JOIN res_partner_address rpa ON sm.address_id = rpa.id
-                    INNER JOIN res_zip_region zr ON zr.country_id = rpa.country_id AND rpa.zip ~ COALESCE(zr.zip_regex, '')
+                    INNER JOIN res_zip_region zr ON zr.country_id = rpa.country_id AND rpa.zip ~* COALESCE(zr.zip_regex, '')
                     INNER JOIN res_zip_region_rel zrr ON zrr.region_id = zr.id
                     INNER JOIN res_zip_region_group zrg ON zrr.region_group_id = zrg.id
                     WHERE zrg.id = %s GROUP BY sm.id""", (arg[2],))
