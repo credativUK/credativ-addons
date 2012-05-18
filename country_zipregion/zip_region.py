@@ -50,7 +50,7 @@ class zip_region(osv.osv):
     
     def create(self, cr, uid, vals, context=None):
         self._validate_reg_ex(cr, uid, None, vals, context)
-        return super(zip_region, self).create(cr, uid, ids, vals, context)
+        return super(zip_region, self).create(cr, uid, vals, context)
 
 
 zip_region()
