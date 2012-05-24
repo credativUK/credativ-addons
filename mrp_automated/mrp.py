@@ -34,8 +34,11 @@ class mrp_production(osv.osv):
         for production in self.browse(cr, uid, ids):
             if not production.product_lines:
                 self.action_compute(cr, uid, [production.id])
-                production = self.browse(cr, uid, [production.id])[0]		
-        prodlot_name = seq_obj.get(cr,uid, 'stock.lot.serial') + '_' +  production.bom_id.routing_id.code
+                production = self.browse(cr, uid, [production.id])[0]
+        if production.bom_id.routing_id.code:
+            prodlot_name = seq_obj.get(cr,uid, 'stock.lot.serial') + '_' +  production.bom_id.routing_id.code
+        else:
+            prodlot_name = seq_obj.get(cr,uid, 'stock.lot.serial')
         finished_prodlot_data = {
             'product_id': production.product_id.id,
             'name': prodlot_name,
