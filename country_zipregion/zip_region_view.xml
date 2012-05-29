@@ -9,6 +9,7 @@
                 <tree string="Zip Region">
                     <field name="name"/>
                     <field name="country_id"/>
+                    <field name="zip_csv"/>
                     <field name="zip_regex"/>
                 </tree>
             </field>
@@ -21,9 +22,11 @@
             <field name="arch" type="xml">
                 <form string="Zip Region">
                     <group colspan="4">
-                        <field name="name" select="1" colspan="4"/>
-                        <field name="country_id" select="1" colspan="4"/>
-                        <field name="zip_regex" colspan="4"/>
+                        <field name="name" select="1"/>
+                        <field name="country_id" select="1"/>
+                        <field name="zip_csv" on_change="onchange_zip_csv(zip_csv, regex_match)" attrs="{'readonly':[('regex_match','=','True')]}"/>
+                        <field name="regex_match" on_change="onchange_zip_csv(zip_csv, regex_match)"/>
+                        <field name="zip_regex" colspan="4" on_change="onchange_zip_regex(zip_regex)" attrs="{'readonly':[('regex_match','!=','True')]}"/>
                     </group>
                     <separator string="Zip Region Groups" colspan="4"/>
                     <field name="group_ids" nolabel="1" colspan="4"/>
