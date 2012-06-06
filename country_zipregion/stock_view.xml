@@ -19,7 +19,7 @@
             <field name="type">search</field>
             <field eval="3" name="priority"/>
             <field name="arch" type="xml">
-                <field name="date" position="after">
+                <field name="prodlot_id" position="after">
                     <field name="region_group_id_select"/>
                 </field>
             </field>
