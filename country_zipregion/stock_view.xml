@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_picking_zipregion_form" model="ir.ui.view">
+            <field name="name">stock.picking.form.inheritzip</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.view_picking_form"/>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form position="inside">
+                    <field name="region_group_id_select" select="2" invisible="1"/>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_move_zipregion_form" model="ir.ui.view">
+            <field name="name">stock.move.form.inheritzip</field>
+            <field name="model">stock.move</field>
+            <field name="inherit_id" ref="stock.view_move_form"/>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form position="inside">
+                    <field name="region_group_id_select" select="2" invisible="1"/>
+                </form>
+            </field>
+        </record>
+    </data>
+</openerp>
