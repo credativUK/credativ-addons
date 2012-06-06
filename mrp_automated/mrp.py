@@ -31,20 +31,16 @@ class mrp_production(osv.osv):
         move_obj = self.pool.get('stock.move')
         seq_obj = self.pool.get('ir.sequence')
         prodlot_obj = self.pool.get('stock.production.lot')
-        production = self.browse(cr, uid, ids[0])
-        prodlot_name = seq_obj.get(cr,uid, 'stock.lot.serial')
-        if production.bom_id.routing_id.code:
-            prodlot_name += '_' +  production.bom_id.routing_id.code
-        finished_prodlot_data = {
-            'product_id': production.product_id.id,
-            'name': prodlot_name,
-            }
-        finished_prodlot_id = prodlot_obj.create(cr, uid, finished_prodlot_data)
-        data = {
-            'prodlot_id': finished_prodlot_id,
-        }                
-        move_obj.write(cr, uid, [move.id for move in production.move_created_ids], data)
-        
+        for production in self.browse(cr, uid, ids):
+            prodlot_name = seq_obj.get(cr,uid, 'stock.lot.serial')
+            if production.bom_id.routing_id.code:
+                prodlot_name += '_' +  production.bom_id.routing_id.code
+            finished_prodlot_id = prodlot_obj.create(cr, uid, {
+                'product_id': production.product_id.id,
+                'name': prodlot_name
+            })
+            move_obj.write(cr, uid, [move.id for move in production.move_created_ids],
+                           {'prodlot_id': finished_prodlot_id})        
         return res
 
 mrp_production()
