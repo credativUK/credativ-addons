@@ -67,6 +67,8 @@ class zip_region(osv.osv):
     def onchange_zip_csv(self, cr, uid, ids, zip_csv, regex_match):
         if regex_match == False:
             return {'value': {'zip_regex': self._zip_regex_from_csv(zip_csv)}}
+        else:
+            return {}
     
     def onchange_zip_regex(self, cr, uid, ids, zip_regex):
         return {'value': {'regex_match': True}}
