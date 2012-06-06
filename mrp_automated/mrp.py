@@ -31,14 +31,10 @@ class mrp_production(osv.osv):
         move_obj = self.pool.get('stock.move')
         seq_obj = self.pool.get('ir.sequence')
         prodlot_obj = self.pool.get('stock.production.lot')
-        for production in self.browse(cr, uid, ids):
-            if not production.product_lines:
-                self.action_compute(cr, uid, [production.id])
-                production = self.browse(cr, uid, [production.id])[0]
+        production = self.browse(cr, uid, ids[0])
+        prodlot_name = seq_obj.get(cr,uid, 'stock.lot.serial')
         if production.bom_id.routing_id.code:
-            prodlot_name = seq_obj.get(cr,uid, 'stock.lot.serial') + '_' +  production.bom_id.routing_id.code
-        else:
-            prodlot_name = seq_obj.get(cr,uid, 'stock.lot.serial')
+            prodlot_name += '_' +  production.bom_id.routing_id.code
         finished_prodlot_data = {
             'product_id': production.product_id.id,
             'name': prodlot_name,
@@ -47,8 +43,7 @@ class mrp_production(osv.osv):
         data = {
             'prodlot_id': finished_prodlot_id,
         }                
-        stock_move_id = move_obj.search(cr, uid, [('name','=','PROD:' + production.name),('date','=',production.date_planned),('location_id','=',7)])[0]
-        move_obj.write(cr, uid, stock_move_id, data, context=None)
+        move_obj.write(cr, uid, [move.id for move in production.move_created_ids], data)
         
         return res
 
