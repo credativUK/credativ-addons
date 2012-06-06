@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
     <data>
-        <record id="view_picking_zipregion_form" model="ir.ui.view">
-            <field name="name">stock.picking.form.inheritzip</field>
+        <record id="view_stock_picking_zipregion_filter" model="ir.ui.view">
+            <field name="name">stock.picking.list.select.inheritzip</field>
             <field name="model">stock.picking</field>
-            <field name="inherit_id" ref="stock.view_picking_form"/>
-            <field name="type">form</field>
+            <field name="inherit_id" ref="stock.view_stock_picking_filter"/>
+            <field name="type">search</field>
             <field name="arch" type="xml">
-                <form position="inside">
-                    <field name="region_group_id_select" select="2" invisible="1"/>
-                </form>
+                <field name="stock_journal_id" position="after">
+                    <field name="region_group_id_select"/>
+                </field>
             </field>
         </record>
-
-        <record id="view_move_zipregion_form" model="ir.ui.view">
-            <field name="name">stock.move.form.inheritzip</field>
+        <record id="view_move_zipregion_search" model="ir.ui.view">
+            <field name="name">stock.move.search.inheritzip</field>
             <field name="model">stock.move</field>
-            <field name="inherit_id" ref="stock.view_move_form"/>
-            <field name="type">form</field>
+            <field name="inherit_id" ref="stock.view_move_search"/>
+            <field name="type">search</field>
+            <field eval="3" name="priority"/>
             <field name="arch" type="xml">
-                <form position="inside">
-                    <field name="region_group_id_select" select="2" invisible="1"/>
-                </form>
+                <field name="date" position="after">
+                    <field name="region_group_id_select"/>
+                </field>
             </field>
         </record>
     </data>
