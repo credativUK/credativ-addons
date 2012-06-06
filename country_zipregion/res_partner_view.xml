@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_partner_address_zipregion_tree" model="ir.ui.view">
+            <field name="name">res.partner.address.tree.inheritzip</field>
+            <field name="model">res.partner.address</field>
+            <field name="inherit_id" ref="base.view_partner_address_tree"/>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <field name="country_id" position="after">
+                    <field name="region_group_names"/>
+                </field>
+            </field>
+        </record>
+
+        <record id="view_partner_address_zipregion_form" model="ir.ui.view">
+            <field name="name">res.partner.address.form1.inheritzip</field>
+            <field name="model">res.partner.address</field>
+            <field name="inherit_id" ref="base.view_partner_address_form1"/>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form position="inside">
+                    <separator string="Zip Region Groups" colspan="4"/>
+                    <field name="region_group_ids" nolabel="1" colspan="4"/>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_res_partner_address_zipregion_filter" model="ir.ui.view">
+            <field name="name">res.partner.address.select.inheritzip</field>
+            <field name="model">res.partner.address</field>
+            <field name="inherit_id" ref="base.view_res_partner_address_filter"/>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <field name="country_id" position="after">
+                    <field name="region_group_id_select"/>
+                </field>
+            </field>
+        </record>
+
+       <record id="view_res_partner__zipregionfilter" model="ir.ui.view">
+            <field name="name">res.partner.select.inheritzip</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_res_partner_filter"/>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <field name="user_id" position="after">
+                    <field name="region_group_id_select"/>
+                </field>
+            </field>
+        </record>
+    </data>
+</openerp>

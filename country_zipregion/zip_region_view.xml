@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_zip_region_tree" model="ir.ui.view">
+            <field name="name">res.zip_region.tree</field>
+            <field name="model">res.zip_region</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Zip Region">
+                    <field name="name"/>
+                    <field name="country_id"/>
+                    <field name="zip_csv"/>
+                    <field name="zip_regex"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_zip_region_form" model="ir.ui.view">
+            <field name="name">res.zip_region.form</field>
+            <field name="model">res.zip_region</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Zip Region">
+                    <group colspan="4">
+                        <field name="name" select="1"/>
+                        <field name="country_id" select="1"/>
+                        <field name="zip_csv" on_change="onchange_zip_csv(zip_csv, regex_match)" attrs="{'readonly':[('regex_match','=','True')]}"/>
+                        <field name="regex_match" on_change="onchange_zip_csv(zip_csv, regex_match)"/>
+                        <field name="zip_regex" colspan="4" on_change="onchange_zip_regex(zip_regex)" attrs="{'invisible':[('regex_match','!=','True')]}"/>
+                    </group>
+                    <separator string="Zip Region Groups" colspan="4"/>
+                    <field name="group_ids" nolabel="1" colspan="4"/>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_zip_region" model="ir.actions.act_window">
+            <field name="name">Zip Regions</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">res.zip_region</field>
+            <field name="view_type">form</field>
+            <field name="view_id" ref="view_zip_region_tree"/>
+        </record>
+
+        <menuitem action="action_zip_region" id="menu_zip_region" parent="base.menu_localisation"/>
+
+        <record id="view_zip_region_group_tree" model="ir.ui.view">
+            <field name="name">res.zip_region_group.tree</field>
+            <field name="model">res.zip_region_group</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Zip Region Group">
+                    <field name="name"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_zip_region_group_form" model="ir.ui.view">
+            <field name="name">res.zip_region_group.form</field>
+            <field name="model">res.zip_region_group</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Zip Region Group">
+                    <group colspan="4">
+                        <field name="name" select="1"/>
+                    </group>
+                    <separator string="Zip Regions" colspan="4"/>
+                    <field name="region_ids" nolabel="1" colspan="4"/>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_zip_region_group" model="ir.actions.act_window">
+            <field name="name">Zip Region Groups</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">res.zip_region_group</field>
+            <field name="view_type">form</field>
+            <field name="view_id" ref="view_zip_region_group_tree"/>
+        </record>
+
+        <menuitem action="action_zip_region_group" id="menu_zip_region_group" parent="base.menu_localisation"/>
+
+    </data>
+</openerp>

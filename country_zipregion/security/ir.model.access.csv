@@ -1,0 +1,5 @@
+"id","name","model_id:id","group_id:id","perm_read","perm_write","perm_create","perm_unlink"
+"access_zip_region","res.zip_region","model_res_zip_region","base.group_user",1,0,0,0
+"access_zip_region_all","res.zip_region","model_res_zip_region","base.group_partner_manager",1,1,1,1
+"access_zip_region_group","res.zip_region_group","model_res_zip_region_group","base.group_user",1,0,0,0
+"access_zip_region_group_all","res.zip_region_group","model_res_zip_region_group","base.group_partner_manager",1,1,1,1
