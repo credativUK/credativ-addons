@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_sales_order_zipregion_filter" model="ir.ui.view">
+            <field name="name">sale.order.list.select.inheritzip</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <field name="user_id" position="after">
+                    <field name="region_group_id_select"/>
+                </field>
+            </field>
+        </record>
+    </data>
+</openerp>
