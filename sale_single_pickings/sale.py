@@ -134,7 +134,7 @@ class sale(osv.osv):
         wf_service = netsvc.LocalService("workflow")
         move_obj = self.pool.get('stock.move')
         picking_obj = self.pool.get('stock.picking')
-        procurement_obj = self.pool.get('mrp.procurement')
+        procurement_obj = self.pool.get('procurement.order')
         proc_ids = []
 
         for line in order_lines:
@@ -190,10 +190,7 @@ class sale(osv.osv):
     
     def action_ship_create(self, cr, uid, ids, context=None):
         for order in self.browse(cr, uid, ids, context=context):
-            if order.name in ("SO-SMOKE-TEST", "SO-SMOKE-TEST-CHAINED", "test_order_2", "lp:461801", "lp:399817"): # The XML unit tests for sale fail with this change
-                return super(sale, self).action_ship_create(cr, uid, ids, context)
-            else:
-                self._create_pickings_and_procurements(cr, uid, order, order.order_line, None, context=context)
+            self._create_pickings_and_procurements(cr, uid, order, order.order_line, None, context=context)
         return True
 
 sale()

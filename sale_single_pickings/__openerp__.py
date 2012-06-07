@@ -18,6 +18,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################{
+{
     'name': 'Sale Single Pickings',
     'version': '1.0',
     'category': 'Generic Modules/Sales & Purchases',
