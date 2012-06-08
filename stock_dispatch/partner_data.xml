@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<openerp>
+<data noupdate="1">
+        <record id="res_partner_category_dispatch" model="res.partner.category">
+                <field name="name">Dispatch Partner</field>
+        </record>
+</data>
+</openerp>
+
