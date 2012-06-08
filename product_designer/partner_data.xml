@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<openerp>
+<data noupdate="1">
+        <record id="product_designer.res_partner_category_designer" model="res.partner.category">
+                <field name="name">Product Designer</field>
+        </record>
+</data>
+</openerp>
+
