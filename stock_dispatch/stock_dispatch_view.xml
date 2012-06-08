@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
     <data>
+        <menuitem id="menu_stock_dispatch" parent="stock.menu_stock_root" name="Moves Pending Dispatch"/>
+
         <record id="action_available_moves" model="ir.actions.act_window">
             <field name="name">Pending Dispatch</field>
             <field name="res_model">stock.move</field>
@@ -9,7 +11,7 @@
             <field name="domain">[('state', '=', 'assigned'), ('picking_type', '=', 'out')]</field>
             <field name="view_id" ref="stock.stock_move_tree"/>
         </record>
-        <menuitem action="action_available_moves" id="menu_picking_waiting" parent="stock.menu_stock_root"/>
+        <menuitem action="action_available_moves" id="menu_waiting" parent="menu_stock_dispatch"/>
 
         <record id="action_nodispatch_moves" model="ir.actions.act_window">
             <field name="name">Not in Dispatches</field>
@@ -19,7 +21,7 @@
             <field name="domain">[('state', '=', 'assigned'), ('picking_type', '=', 'out'), ('dispatch_id', '=', False)]</field>
             <field name="view_id" ref="stock.stock_move_tree"/>
         </record>
-        <menuitem action="action_nodispatch_moves" id="menu_picking_nodispatch" parent="menu_picking_waiting"/>
+        <menuitem action="action_nodispatch_moves" id="menu_nodispatch" parent="menu_stock_dispatch"/>
 
         <record id="view_dispatch_tree" model="ir.ui.view">
             <field name="name">stock.dispatch.tree</field>
@@ -89,32 +91,16 @@
             </field>
         </record>
 
+        <menuitem id="menu_action_dispatch_root" parent="stock.menu_stock_root" name="Dispatches"/>
+
         <record id="action_dispatch_form" model="ir.actions.act_window">
-            <field name="name">Dispatch</field>
+            <field name="name">Dispatches</field>
             <field name="type">ir.actions.act_window</field>
             <field name="res_model">stock.dispatch</field>
             <field name="view_type">form</field>
             <field name="view_id" ref="view_dispatch_tree"/>
         </record>
-        <menuitem action="action_dispatch_form" id="menu_action_dispatch_form" parent="stock.menu_stock_root"/>
-
-        <record id="action_dispatch_draft_form" model="ir.actions.act_window">
-            <field name="name">Draft Dispatch</field>
-            <field name="type">ir.actions.act_window</field>
-            <field name="res_model">stock.dispatch</field>
-            <field name="view_type">form</field>
-            <field name="domain">[('state','=','draft')]</field>
-        </record>
-        <menuitem action="action_dispatch_draft_form" id="menu_action_dispatch_draft_form" parent="menu_action_dispatch_form"/>
-
-        <record id="action_dispatch_confirmed_form" model="ir.actions.act_window">
-            <field name="name">Confirmed Dispatch</field>
-            <field name="type">ir.actions.act_window</field>
-            <field name="res_model">stock.dispatch</field>
-            <field name="view_type">form</field>
-            <field name="domain">[('state','=','confirmed')]</field>
-        </record>
-        <menuitem action="action_dispatch_confirmed_form" id="menu_action_dispatch_confirmed_form" parent="menu_action_dispatch_form"/>
+        <menuitem action="action_dispatch_form" id="menu_action_dispatch_form" parent="menu_action_dispatch_root"/>
 
         <act_window
             domain="[('dispatch_id', '=', active_id)]"
