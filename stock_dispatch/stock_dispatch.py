@@ -31,6 +31,7 @@ class stock_dispatch(osv.osv):
     _description = 'Stock Dispatch'
     _rec_name = 'id'
     _columns = {
+        'name' : fields.char('Name', size=128, required=True, readonly=True, states={'draft': [('readonly', False)]}, select=True),
         'stock_moves': fields.one2many('stock.move', 'dispatch_id', 'Stock Moves', select=True, readonly=True, states={'draft':[('readonly',False)]}),
         'carrier_id': fields.many2one('res.partner', 'Carrier', required=True, select=True, readonly=True, states={'draft':[('readonly',False)]}),
         'complete_uid': fields.many2one('res.users', 'Completed User', readonly=True),
@@ -40,9 +41,13 @@ class stock_dispatch(osv.osv):
         'dispatch_date': fields.date('Planned Dispatch Date', required=True, readonly=True, states={'draft':[('readonly',False)]}),
         }
 
-    _order = 'id desc'
+    _sql_constraints = [
+        ('name_uniq', 'unique(name)', 'Dispatch Name must be unique !'),
+    ]
+    _order = 'name desc'
 
     _defaults = {
+        'name': lambda obj, cr, uid, context: obj.pool.get('ir.sequence').get(cr, uid, 'stock.dispatch'),
         'state': lambda *a: 'draft',
         'date': lambda *a: time.strftime('%Y-%m-%d %H:%M:%S'),
         'dispatch_date': lambda *a: time.strftime('%Y-%m-%d'),
