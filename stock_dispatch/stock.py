@@ -28,6 +28,11 @@ class stock_move(osv.osv):
     _inherit = 'stock.move'
     _columns = {
         'dispatch_id': fields.many2one('stock.dispatch', 'Dispatch'),
+        'picking_type': fields.related('picking_id', 'type', type='selection', selection=
+                                        [('out', 'Sending Goods'),
+                                         ('in', 'Getting Goods'),
+                                         ('internal', 'Internal')],
+                                        string="Shipping Type", help="Shipping type specify, goods coming in or going out.", store=True, select=True),
         }
 
     def action_done(self, cr, uid, ids, context=None):

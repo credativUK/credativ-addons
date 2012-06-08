@@ -39,9 +39,10 @@ Customizations to allow stock moves to be grouped into dispatches so batch opera
     ],
     'update_xml' : [
         'security/ir.model.access.csv',
+        'partner_data.xml',
         'stock_dispatch_view.xml',
         'stock_dispatch_workflow.xml',
-        'stock_wizard.xml',
+        'wizard/wizard_create_dispatch_view.xml',
     ],
     'active': False,
     'installable': True

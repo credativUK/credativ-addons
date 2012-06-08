@@ -1,6 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
     <data>
+        <record id="action_available_moves" model="ir.actions.act_window">
+            <field name="name">Pending Dispatch</field>
+            <field name="res_model">stock.move</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="view_type">form</field>
+            <field name="domain">[('state', '=', 'assigned'), ('picking_type', '=', 'out')]</field>
+            <field name="view_id" ref="stock.stock_move_tree"/>
+        </record>
+        <menuitem action="action_available_moves" id="menu_picking_waiting" parent="stock.menu_stock_root"/>
+
+        <record id="action_nodispatch_moves" model="ir.actions.act_window">
+            <field name="name">Not in Dispatches</field>
+            <field name="res_model">stock.move</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="view_type">form</field>
+            <field name="domain">[('state', '=', 'assigned'), ('picking_type', '=', 'out'), ('dispatch_id', '=', False)]</field>
+            <field name="view_id" ref="stock.stock_move_tree"/>
+        </record>
+        <menuitem action="action_nodispatch_moves" id="menu_picking_nodispatch" parent="menu_picking_waiting"/>
+
         <record id="view_dispatch_tree" model="ir.ui.view">
             <field name="name">stock.dispatch.tree</field>
             <field name="model">stock.dispatch</field>
@@ -22,7 +42,7 @@
             <field name="arch" type="xml">
                 <form string="Dispatch">
                     <group colspan="4">
-                        <field name="carrier_id" select="1"/>
+                        <field name="carrier_id" select="1" domain="[('category_id', 'child_of', [%(res_partner_category_dispatch)d])]"/>
                         <field name="dispatch_date" select="1"/>
                         <field name="date"/>
                         <field name="complete_date"/>
@@ -36,7 +56,7 @@
                     </group>
                     <notebook colspan="4">
                         <page string="Stock Moves">
-                            <field colspan="4" name="stock_moves" nolabel="1" widget="many2many" on_change="on_change_stock_moves(stock_moves)"/>
+                            <field colspan="4" name="stock_moves" nolabel="1" widget="many2many" on_change="on_change_stock_moves(stock_moves)" domain="[('state', '=', 'assigned'), ('picking_type', '=', 'out'), '|', ('dispatch_id', '=', False), ('dispatch_id', '=', active_id)]" />
                         </page>
                     </notebook>
                 </form>
