@@ -42,6 +42,7 @@ Customizations to allow stock moves to be grouped into dispatches so batch opera
         'partner_data.xml',
         'stock_dispatch_view.xml',
         'stock_dispatch_workflow.xml',
+        'stock_dispatch_sequence.xml',
         'wizard/wizard_create_dispatch_view.xml',
     ],
     'active': False,

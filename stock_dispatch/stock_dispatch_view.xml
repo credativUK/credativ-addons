@@ -27,11 +27,36 @@
             <field name="type">tree</field>
             <field name="arch" type="xml">
                 <tree string="Dispatch">
-                    <field name="id"/>
+                    <field name="name"/>
                     <field name="carrier_id"/>
                     <field name="dispatch_date"/>
                     <field name="state"/>
                 </tree>
+            </field>
+        </record>
+
+        <record id="view_dispatch_search" model="ir.ui.view">
+            <field name="name">stock.dispatch.search</field>
+            <field name="model">stock.dispatch</field>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <search string="Search Dispatch">
+                    <group col="10" colspan="4">
+                        <filter icon="terp-dialog-close" string="Done" name="done" domain="[('state','=','done')]"/>
+                        <filter icon="terp-camera_test" string="Confirmed" name="confirmed" domain="[('state','=','confirmed')]"/>
+                        <filter icon="terp-stock" string="Draft" name="draft" domain="[('state','=','draft')]"/>
+                        <separator orientation="vertical"/>
+                        <field name="name"/>
+                        <field name="dispatch_date"/>
+                        <field name="carrier_id" widget="selection" domain="[('category_id', 'child_of', [%(res_partner_category_dispatch)d])]"/>
+                    </group>
+                    <newline/>
+                    <group expand="0" string="Group By..." colspan="4" col="4" groups="base.group_extended">
+                        <filter string="State" icon="terp-stock_effects-object-colorize" domain="[]" context="{'group_by':'state'}"/>
+                        <filter string="Planned Dispatch Date" icon="terp-go-month" domain="[]" context="{'group_by':'dispatch_date'}"/>
+                        <filter string="Carrier" icon="terp-personal" domain="[]" context="{'group_by':'carrier_id'}"/>
+                    </group>
+                </search>
             </field>
         </record>
 
@@ -42,6 +67,7 @@
             <field name="arch" type="xml">
                 <form string="Dispatch">
                     <group colspan="4">
+                        <field name="name" select="1"/>
                         <field name="carrier_id" select="1" domain="[('category_id', 'child_of', [%(res_partner_category_dispatch)d])]"/>
                         <field name="dispatch_date" select="1"/>
                         <field name="date"/>
