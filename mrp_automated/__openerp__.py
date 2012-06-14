@@ -34,7 +34,8 @@
         'sale',
         ],
     'update_xml': [
-        "mrp_workflow.xml"
+        "mrp_workflow.xml",
+        "stock_view.xml"
         ],
     'demo_xml': [],
     'test': [],
