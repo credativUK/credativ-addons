@@ -32,7 +32,7 @@ class sale_order(osv.osv):
             if arg[0] == 'region_group_id_select':
                 cr.execute("""SELECT so.id FROM sale_order so
                     INNER JOIN res_partner_address rpa ON so.partner_shipping_id = rpa.id
-                    INNER JOIN res_zip_region zr ON zr.country_id = rpa.country_id AND rpa.zip ~* COALESCE(zr.zip_regex, '')
+                    INNER JOIN res_zip_region zr ON zr.country_id = rpa.country_id AND COALESCE(rpa.zip, '') ~* COALESCE(zr.zip_regex, '')
                     INNER JOIN res_zip_region_rel zrr ON zrr.region_id = zr.id
                     INNER JOIN res_zip_region_group zrg ON zrr.region_group_id = zrg.id
                     WHERE zrg.id = %s GROUP BY so.id""", (arg[2],))
