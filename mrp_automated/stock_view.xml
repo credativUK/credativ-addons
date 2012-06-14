@@ -23,6 +23,11 @@
                         icon="gtk-convert" context="{'scrap': True}"
                         states="draft,waiting,confirmed,assigned" groups="base.group_extended"/>
                     <field name="prodlot_id" groups="base.group_extended"/>
+                    <button name="fifo" groups="base.group_extended"
+                            string="FIFO" type="object"
+                            icon="terp-stock_effects-object-colorize"
+                            states="draft,waiting,confirmed,assigned"
+                            colspan="1"/>
                     <button name="%(stock.track_line)d" string="Split in production lots" type="action"
                         icon="terp-stock_effects-object-colorize" attrs="{'invisible': [('prodlot_id','&lt;&gt;',False)]}"
                        states="draft,waiting,confirmed,assigned,done"
@@ -91,6 +96,22 @@
                             colspan="1"/>
                 </xpath>
            </field>
+        </record>
+
+        #
+        # Added FIFO(First In, First Out) production lot assignation button
+        #
+        <!-- Deliver Products - Form -->
+        <record id="view_move_form" model="ir.ui.view">
+            <field name="arch" type="xml">
+                <xpath expr="/form/group/button[@name='%(stock.track_line)d']" position="after">
+                    <button name="fifo" groups="base.group_extended"
+                            string="FIFO" type="object"
+                            icon="terp-stock_effects-object-colorize"
+                            states="draft,waiting,confirmed,assigned"
+                            colspan="1"/>
+                </xpath>
+            </field>
         </record>
    </data>
 </openerp>

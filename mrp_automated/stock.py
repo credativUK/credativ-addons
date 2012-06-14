@@ -44,4 +44,24 @@ class stock_move(osv.osv):
                       
         return True
 
+    def fifo(self, cr, uid, ids, context):
+        # assigns the oldest available production lot if one is available
+        move_obj = self.pool.get('stock.move')
+        move_item = move_obj.browse(cr,uid,ids[0])
+        if not move_item.prodlot_id.id:
+            prodlot_obj = self.pool.get('stock.production.lot')
+            prodlots = prodlot_obj.search(cr, uid, [('product_id','=',move_item.product_id.id),('stock_available','>',0)], order = 'create_date')
+            if prodlots:
+                move_obj.write(cr, uid, move_item.id, {'prodlot_id': prodlots[0]}, context)
+                return True
+            else:
+                print 'there are no production lots available for this product, please make one'
+                return False
+        else:
+            #whack in an error message saying that there is already something there, and that the user is a bellend
+            print 'the production lot is ', move_item.prodlot_id.id, ':', move_item.prodlot_id.name
+            return False
+        
+        return False
+
 stock_move()
