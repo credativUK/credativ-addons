@@ -32,7 +32,9 @@
         'mrp',
         'stock',
         ],
-    'update_xml': [],
+    'update_xml': [
+        "mrp_workflow.xml"
+        ],
     'demo_xml': [],
     'test': [],
     'installable': True,
