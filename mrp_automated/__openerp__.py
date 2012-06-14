@@ -31,6 +31,7 @@
     'depends': [
         'mrp',
         'stock',
+        'sale',
         ],
     'update_xml': [
         "mrp_workflow.xml"
