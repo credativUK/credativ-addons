@@ -51,9 +51,13 @@
             </field>
         </record>
         <record id="action_out_picking_move" model="ir.actions.act_window">
+            <field name="name">Deliver Products</field>
+            <field name="res_model">stock.move</field>
+            <field name="view_mode">tree,form</field>
             <field name="view_id" ref="view_move_tree_reception_picking_del"/>
         </record>
         <record model="ir.actions.act_window.view" id="action_move_out_picking_tree">
+            <field name="view_mode">tree</field>
             <field name="view_id" ref="view_move_tree_reception_picking_del"/>
         </record>
 
@@ -62,19 +66,26 @@
         #
         <!-- Receive Products - Form -->
         <record id="view_move_form_reception_picking" model="ir.ui.view">
+            <field name="name">stock.move.form2</field>
+            <field name="type">form</field>
+            <field name="model">stock.move</field>
+            <field name="inherit_id" ref="stock.view_move_form_reception_picking"/>
             <field name="arch" type="xml">
-                <xpath expr="/form/group/field[@name='prodlot_id']" position="after">
+                <xpath expr="/form/group/button[@name='%(stock.track_line)d']" position="after">
                     <button name="new_prod_lot" groups="base.group_extended"
                             string="New" type="object"
                             icon="terp-document-new"
                             states="draft,waiting,confirmed,assigned"
                             colspan="1"/>
-                    <newline/>
                 </xpath>
             </field>
         </record>
         <!-- Incomming Shipments - Form -->
         <record id="view_picking_in_form" model="ir.ui.view">
+            <field name="name">stock.picking.in.form</field>
+            <field name="type">form</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.view_picking_in_form"/>
             <field name="arch" type="xml">
                 <xpath expr="/form/notebook/page/field/tree/field[@name='prodlot_id']" position="after">
                     <button name="new_prod_lot" groups="base.group_extended"
@@ -87,6 +98,10 @@
         </record>
         <!-- Receive Products - Tree -->
         <record id="view_move_tree_reception_picking" model="ir.ui.view">
+            <field name="name">stock.move.tree2</field>
+            <field name="type">tree</field>
+            <field name="model">stock.move</field>
+            <field name="inherit_id" ref="stock.view_move_tree_reception_picking"/>
             <field name="arch" type="xml">
                 <xpath expr="/tree/field[@name='prodlot_id']" position="after">
                     <button name="new_prod_lot" groups="base.group_extended"
@@ -103,6 +118,10 @@
         #
         <!-- Deliver Products - Form -->
         <record id="view_move_form" model="ir.ui.view">
+            <field name="name">stock.move.form</field>
+            <field name="type">form</field>
+            <field name="model">stock.move</field>
+            <field name="inherit_id" ref="stock.view_move_form"/>
             <field name="arch" type="xml">
                 <xpath expr="/form/group/button[@name='%(stock.track_line)d']" position="after">
                     <button name="fifo" groups="base.group_extended"
@@ -113,5 +132,5 @@
                 </xpath>
             </field>
         </record>
-   </data>
+    </data>
 </openerp>
