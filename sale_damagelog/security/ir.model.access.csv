@@ -1,2 +1,5 @@
 "id","name","model_id:id","group_id:id","perm_read","perm_write","perm_create","perm_unlink"
+<<<<<<< TREE
+"access_sale_damagelog","sale.damagelog","model_sale_damagelog","base.group_sale_salesman",1,1,1,1=======
 "access_sale_damagelog","sale.damagelog","model_sale_damagelog","base.group_sale_salesman",1,1,1,1
+>>>>>>> MERGE-SOURCE

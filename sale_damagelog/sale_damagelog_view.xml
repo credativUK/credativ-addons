@@ -120,7 +120,7 @@
         
         <!-- Menu for Damage Log -->
         
-        <menuitem action="action_sale_damagelog_tree" id="menu_sale_damagelog" parent="sale.menu_sale_root"/>
+        <menuitem action="action_sale_damagelog_tree" id="menu_sale_damagelog" parent="base.menu_sales"/>
 
         <!-- Link from Products to Damage Log -->
 

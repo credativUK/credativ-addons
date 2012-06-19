@@ -34,10 +34,10 @@ class sale_damagelog(osv.osv):
                 'partner_id':fields.related('sale_order_id', 'partner_id', type='many2one', relation='res.partner',string='Customer', readonly=True),
                 'product_id':fields.related('stock_move_id', 'product_id', type='many2one', relation='product.product',string='Product', required=True),
                 'product_sku': fields.related('product_id', 'default_code',type='char',size=16, string='Product Code', readonly=True),
-                'dispatch_date' : fields.related('stock_move_id', 'date_planned', type='datetime', string='Order Date',readonly=True),
+                'dispatch_date' : fields.related('stock_move_id', 'date', type='datetime', string='Dispatch Date',readonly=True),
                 'log_date':fields.datetime('Date Created', readonly=True),
                 'log_uid':fields.many2one('res.users','Created By', readonly=True),
-                'claim_ids':fields.one2many('crm.case','damagelog_id','Claims'),
+                'claim_ids':fields.one2many('crm.claim','damagelog_id','Claims'),
                 'customer_refund_id':fields.many2one('account.invoice','Customer Refund'),
                 'customer_refund_amount':fields.related('customer_refund_id','amount_total',type='float',string='Refund Amount'),
                 'issue_description':fields.text('Comments'),
@@ -70,7 +70,7 @@ class sale_damagelog(osv.osv):
             value['product_qty'] = stock_move_rec.product_qty
             value['product_supplier'] = stock_move_rec.product_id.seller_ids and stock_move_rec.product_id.seller_ids[0].name.id or False
             value['sale_line_id'] = stock_move_rec.sale_line_id.id
-            value['dispatch_date'] = stock_move_rec.date_planned
+            value['dispatch_date'] = stock_move_rec.date
             value['partner_id'] = stock_move_rec.sale_line_id.order_id.partner_id.id or False
         return {'value':value}
     
@@ -104,17 +104,18 @@ class sale_damagelog(osv.osv):
         
         inv_id = invoice_obj.create(cr, uid, refund_vals, context=context)
         self.write(cr, uid, ids, {'customer_refund_id':inv_id}, context=context)
+        return {}
 
 sale_damagelog()
 
 
-class crm_case(osv.osv):
+class crm_claim(osv.osv):
     
-    _inherit = 'crm.case'
+    _inherit = 'crm.claim'
     
     _columns = {
                 'damagelog_id':fields.many2one('sale.damagelog','Damage Log'),
                 }
     
-crm_case()
+crm_claim()
 
