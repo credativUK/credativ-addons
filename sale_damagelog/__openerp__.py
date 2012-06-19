@@ -9,7 +9,8 @@
     'init_xml': [],
     'update_xml': [
         'security/ir.model.access.csv',
-        'sale_damagelog_view.xml'
+        'sale_damagelog_view.xml',
+        'wizard/create_damagelog.xml'
     ],
     'demo_xml': [],
     'installable': True,

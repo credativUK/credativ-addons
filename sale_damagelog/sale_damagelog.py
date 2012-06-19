@@ -10,7 +10,7 @@ class sale_damagelog(osv.osv):
         res = {}
         attachment_obj = self.pool.get('ir.attachment')
         for id in ids: 
-            res[id] = attachment_obj.search(cr, uid, [('res_id','=',id),('res_model','=','sale.damagelog')], context=context, count=True)
+            res[id] = len(attachment_obj.search(cr, uid, [('res_id','=',id),('res_model','=','sale.damagelog')], context=context))
         return res
     
     def _get_name(self, cr, uid, ids, name, arg, context={}):
