@@ -50,7 +50,7 @@ class sale_create_damagelog_from_product(damagelog_osv, osv.osv_memory):
     _name = "sale.create.damagelog.from.product"
     _description = "Create Damage Log From Product"
     _columns = {
-        'stock_move_id' : fields.many2one('stock.move', 'Stock Move', required=True),
+        'stock_move_id' : fields.many2one('stock.move', 'Stock Move', domain=[('product_id','=','product_id')], required=True),
         'product_id' : fields.many2one('product.product', 'Product'),
     }
 
@@ -65,7 +65,7 @@ class sale_create_damagelog_from_outgoing(damagelog_osv, osv.osv_memory):
     _name = "sale.create.damagelog.from.outgoing"
     _description = "Create Damage Log From Packing"
     _columns = {
-        'stock_move_id' : fields.many2one('stock.move', 'Stock Move', required=True),
+        'stock_move_id' : fields.many2one('stock.move', 'Stock Move', domain=[('picking_id','=','picking_id')], required=True),
         'picking_id' : fields.many2one('stock.picking', 'Picking'),
     }
 
@@ -80,13 +80,13 @@ class sale_create_damagelog_from_saleorder(damagelog_osv, osv.osv_memory):
     _name = "sale.create.damagelog.from.saleorder"
     _description = "Create Damage Log From Sale Order"
     _columns = {
-        'stock_move_id' : fields.many2one('stock.move', 'Stock Move', required=True),
-        'order_id' : fields.many2one('sale.order', 'Sale Order'),
+        'stock_move_id' : fields.many2one('stock.move', 'Stock Move', domain=[('sale_line_id.order_id','=','sale_order_id')], required=True),
+        'sale_order_id' : fields.many2one('sale.order', 'Sale Order'),
     }
 
     def default_get(self, cr, uid, fields, context):
         res = super(sale_create_damagelog_from_saleorder, self).default_get(cr, uid, fields, context=context)
-        res.update({'order_id': context and context.get('active_id', False) or False})
+        res.update({'sale_order_id': context and context.get('active_id', False) or False})
         return res
 
 sale_create_damagelog_from_saleorder()
