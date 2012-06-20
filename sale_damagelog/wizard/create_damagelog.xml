@@ -46,8 +46,8 @@
             <field name="arch" type="xml">
                 <form string="Create Damage Log From Sale Order">
                     <group col="2" colspan="2">
-                        <field name="order_id" invisible="1"/>
-                        <field name="stock_move_id" domain="[('sale_line_id.order_id','=',order_id)]"/>
+                        <field name="sale_order_id" invisible="1"/>
+                        <field name="stock_move_id" domain="[('sale_line_id.order_id','=',sale_order_id)]"/>
                     </group>
                     <newline/>
                     <group col="2" colspan="2">
