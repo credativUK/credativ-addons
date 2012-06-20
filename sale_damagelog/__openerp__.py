@@ -5,11 +5,12 @@
     'category': 'Generic Modules/Sales & Purchases',
     'description': """This Module allows you to manage the log for damaged products.""",
     'author': 'Credativ',
-    'depends': ['sale','crm_configuration'],
+    'depends': ['sale','crm','crm_claim'],
     'init_xml': [],
     'update_xml': [
         'security/ir.model.access.csv',
-        'sale_damagelog_view.xml'
+        'sale_damagelog_view.xml',
+        'wizard/create_damagelog.xml'
     ],
     'demo_xml': [],
     'installable': True,

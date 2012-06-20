@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution	
+#    OpenERP, Open Source Management Solution   
 #    Copyright (C) 2012 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -21,5 +21,6 @@
 
 import mrp
 import stock
+import sale
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

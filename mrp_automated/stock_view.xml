@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+        #
+        # Added new tree view for deliver products so that the new button would not appear on both receive and deliver
+        #
+        <!-- Deliver Products - Tree -->
+        <record id="view_move_tree_reception_picking_del" model="ir.ui.view">
+            <field name="name">stock.move.tree2.del</field>
+            <field name="model">stock.move</field>
+            <field name="type">tree</field>
+            <field name="priority" eval="6" />
+            <field name="arch" type="xml">
+                <tree colors="grey:state in ('cancel')" string="Moves">
+                    <field name="picking_id" string="Reference"/>
+                    <field name="origin"/>
+                    <field name="partner_id" string="Partner"/>
+                    <field name="product_id"/>
+                    <field name="product_qty" />
+                    <field name="product_uom" string="UoM"/>
+                    <button name="%(stock.move_scrap)d"
+                        string="Scrap Products" type="action"
+                        icon="gtk-convert" context="{'scrap': True}"
+                        states="draft,waiting,confirmed,assigned" groups="base.group_extended"/>
+                    <field name="prodlot_id" groups="base.group_extended"/>
+                    <button name="fifo" groups="base.group_extended"
+                            string="FIFO" type="object"
+                            icon="terp-stock_effects-object-colorize"
+                            states="draft,waiting,confirmed,assigned"
+                            colspan="1"/>
+                    <button name="%(stock.track_line)d" string="Split in production lots" type="action"
+                        icon="terp-stock_effects-object-colorize" attrs="{'invisible': [('prodlot_id','&lt;&gt;',False)]}"
+                       states="draft,waiting,confirmed,assigned,done"
+                        context="{'default_use_exist': picking_id.type=='in'}"
+                        groups="base.group_extended"/>
+                    <field name="tracking_id" groups="base.group_extended"/>
+                    <button name="setlast_tracking" string="Put in current pack" type="object"
+                        attrs="{'invisible': [('tracking_id','&lt;&gt;',False)]}"
+                        groups="base.group_extended"
+                        icon="terp-stock_effects-object-colorize"
+                        states="draft,assigned,confirmed,done"/>
+                    <button name="%(stock.split_into)d" string="Put in a new pack" type="action"
+                        groups="base.group_extended"
+                        icon="terp-stock_effects-object-colorize"
+                        states="draft,assigned,confirmed,done"/>
+                    <field name="date"/>
+                    <field name="state"/>
+                    <button name="action_assign" states="confirmed" string="Set Available" type="object" icon="gtk-yes"/>
+                    <button name="%(stock.action_partial_move_server)d" string="Process" type="action" states="confirmed,assigned" icon="gtk-go-forward"/>
+                </tree>
+            </field>
+        </record>
+        <record id="action_out_picking_move" model="ir.actions.act_window">
+            <field name="name">Deliver Products</field>
+            <field name="res_model">stock.move</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_move_tree_reception_picking_del"/>
+        </record>
+        <record model="ir.actions.act_window.view" id="action_move_out_picking_tree">
+            <field name="view_mode">tree</field>
+            <field name="view_id" ref="view_move_tree_reception_picking_del"/>
+        </record>
+
+        #
+        # Add new production lot button
+        #
+        <!-- Receive Products - Form -->
+        <record id="view_move_form_reception_picking" model="ir.ui.view">
+            <field name="name">stock.move.form2</field>
+            <field name="type">form</field>
+            <field name="model">stock.move</field>
+            <field name="inherit_id" ref="stock.view_move_form_reception_picking"/>
+            <field name="arch" type="xml">
+                <xpath expr="/form/group/button[@name='%(stock.track_line)d']" position="after">
+                    <button name="new_prod_lot" groups="base.group_extended"
+                            string="New" type="object"
+                            icon="terp-document-new"
+                            states="draft,waiting,confirmed,assigned"
+                            colspan="1"/>
+                </xpath>
+            </field>
+        </record>
+        <!-- Incomming Shipments - Form -->
+        <record id="view_picking_in_form" model="ir.ui.view">
+            <field name="name">stock.picking.in.form</field>
+            <field name="type">form</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.view_picking_in_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="/form/notebook/page/field/tree/field[@name='prodlot_id']" position="after">
+                    <button name="new_prod_lot" groups="base.group_extended"
+                            string="New" type="object"
+                            icon="terp-document-new"
+                            states="draft,waiting,confirmed,assigned"
+                            colspan="1"/>
+                </xpath>
+           </field>
+        </record>
+        <!-- Receive Products - Tree -->
+        <record id="view_move_tree_reception_picking" model="ir.ui.view">
+            <field name="name">stock.move.tree2</field>
+            <field name="type">tree</field>
+            <field name="model">stock.move</field>
+            <field name="inherit_id" ref="stock.view_move_tree_reception_picking"/>
+            <field name="arch" type="xml">
+                <xpath expr="/tree/field[@name='prodlot_id']" position="after">
+                    <button name="new_prod_lot" groups="base.group_extended"
+                            string="New" type="object"
+                            icon="terp-document-new"
+                            states="draft,waiting,confirmed,assigned"
+                            colspan="1"/>
+                </xpath>
+           </field>
+        </record>
+
+        #
+        # Added FIFO(First In, First Out) production lot assignation button
+        #
+        <!-- Deliver Products - Form -->
+        <record id="view_move_form" model="ir.ui.view">
+            <field name="name">stock.move.form</field>
+            <field name="type">form</field>
+            <field name="model">stock.move</field>
+            <field name="inherit_id" ref="stock.view_move_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="/form/group/button[@name='%(stock.track_line)d']" position="after">
+                    <button name="fifo" groups="base.group_extended"
+                            string="FIFO" type="object"
+                            icon="terp-stock_effects-object-colorize"
+                            states="draft,waiting,confirmed,assigned"
+                            colspan="1"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</openerp>

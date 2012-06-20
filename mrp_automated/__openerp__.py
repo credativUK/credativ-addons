@@ -31,8 +31,12 @@
     'depends': [
         'mrp',
         'stock',
+        'sale',
         ],
-    'update_xml': [],
+    'update_xml': [
+        "mrp_workflow.xml",
+        "stock_view.xml"
+        ],
     'demo_xml': [],
     'test': [],
     'installable': True,

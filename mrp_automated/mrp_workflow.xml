@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+        <record id="mrp.prod_trans_picking_ready" model="workflow.transition">
+            <field name="act_to" ref="mrp.prod_act_in_production"/>
+        </record>
+    </data>
+</openerp>

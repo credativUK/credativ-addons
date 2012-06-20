@@ -120,7 +120,7 @@
         
         <!-- Menu for Damage Log -->
         
-        <menuitem action="action_sale_damagelog_tree" id="menu_sale_damagelog" parent="sale.menu_sale_root"/>
+        <menuitem action="action_sale_damagelog_tree" id="menu_sale_damagelog" parent="base.menu_sales"/>
 
         <!-- Link from Products to Damage Log -->
 
@@ -129,36 +129,6 @@
         <!-- Link from Sale Orders to Damage Log -->
     
         <act_window domain="[('sale_order_id', '=', active_id)]" id="act_sale_order_sale_damagelog" name="Damage Log" res_model="sale.damagelog" src_model="sale.order"/>
-    
-        <!-- Wizard to create a damagelog from Products -->
-    
-        <wizard
-            id="wizard_product_create_damagelog"
-            keyword="client_action_multi"
-            model="product.product"
-            name="product_create_damagelog"
-            menu="True"
-            string="Create Damage Log"/>
-    
-        <!-- Wizard to create a damagelog from Sale Orders -->
-    
-        <wizard
-            id="wizard_saleorder_create_damagelog"
-            keyword="client_action_multi"
-            model="sale.order"
-            name="saleorder_create_damagelog"
-            menu="True"
-            string="Create Damage Log"/>
-    
-        <!-- Wizard to create a damagelog from Outgoing Products(Picking) -->	
-    
-        <wizard
-            id="wizard_outgoing_create_damagelog"
-            keyword="client_action_multi"
-            model="stock.picking"
-            name="outgoing_create_damagelog"
-            menu="True"
-            string="Create Damage Log"/>
     
     </data>
 </openerp>
