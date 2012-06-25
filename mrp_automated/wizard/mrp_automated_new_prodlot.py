@@ -51,10 +51,8 @@ class wiz_new_prodlot(osv.osv_memory):
                 for result in self.browse(cr, uid, ids):
                     if result.prodlot_id:
                         context['prodlot_name'] = result.prodlot_id
-                        print ids
                         move_obj.new_prod_lot(cr, uid, [move.id], context)
                     else:
-                        print ids
                         move_obj.new_prod_lot(cr, uid, [move.id], context)
 
         return {}

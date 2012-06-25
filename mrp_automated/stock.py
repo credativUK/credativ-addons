@@ -52,14 +52,13 @@ class stock_move(osv.osv):
         # add's a new production lot to a stock move
         move_obj = self.pool.get('stock.move')
         for move in move_obj.browse(cr, uid, ids):
-            if move.prodlot_id:
+            if not move.prodlot_id:
                 prodlot_obj = self.pool.get('stock.production.lot')
                 seq_obj = self.pool.get('ir.sequence')
                 if context['prodlot_name'] == False:
                     prodlot_name = seq_obj.get(cr,uid, 'stock.lot.serial')
                 else:
                     prodlot_name = context['prodlot_name']
-        
                 prodlot_id = prodlot_obj.create(cr, uid, {
                     'product_id': move.product_id.id,
                     'name': prodlot_name
