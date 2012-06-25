@@ -27,21 +27,44 @@ class stock_move(osv.osv):
     
     _inherit = "stock.move"
 
+    def check_prodlot_field(self, cr, uid, ids, context):
+        # If the prodlot field is empty open the new prodlot wizard
+        for stock_move in self.pool.get('stock.move').browse(cr, uid, ids):
+            if stock_move.prodlot_id:
+                raise osv.except_osv('No Action Taken','There is already a production lot assigned')
+                return False
+            else:
+                return {
+                    'name':("New Production Lot"),
+                    'view_mode': 'form',
+                    'view_id': False,
+                    'view_type': 'form',
+                    'res_model': 'wiz.new.prodlot',
+                    'res_id': False,
+                    'type': 'ir.actions.act_window',
+                    'nodestroy': True,
+                    'target': 'new',
+                    'domain': '[]',
+                    'context': dict(context, active_ids=ids)
+                }
+
     def new_prod_lot(self, cr, uid, ids, context):
         # add's a new production lot to a stock move
         move_obj = self.pool.get('stock.move')
-        move_item = move_obj.browse(cr, uid, ids[0])
-        if not move_item.prodlot_id: 
-            prodlot_obj = self.pool.get('stock.production.lot')
-            seq_obj = self.pool.get('ir.sequence')
-            seq_next = seq_obj.get(cr,uid, 'stock.lot.serial')
+        for move in move_obj.browse(cr, uid, ids):
+            if move.prodlot_id:
+                prodlot_obj = self.pool.get('stock.production.lot')
+                seq_obj = self.pool.get('ir.sequence')
+                if context['prodlot_name'] == False:
+                    prodlot_name = seq_obj.get(cr,uid, 'stock.lot.serial')
+                else:
+                    prodlot_name = context['prodlot_name']
         
-            prodlot_id = prodlot_obj.create(cr, uid, {
-                'product_id': move_item.product_id.id,
-                'name': seq_next
-                })
-            move_obj.write(cr, uid, ids[0], {'prodlot_id':prodlot_id}, context)
-                      
+                prodlot_id = prodlot_obj.create(cr, uid, {
+                    'product_id': move.product_id.id,
+                    'name': prodlot_name
+                    })
+                move_obj.write(cr, uid, move.id, {'prodlot_id':prodlot_id}, context)
         return True
 
     def fifo(self, cr, uid, ids, context):

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        
+        <!--  Change Product Quantity -->
+        
+        <record id="view_new_prodlot_wizard" model="ir.ui.view">
+            <field name="name">New Production Lot</field>
+            <field name="model">wiz.new.prodlot</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="New Production Lot">
+                    <field name="prodlot_id"/>
+                    <newline/>
+                    <button icon='gtk-stop' special="cancel"
+                            string="Cancel" />
+                    <button name="add_new_prod_lot" string="Approve"
+                            colspan="1" type="object" icon="gtk-ok" />
+                </form>
+            </field>
+        </record>
+
+        <record id="action_new_prod_lot" model="ir.actions.act_window">
+            <field name="name">New Production Lot</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">wiz.new.prodlot</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>            
+        </record>
+        <record model="ir.values" id="wizard_new_prodlot">
+            <field name="model_id" ref="stock.model_stock_picking" />
+            <field name="object" eval="1" />
+            <field name="name">New Production Lot</field>
+            <field name="key2">client_action_multi</field>
+            <field name="value" eval="'ir.actions.act_window,' + str(ref('action_new_prod_lot'))" />
+            <field name="key">action</field>
+            <field name="model">stock.picking</field>
+        </record>
+        
+        </data>
+</openerp>      

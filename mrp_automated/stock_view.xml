@@ -80,6 +80,9 @@
                 </xpath>
             </field>
         </record>
+        #
+        # Add new production lot wizard button
+        #
         <!-- Incomming Shipments - Form -->
         <record id="view_picking_in_form" model="ir.ui.view">
             <field name="name">stock.picking.in.form</field>
@@ -88,11 +91,11 @@
             <field name="inherit_id" ref="stock.view_picking_in_form"/>
             <field name="arch" type="xml">
                 <xpath expr="/form/notebook/page/field/tree/field[@name='prodlot_id']" position="after">
-                    <button name="new_prod_lot" groups="base.group_extended"
-                            string="New" type="object"
+                    <button type="object"
                             icon="terp-document-new"
-                            states="draft,waiting,confirmed,assigned"
-                            colspan="1"/>
+                            name="check_prodlot_field"
+                            string="New Production Lot"
+                            states="draft,waiting,confirmed,assigned"/>
                 </xpath>
            </field>
         </record>

@@ -35,7 +35,8 @@
         ],
     'update_xml': [
         "mrp_workflow.xml",
-        "stock_view.xml"
+        "stock_view.xml",
+        "wizard/mrp_automated_new_prodlot_view.xml"
         ],
     'demo_xml': [],
     'test': [],

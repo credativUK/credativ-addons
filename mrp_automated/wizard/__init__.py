@@ -19,9 +19,7 @@
 #
 ##############################################################################
 
-import mrp
-import stock
-import sale
-import wizard
+import mrp_automated_new_prodlot
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+
