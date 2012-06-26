@@ -64,26 +64,36 @@ class stock_move(osv.osv):
                     'name': prodlot_name
                     })
                 move_obj.write(cr, uid, move.id, {'prodlot_id':prodlot_id}, context)
+            else:
+                raise osv.except_osv('No Action Taken', 'The production lot is already assigned')
         return True
 
     def fifo(self, cr, uid, ids, context):
         # assigns the oldest available production lot if one is available
         move_obj = self.pool.get('stock.move')
-        move_item = move_obj.browse(cr,uid,ids[0])
+        move_item = move_obj.browse(cr,uid,ids[0]) # for the sake of convention I should really do this with a loop
         if not move_item.prodlot_id.id:
             prodlot_obj = self.pool.get('stock.production.lot')
             prodlots = prodlot_obj.search(cr, uid, [('product_id','=',move_item.product_id.id),('stock_available','>',0)], order = 'create_date')
             if prodlots:
-                move_obj.write(cr, uid, move_item.id, {'prodlot_id': prodlots[0]}, context)
-                return True
+                available_stock = 0
+                for prodlot in prodlots:
+                    if prodlot_obj._get_stock(cr, uid, prodlot, prodlot, context)[prodlot] > move_item.product_qty:
+                        move_obj.write(cr, uid, move_item.id, {'prodlot_id': prodlot}, context)
+                        return True
+                    else:
+                        available_stock += prodlot_obj._get_stock(cr, uid, prodlot, prodlot, context)[prodlot]
+                if available_stock > move_item.product_qty:
+                    raise osv.except_osv('Split Required','There are enough production lots available but the stock move will need to be split')
+                    return False
+                else:
+                    raise osv.except_osv('Not Enough Stock','There is only %s in production lots assign to:\n%s' % (available_stock, move_item.product_id.name))
+                    return False
             else:
-                print 'there are no production lots available for this product, please make one'
+                raise osv.except_osv('No Production Lots', 'There are no production lots available for:\n%s' % move_item.product_id.name)
                 return False
         else:
-            #whack in an error message saying that there is already something there, and that the user is a bellend
-            print 'the production lot is ', move_item.prodlot_id.id, ':', move_item.prodlot_id.name
+            raise osv.except_osv('No Action Taken', 'The production lot is already assigned')
             return False
-        
-        return False
 
 stock_move()
