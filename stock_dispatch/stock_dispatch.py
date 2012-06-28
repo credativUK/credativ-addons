@@ -29,7 +29,7 @@ import netsvc
 class stock_dispatch(osv.osv):
     _name = 'stock.dispatch'
     _description = 'Stock Dispatch'
-    _rec_name = 'id'
+
     _columns = {
         'name' : fields.char('Name', size=128, required=True, readonly=True, states={'draft': [('readonly', False)]}, select=True),
         'stock_moves': fields.one2many('stock.move', 'dispatch_id', 'Stock Moves', select=True, readonly=True, states={'draft':[('readonly',False)]}),
