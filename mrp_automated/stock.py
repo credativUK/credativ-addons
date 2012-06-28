@@ -27,6 +27,41 @@ class stock_move(osv.osv):
     
     _inherit = "stock.move"
 
+    def action_done(self, cr, uid, ids, context=None):
+        # auto generate customer invoice of  if the stock move is to the customer and the customers sale order has been satisfied
+        res = super(stock_move, self).action_done(cr, uid, ids, context=context)
+        return res
+        stock_move_obj = self.pool.get('stock.move')
+        sale_order_obj = self.pool.get('sale.order')
+        stock_picking_obj = self.pool.get('stock.picking')
+        for stock_move_item in stock_move_obj.browse(cr, uid, ids):
+            # i'm assuming that the sale_line_id will be carried over if a delivery is split, need to check to see if this is the case
+            if stock_move_item.sale_line_id:
+                sale_order = sale_order_obj.browse(cr, uid, stock_move_item.sale_line_id)
+                if sale_order.order_policy == 'automatic':
+                    if not sale_order.invoice_quantity == 'procurement':
+                        print 'the invoice_quantity should be procurement. It\'s been changed, hunt it down and destroy'
+                    journal_id = 9 # sale_journal. check to see if this is the right journal
+                    context['inv_type'] = stock_picking_obj._get_invoice_type(stock_picking_obj.browse(cr, uid, stock_move_item.picking_id))
+                    context['date_inv'] = datetime.datetime.now().strftime("%Y-%m-%d")
+                    stock_picking_obj.action_invoice_create(cr, uid, [stock_move_item.picking_id.id], journal_id=journal_id, context=context)
+            if stock_move_item.production_id:
+                ratio = stock_move_item.product_qty / stock_move_item.production_id.product_qty
+                # will only need to change sekf back to what it was if i include the raw material invoice creation in this function
+                old_self = self
+                self = self.pool.get('purchase.order')
+                purchase_order_ids = self.pool.get('purchase.order').search(cr, uid,[('origin','like',stock_move_item.production_id.name)])
+                invoice_id = self.action_invoice_create(cr, uid, purchase_order_ids, {})
+                self = old_self
+                invoice_line_ids = self.pool.get('account.invoice.line').search(cr, uid, [('invoice_id','=', invoice_id)])
+                stock_move_item.production_id.product_lines[0].product_id.id
+                for production_line in stock_move_item.production_id.product_lines:
+                    for invoice_line in self.pool.get('account.invoice.line').browse(cr, uid, invoice_line_ids):
+                        if production_line.product_id == invoice_line.product_id:
+                            self.pool.get('account.invoice.line').write(cr, uid, invoice_line.id,{'quantity':ratio * production_line.product_qty})
+        return True
+
+
     def check_prodlot_field(self, cr, uid, ids, context):
         # If the prodlot field is empty open the new prodlot wizard
         for stock_move in self.pool.get('stock.move').browse(cr, uid, ids):
