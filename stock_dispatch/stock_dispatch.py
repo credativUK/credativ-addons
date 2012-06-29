@@ -37,7 +37,7 @@ class stock_dispatch(osv.osv):
         'complete_uid': fields.many2one('res.users', 'Completed User', readonly=True),
         'complete_date': fields.datetime('Completed date', readonly=True),
         'date': fields.datetime('Date created', readonly=True),
-        'state': fields.selection([('draft', 'Draft'), ('confirmed', 'Confirmed'), ('done', 'Done'), ('cancel', 'Cancelled')], 'Status', readonly=True, select=True),
+        'state': fields.selection([('draft', 'New'), ('waiting', 'Waiting Another Move'), ('confirmed', 'Waiting Availability'), ('assigned', 'Available'), ('done', 'Done'), ('cancel', 'Cancelled')], 'Status', readonly=True, select=True),
         'dispatch_date': fields.date('Planned Dispatch Date', required=True, readonly=True, states={'draft':[('readonly',False)]}),
         }
 
