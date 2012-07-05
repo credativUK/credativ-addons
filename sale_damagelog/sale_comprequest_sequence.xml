@@ -12,7 +12,7 @@
             <field name="name">Compensation Request</field>
             <field name="code">sale.comprequest</field>
             <field name="prefix">CR</field>
-            <field name="padding">3</field>
+            <field name="padding">8</field>
         </record>
 
     </data>
