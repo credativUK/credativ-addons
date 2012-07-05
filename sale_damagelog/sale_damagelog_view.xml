@@ -50,20 +50,22 @@
                                 <field name="issue_description" colspan="4" nolabel="1"/>
                             </page>
                             <page string="Claims Details">
-                                <field name="claim_ids" colspan="4" nolabel="1" string="claims" context="{'default_partner_id':partner_id}"/>
+                                <field name="claim_ids" colspan="4" nolabel="1" context="{'default_partner_id':partner_id}"/>
+                            </page>
+                            <page string="Compensation Requests">
+                                <field name="comprequest_ids" colspan="4" nolabel="1" context="{'default_damagelog_id':active_id}">
+                                    <tree string="Sale Compensation Requests">
+                                        <field name="name"/>
+                                        <field name="refund_type"/>
+                                        <field name="refund_value"/>
+                                        <field name="state"/>
+                                        <field name="repl_order_ref"/>
+                                        <field name="write_date"/>
+                                        <field name="write_uid"/>
+                                    </tree>
+                                </field>
                             </page>
                             <page string="Other Info">
-                                <separator string="Refund Details:" colspan="4"/>
-                                <group colspan="4">
-                                    <group colspan="3">
-                                        <field name="customer_refund_id" select="2" readonly="1"/>
-                                        <field name="customer_refund_amount" select="2" readonly="1"/>
-                                    </group>
-                                    <group colspan="1">
-                                        <button name="create_refund" string="Create Refund" type="object" attrs="{'readonly':[('customer_refund_id','!=',False)]}"/>
-                                    </group>
-                                </group>
-                                <newline/>
                                 <separator string="Log Details:" colspan="4"/>
                                 <field name="log_date" select="2"/>
                                 <field name="log_uid" select="2"/>
@@ -91,7 +93,6 @@
                     <field name="product_id"/>
                     <field name="product_sku"/>
                     <field name="product_supplier"/>
-                    <field name="customer_refund_amount"/>
                     <field name="flag_transport"/>
                     <field name="flag_product_quality"/>
                 </tree>

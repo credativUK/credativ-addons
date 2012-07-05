@@ -1,0 +1,121 @@
+from osv import osv,fields
+import time
+
+class sale_comprequest(osv.osv):
+
+    _name = 'sale.comprequest'
+
+    _columns = {
+        'name' : fields.char('Name', size=128, required=True),
+        'damagelog_id': fields.many2one('sale.damagelog', 'Damage Log', required=True, readonly=True, states={'draft': [('readonly', False)]}),
+        'create_date': fields.datetime('Date Created', readonly=True),
+        'create_uid': fields.many2one('res.users', 'Created By', readonly=True),
+        'write_date': fields.datetime('Last Updated', readonly=True),
+        'write_uid': fields.many2one('res.users', 'Last Updated By', readonly=True),
+        'cancel_date': fields.datetime('Last Updated', readonly=True),
+        'cancel_uid': fields.many2one('res.users', 'Last Updated By', readonly=True),
+        'confirm_date': fields.datetime('Last Updated', readonly=True),
+        'confirm_uid': fields.many2one('res.users', 'Last Updated By', readonly=True),
+        'sale_order_id': fields.related('damagelog_id', 'stock_move_id', 'sale_line_id', 'order_id', type='many2one', relation='sale.order', string='Order Reference', readonly=True),
+        'date_order': fields.related('sale_order_id', 'date_order', type='date', string='Order Date', readonly=True),
+        'product_id': fields.related('damagelog_id', 'stock_move_id', 'product_id', type='many2one', relation='product.product', string='Product', readonly=True),
+        'product_sku': fields.related('product_id', 'default_code', type='char', size=16, string='Product Code', readonly=True),
+        'product_value': fields.float('Product Value', readonly=True),
+        'product_supplier': fields.many2one('res.partner', 'Product Supplier', readonly=True),
+        'partner_id': fields.related('sale_order_id', 'partner_id', type='many2one', relation='res.partner', string='Partner', readonly=True),
+        'refund_type': fields.selection(
+            [('refund', 'Refund'), ('voucher', 'Voucher'),
+             ('replace-same', 'Replacement - same'),
+             ('replace-diff', 'Replacement - different'),
+             ('redispatch', 'Redispatch')], 'Refund Type', required=True, readonly=True, states={'draft': [('readonly', False)]}),
+        'refund_value': fields.float('Refund Value', readonly=True, states={'draft': [('readonly', False)]}),
+        'state': fields.selection([('draft', 'Draft'), ('confirmed', 'Confirmed'), ('cancel', 'Cancelled')], 'Refund Status', required=True, readonly=True),
+        'voucher_code': fields.char('Voucher Code', size=200, readonly=True, states={'draft': [('readonly', False)]}),
+        'repl_order_ref': fields.char('Replacement / Redispatch Order Reference', size=200, readonly=True, states={'draft': [('readonly', False)]}),
+        'comment_ids': fields.one2many('sale.comprequest.comment', 'comprequest_id'),
+        'notes': fields.text('Notes'),
+    }
+    
+    _sql_constraints = [
+        ('name_uniq', 'unique(name)', 'Compensation Request name must be unique !'),
+    ]
+    _order = 'name desc'
+    
+    _defaults = {
+        'name': lambda obj, cr, uid, context: obj.pool.get('ir.sequence').get(cr, uid, 'sale.comprequest'),
+        'state': lambda *a: 'draft',
+    }
+
+    def onchange_damagelog_id(self, cr, uid, ids, damagelog_id):
+        value = {}
+        if damagelog_id:
+            damagelog_rec = self.pool.get('sale.damagelog').browse(cr, uid, damagelog_id)
+            value['sale_order_id'] = damagelog_rec.sale_order_id.id
+            value['partner_id'] = damagelog_rec.sale_order_id.partner_id.id
+            value['product_id'] =  damagelog_rec.product_id.id
+            value['product_sku'] =  damagelog_rec.product_sku
+            value['product_supplier'] = damagelog_rec.product_supplier.id
+            value['product_value'] = damagelog_rec.product_id.list_price
+        return {'value':value}
+    
+    def action_cancel(self, cr, uid, ids, *args):
+        self.write(cr, uid, ids, {'state': 'cancel', 'cancel_uid': uid, 'cancel_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=None)
+
+    def action_draft(self, cr, uid, ids, *args):
+        self.write(cr, uid, ids, {'state': 'draft'}, context=None)
+
+    def action_confirm(self, cr, uid, ids, *args):
+        self.write(cr, uid, ids, {'state': 'confirmed', 'confirm_uid': uid, 'confirm_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=None)
+
+    def create(self, cr, uid, values, context):
+        if values.get('refund_type') in ('replace-same', 'replace-diff', 'redispatch') and not values.get('repl_order_ref', False):
+            raise osv.except_osv('User Error', 'Replacement / Redispatch Order Reference is required for this refund type')
+        if values.get('refund_type') == 'voucher' and not values.get('voucher_code', False):
+            raise osv.except_osv('User Error', 'Voucher Code is required for this refund type')
+        if values.get('refund_type') == 'refund' and not values.get('refund_value', False):
+            raise osv.except_osv('User Error', 'Refund Value is required for this refund type')
+        return super(sale_comprequest, self).create(cr, uid, values, context)
+
+    def write(self, cr, uid, ids, values, context):
+        comp_reqs = self.browse(cr, uid, ids, context)
+        for comp_req in comp_reqs:
+            if 'refund_type' in values:
+                refund_type = values.get('refund_type', False)
+            else:
+                refund_type = comp_req.refund_type
+            if 'repl_order_ref' in values:
+                repl_order_ref = values.get('repl_order_ref', False)
+            else:
+                repl_order_ref = comp_req.repl_order_ref
+            if 'voucher_code' in values:
+                voucher_code = values.get('voucher_code', False)
+            else:
+                voucher_code = comp_req.voucher_code 
+            if 'refund_value' in values:
+                refund_value = values.get('refund_value', False)
+            else:
+                refund_value = comp_req.refund_value 
+            if refund_type in ('replace-same', 'replace-diff', 'redispatch') and not repl_order_ref:
+                raise osv.except_osv('User Error', 'Replacement / Redispatch Order Reference is required for this refund type')
+            if refund_type == 'voucher' and not voucher_code:
+                raise osv.except_osv('User Error', 'Voucher Code is required for this refund type')
+            if refund_type == 'refund' and not refund_value:
+                raise osv.except_osv('User Error', 'Refund Value is required for this refund type')
+        return super(sale_comprequest, self).write(cr, uid, ids, values, context)
+
+sale_comprequest()
+
+
+class sale_comprequest_comment(osv.osv):
+
+    _name = 'sale.comprequest.comment'
+    _rec_name = 'id'
+
+    _columns = {
+        'comprequest_id': fields.many2one('sale.comprequest', 'Compensation Request', required=True),
+        'create_date': fields.datetime('Date Created', readonly=True),
+        'create_uid': fields.many2one('res.users', 'Created By', readonly=True),
+        'comment': fields.text('Comment'),
+    }
+
+sale_comprequest_comment()

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data noupdate="1">
+
+        <!-- Sequences for sale.comprequest -->
+        <record id="seq_type_sale_comprequest" model="ir.sequence.type">
+            <field name="name">Compensation Request</field>
+            <field name="code">sale.comprequest</field>
+        </record>
+
+        <record id="seq_sale_comprequest" model="ir.sequence">
+            <field name="name">Compensation Request</field>
+            <field name="code">sale.comprequest</field>
+            <field name="prefix">CR</field>
+            <field name="padding">3</field>
+        </record>
+
+    </data>
+</openerp>

@@ -4,7 +4,7 @@ import time
 class sale_damagelog(osv.osv):
 
     _name = 'sale.damagelog'
-    _rec_name = 'ticket_id'
+    _rec_name = 'name'
     
     def _get_attachments_count(self, cr, uid, ids, name, arg, context={}):
         res = {}
@@ -47,6 +47,7 @@ class sale_damagelog(osv.osv):
                 'product_supplier':fields.many2one('res.partner','Product Supplier'),
                 'product_qty':fields.float('Qty'),
                 'product_uom':fields.many2one('product.uom','UoM', required=True),
+                'comprequest_ids': fields.one2many('sale.comprequest', 'damagelog_id', 'Compensation Requests'),
                 }
     
     _defaults = {
@@ -75,6 +76,7 @@ class sale_damagelog(osv.osv):
         return {'value':value}
     
     def create_refund(self, cr, uid, ids, context=None):
+        return # Deprecated
         if context is None:
             context = {}
         invoice_obj = self.pool.get('account.invoice')
