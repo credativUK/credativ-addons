@@ -65,43 +65,15 @@ class sale_comprequest(osv.osv):
         self.write(cr, uid, ids, {'state': 'draft'}, context=None)
 
     def action_confirm(self, cr, uid, ids, *args):
-        self.write(cr, uid, ids, {'state': 'confirmed', 'confirm_uid': uid, 'confirm_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=None)
-
-    def create(self, cr, uid, values, context):
-        if values.get('refund_type') in ('replace-same', 'replace-diff', 'redispatch') and not values.get('repl_order_ref', False):
-            raise osv.except_osv('User Error', 'Replacement / Redispatch Order Reference is required for this refund type')
-        if values.get('refund_type') == 'voucher' and not values.get('voucher_code', False):
-            raise osv.except_osv('User Error', 'Voucher Code is required for this refund type')
-        if values.get('refund_type') == 'refund' and not values.get('refund_value', False):
-            raise osv.except_osv('User Error', 'Refund Value is required for this refund type')
-        return super(sale_comprequest, self).create(cr, uid, values, context)
-
-    def write(self, cr, uid, ids, values, context):
-        comp_reqs = self.browse(cr, uid, ids, context)
+        comp_reqs = self.browse(cr, uid, ids, context=None)
         for comp_req in comp_reqs:
-            if 'refund_type' in values:
-                refund_type = values.get('refund_type', False)
-            else:
-                refund_type = comp_req.refund_type
-            if 'repl_order_ref' in values:
-                repl_order_ref = values.get('repl_order_ref', False)
-            else:
-                repl_order_ref = comp_req.repl_order_ref
-            if 'voucher_code' in values:
-                voucher_code = values.get('voucher_code', False)
-            else:
-                voucher_code = comp_req.voucher_code 
-            if 'refund_value' in values:
-                refund_value = values.get('refund_value', False)
-            else:
-                refund_value = comp_req.refund_value 
-            if refund_type in ('replace-same', 'replace-diff', 'redispatch') and not repl_order_ref:
+            if comp_req.refund_type in ('replace-same', 'replace-diff', 'redispatch') and not comp_req.repl_order_ref:
                 raise osv.except_osv('User Error', 'Replacement / Redispatch Order Reference is required for this refund type')
-            if refund_type == 'voucher' and not voucher_code:
+            if comp_req.refund_type == 'voucher' and not comp_req.voucher_code:
                 raise osv.except_osv('User Error', 'Voucher Code is required for this refund type')
-            if refund_type == 'refund' and not refund_value:
+            if comp_req.refund_type == 'refund' and not comp_req.refund_value:
                 raise osv.except_osv('User Error', 'Refund Value is required for this refund type')
-        return super(sale_comprequest, self).write(cr, uid, ids, values, context)
+        self.write(cr, uid, ids, {'state': 'confirmed', 'confirm_uid': uid, 'confirm_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=None)
 
 sale_comprequest()
 

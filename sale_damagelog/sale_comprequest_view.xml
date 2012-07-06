@@ -49,8 +49,8 @@
             </notebook>
             <group col="5" colspan="4">
                 <field name="state" select="1"/>
-                <button name="action_confirm" states="draft" string="Confirm" icon="gtk-go-forward" type="object"/>
-                <button name="action_cancel" states="draft,confirmed" string="Cancel" icon="gtk-cancel" type="object"/>
+                <button name="action_confirm" states="draft" string="Confirm" icon="gtk-go-forward" type="object" groups="sale.group_sale_manager"/>
+                <button name="action_cancel" states="draft,confirmed" string="Cancel" icon="gtk-cancel" type="object" groups="sale.group_sale_manager"/>
                 <button name="action_draft" states="cancel" string="Set to Draft" icon="gtk-convert" type="object"/>
             </group>
           </group>
