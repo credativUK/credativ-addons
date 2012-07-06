@@ -21,7 +21,7 @@ class sale_comprequest(osv.osv):
         'product_id': fields.related('damagelog_id', 'stock_move_id', 'product_id', type='many2one', relation='product.product', string='Product', readonly=True),
         'product_sku': fields.related('product_id', 'default_code', type='char', size=16, string='Product Code', readonly=True),
         'product_value': fields.float('Product Value', readonly=True),
-        'product_supplier': fields.many2one('res.partner', 'Product Supplier', readonly=True),
+        'product_supplier': fields.related('damagelog_id', 'product_supplier', type='many2one', relation='res.partner', string='Product Supplier', readonly=True),
         'partner_id': fields.related('sale_order_id', 'partner_id', type='many2one', relation='res.partner', string='Partner', readonly=True),
         'refund_type': fields.selection(
             [('refund', 'Refund'), ('voucher', 'Voucher'),
@@ -31,7 +31,7 @@ class sale_comprequest(osv.osv):
         'refund_value': fields.float('Refund Value', readonly=True, states={'draft': [('readonly', False)]}),
         'state': fields.selection([('draft', 'Draft'), ('confirmed', 'Confirmed'), ('cancel', 'Cancelled')], 'Refund Status', required=True, readonly=True),
         'voucher_code': fields.char('Voucher Code', size=200, readonly=True, states={'draft': [('readonly', False)]}),
-        'repl_order_ref': fields.char('Replacement / Redispatch Order Reference', size=200, readonly=True, states={'draft': [('readonly', False)]}),
+        'repl_order_ref': fields.many2one('sale.order', 'Replacement / Redispatch Order Reference', readonly=True, states={'draft': [('readonly', False)]}),
         'comment_ids': fields.one2many('sale.comprequest.comment', 'comprequest_id'),
         'notes': fields.text('Notes'),
     }
@@ -71,7 +71,7 @@ class sale_comprequest(osv.osv):
                 raise osv.except_osv('User Error', 'Replacement / Redispatch Order Reference is required for this refund type')
             if comp_req.refund_type == 'voucher' and not comp_req.voucher_code:
                 raise osv.except_osv('User Error', 'Voucher Code is required for this refund type')
-            if comp_req.refund_type == 'refund' and not comp_req.refund_value:
+            if comp_req.refund_type in ('refund', 'voucher') and not comp_req.refund_value:
                 raise osv.except_osv('User Error', 'Refund Value is required for this refund type')
         self.write(cr, uid, ids, {'state': 'confirmed', 'confirm_uid': uid, 'confirm_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=None)
 
