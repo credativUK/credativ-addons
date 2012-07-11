@@ -1,2 +1,4 @@
 "id","name","model_id:id","group_id:id","perm_read","perm_write","perm_create","perm_unlink"
 "access_sale_damagelog","sale.damagelog","model_sale_damagelog","base.group_sale_salesman",1,1,1,1
+"access_sale_comprequest","sale.comprequest","model_sale_comprequest","base.group_sale_salesman",1,1,1,1
+"access_sale_comprequest_comment","sale.comprequest.comment","model_sale_comprequest_comment","base.group_sale_salesman",1,1,1,1
