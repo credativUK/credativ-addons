@@ -84,7 +84,7 @@
       </field>
     </record>
 
-<!--    <record id="view_sale_comprequest_search" model="ir.ui.view">
+    <record id="view_sale_comprequest_search" model="ir.ui.view">
       <field name="name">sale.comprequest.search</field>
       <field name="model">sale.comprequest</field>
       <field name="type">search</field>
@@ -106,7 +106,7 @@
           </group>
         </search>
       </field>
-  </record>-->
+  </record>
 
     <!-- Action for the view -->
 
