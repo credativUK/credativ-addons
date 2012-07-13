@@ -1,5 +1,4 @@
 # -*- encoding: utf-8 -*-
-
 import wizard
 import sale_damagelog
 import sale_comprequest
