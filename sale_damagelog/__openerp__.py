@@ -10,6 +10,8 @@
     'update_xml': [
         'security/ir.model.access.csv',
         'sale_damagelog_view.xml',
+        'sale_comprequest_view.xml',
+        'sale_comprequest_sequence.xml',
         'wizard/create_damagelog.xml'
     ],
     'demo_xml': [],
