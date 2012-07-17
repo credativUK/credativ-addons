@@ -87,6 +87,10 @@ class report_result(osv.osv):
         for f in report.field_ids:
             if f.field_id.model:
                 fields['field'+str(i)] = models[f.field_id.model][f.field_id.name]
+                if f.field_name:
+                    fields['field'+str(i)]['string'] = f.field_name
+                if f.field_type:
+                    fields['field'+str(i)]['type'] = f.field_type
                 i += 1
             else:
                 fields['column_count'] = {'readonly': True, 'type': 'integer', 'string': 'Count', 'size': 64, 'name': 'column_count'}
