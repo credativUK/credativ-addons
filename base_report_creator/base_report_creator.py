@@ -372,7 +372,16 @@ class report_creator(osv.osv):
                     continue
                 t = self.pool.get(f.field_id.model_id.model)._table
                 if f.group_method == 'group':
-                    fields.append('\t'+t+'.'+f.field_id.name+' as field'+str(i))
+                    coalesce_types = {
+                            'char': "''",
+                            'date': "''",
+                            'integer': '0'
+                        }
+                    coalesce_type = coalesce_types.get(f.field_id.ttype, 'NULL')
+                    if f.field_id.ttype == 'date':
+                        fields.append('\tcoalesce('+t+'.'+f.field_id.name+'::varchar,'+coalesce_type+') as field'+str(i))
+                    else:
+                        fields.append('\tcoalesce('+t+'.'+f.field_id.name+','+coalesce_type+') as field'+str(i))
                     groupby.append(t+'.'+f.field_id.name)
                 else:
                     fields.append('\t'+f.group_method+'('+t+'.'+f.field_id.name+')'+' as field'+str(i))
