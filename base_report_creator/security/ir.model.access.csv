@@ -4,3 +4,4 @@
 "access_base_report_creator_report_filter","base_report_creator.report.filter","model_base_report_creator_report_filter","base.group_system",1,1,1,1
 "access_report_menu_create","report.menu.create","model_report_menu_create","base.group_system",1,1,1,1
 "access_report_open","report.open","model_report_open","base.group_system",1,1,1,1
+"access_wiz_dates","base_report_creator.date_wizard","model_base_report_creator_date_wizard","base.group_system",1,1,1,1

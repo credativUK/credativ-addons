@@ -22,37 +22,18 @@
 from osv import fields, osv
 from tools.translate import _
 from tools import ustr
+import string
 
-class report_creator(osv.osv):
+class report_result(osv.osv):
     """
     Report Creator
     """
-    _name = "base_report_creator.report"
+    _name = "base_report_creator_report.result"
     _description = "Report"
-    model_set_id = False
     #
     # Should request only used fields
     #
-    def export_data(self, cr, uid, ids, fields_to_export, context=None):
-        
-        if context is None:
-            context = {}
-        data_l = self.read(cr, uid, ids, ['sql_query'], context)
-        final_datas = []
-        #start Loop
-        for i in data_l:
-            datas = []
-            for key, value in i.items():
-                if key not in fields_to_export:
-                    continue
-                if isinstance(value, tuple):
-                    datas.append(ustr(value[1]))
-                else:
-                    datas.append(ustr(value))
-            final_datas += [datas]
-            #End Loop
-        return {'datas': final_datas}
-        
+
     def fields_get(self, cr, user, fields=None, context=None):
         """
         Get Fields.
@@ -63,12 +44,12 @@ class report_creator(osv.osv):
         """
         if context is None:
             context = {}
-            
+
         data = context and context.get('report_id', False) or False
         if (not context) or 'report_id' not in context:
-            return super(report_creator, self).fields_get(cr, user, fields, context)
+            return super(report_result, self).fields_get(cr, user, fields, context)
         if data:
-            report = self.browse(cr, user, data)
+            report = self.pool.get('base_report_creator.report').browse(cr, user, data,context=context)
             models = {}
         #Start Loop
             for model in report.model_ids:
@@ -82,12 +63,8 @@ class report_creator(osv.osv):
                     i += 1
                 else:
                     fields['column_count'] = {'readonly': True, 'type': 'integer', 'string': 'Count', 'size': 64, 'name': 'column_count'}
-              
             return fields
 
-    #
-    # Should Call self.fields_get !
-    #
     def fields_view_get(self, cr, user, view_id=None, view_type='form', context=None, toolbar=False, submenu=False):
         """
         Overrides orm field_view_get.
@@ -97,11 +74,11 @@ class report_creator(osv.osv):
         """
         if context is None:
             context = {}
-          
-        data = context and context.get('report_id', False) or False    
+        
+        data = context and context.get('report_id', False) or False
         if (not context) or 'report_id' not in context:
-            return super(report_creator, self).fields_view_get(cr, user, view_id, view_type, context, toolbar=toolbar, submenu=submenu)
-        report = self.browse(cr, user, data)
+            return super(report_result, self).fields_view_get(cr, user, view_id, view_type, context, toolbar=toolbar, submenu=submenu)
+        report = self.pool.get('base_report_creator.report').browse(cr, user, context.get('report_id'), context=context)
         models = {}
         for model in report.model_ids:
             models[model.model] = self.pool.get(model.model).fields_get(cr, user, context=context)
@@ -113,8 +90,8 @@ class report_creator(osv.osv):
                 i += 1
             else:
                 fields['column_count'] = {'readonly': True, 'type': 'integer', 'string': 'Count', 'size': 64, 'name': 'column_count'}
-            
-        arch = '<?xml version="1.0" encoding="utf-8"?>\n'
+
+        arch = '<?xml version="1.0"?>'
         if view_type == 'graph':
             orientation_eval = {'horz':'horizontal','vert' :'vertical'}
             orientation = eval(report.view_graph_orientation,orientation_eval)
@@ -128,7 +105,7 @@ class report_creator(osv.osv):
                             i += 1
                         else:
                             arch += '<field name="%s" select="1"/>' % ('column_count',)
-                    
+
         elif view_type == 'calendar':
             required_types = ['date_start', 'date_delay', 'color']
             set_dict = {'view_type':view_type, 'string':report.name}
@@ -141,7 +118,7 @@ class report_creator(osv.osv):
                         i += 1
                     else:
                         field_cal = 'column_count'
-                    set_dict[f.calendar_mode] = field_cal   
+                    set_dict[f.calendar_mode] = field_cal
                     del required_types[required_types.index(f.calendar_mode)]
 
                 else:
@@ -149,8 +126,8 @@ class report_creator(osv.osv):
                         temp_list.append('''<field name = "%(name)s" select = "1"/>''' % {'name': 'field' + str(i)})
                         i += 1
                     else:
-                        temp_list.append('''<field name="%(name)s" select="1"/>''' % {'name':'column_count'})    
-                    
+                        temp_list.append('''<field name="%(name)s" select="1"/>''' % {'name':'column_count'})
+
             arch += '''<% (view_type)s string = "%(string)s" date_start = "%(date_start)s" ''' % set_dict
             if set_dict.get('date_delay', False):
                 arch += ''' date_delay = "%(date_delay)s"  ''' % set_dict
@@ -163,28 +140,28 @@ class report_creator(osv.osv):
             arch += '''>'''
             arch += ''.join(temp_list)
         else:
-            arch += '<%s string="%s">\n' % (view_type, report.name)
+            arch += '<%s string="%s">' % (view_type, report.name)
             i = 0
             for f in report.field_ids:
                 if f.field_id.model:
-                    arch += '<field name="%s" select="1"/>' % ('field' + str(i),)
+                    arch += '<field name="%s"/>' % ('field' + str(i),)
                     i += 1
                 else:
-                    arch += '<field name="%s" select="1"/>' % ('column_count',)
+                    arch += '<field name="%s"/>' % ('column_count',)
         arch += '</%s>' % (view_type,)
         result = {
             'arch': arch,
-            'fields': fields
+            'fields': fields,
+            'type': view_type,
         }
         result['toolbar'] = {
             'print': [],
             'action': [],
             'relate': []
         }
-        
         return result
 
-    def read(self, cr, user, ids, fields = None, context = None, load = '_classic_read'):
+    def read(self, cr, user, ids, fields=None, context=None, load='_classic_read'):
         """
         overrides  orm Read method.Read List of fields for report creator.
         @param cr: the current row, from the database cursor,
@@ -195,31 +172,11 @@ class report_creator(osv.osv):
         """
         if context is None:
             context = {}
-        data = context.get('report_id', False)
-        if (not context) or 'report_id' not in context:
-            return super(report_creator, self).read(cr, user, ids, fields, context, load)
-        ctx = context or {}
-        wp = ''
-        if data:
-            if self.model_set_id:
-                wp = [self._id_get(cr, user, data, context) + (' in (%s)' % (','.join(map(lambda x: "'" + str(x) + "'", ids))))]
-            report = self._sql_query_get(cr, user, [data], 'sql_query', None, ctx, where_plus = wp)
-            sql_query = report[data]
-            cr.execute(sql_query)
-            res = cr.dictfetchall()
-            fields_get = self.fields_get(cr, user, None, context)
-            for r in res:
-                for k in r:
-                    r[k] = r[k] or False
-                    field_dict = fields_get.get(k)
-                    field_type = field_dict and field_dict.get('type', False) or False
-                    if field_type and field_type == 'many2one':
-                        if r[k] == False:
-                            continue
-                        related_name = self.pool.get(field_dict.get('relation')).name_get(cr, user, [r[k]], context)[0]
-                        r[k] = related_name
-            
-            return res
+        report_id = context.get('active_id', False)
+        report = self.pool.get('base_report_creator.report').browse(cr, user, context.get('report_id'), context=context)
+        cr.execute(report._sql_query_get('sql_query', None, context=context, where_plus=None, limit=None, offset=None, escape=False)[report.id])
+        result = cr.dictfetchall()
+        return result
 
     def search(self, cr, user, args, offset=0, limit=None, order=None, context=None, count=False):
         """
@@ -227,16 +184,16 @@ class report_creator(osv.osv):
         @param cr: the current row, from the database cursor,
         @param user: the current user’s ID for security checks,
         @param args: list of tuples of form [(‘name_of_the_field’, ‘operator’, value), ...].
-        @return: List of id 
+        @return: List of id
         """
         if context is None:
             context = {}
         context_id = context.get('report_id', False)
-        
+
         if (not context) or 'report_id' not in context:
-            return super(report_creator, self).search(cr, user, args, offset, limit, order, context, count)
+            return {}
         if context_id:
-            report = self.browse(cr, user, context_id)
+            report = self.pool.get('base_report_creator.report').browse(cr, user, context_id, context=context)
             i = 0
             fields = {}
             for f in report.field_ids:
@@ -244,23 +201,59 @@ class report_creator(osv.osv):
                     fields['field'+str(i)] = (f.field_id.model, f.field_id.name)
                     i += 1
                 else:
-                    fields['column_count'] = (False, 'Count')   
+                    fields['column_count'] = (False, 'Count')
             newargs = []
             newargs2 = []
             for a in args:
                 if fields[a[0]][0]:
                     res = self.pool.get(fields[a[0]][0])._where_calc(cr, user, [[fields[a[0]][1], a[1], a[2]]], active_test = False, context = context)
-                    newargs += res[0]
-                    newargs2 += res[1]
+                    if report.manual_sql_query_enable:
+                        for searches in res.where_clause:
+                            to_replace = "%s.\"%s\"" % (self.pool.get(fields[a[0]][0])._table, fields[a[0]][1])
+                            newargs+=[searches.replace(to_replace, a[0])]
+                    else:
+                        newargs += res.where_clause
+                    newargs2 += res.where_clause_params
                 else:
                     newargs += [("count(*) " + a[1] +" " + str(a[2]))]
             ctx = context or {}
             ctx['getid'] = True
-            report = self._sql_query_get(cr, user, [context_id], 'sql_query', None, ctx, where_plus = newargs, limit=limit, offset=offset)
-            query = report[context_id]
-            cr.execute(query, newargs2)
+            sql_query = report._sql_query_get('sql_query', None, context=ctx, where_plus=newargs, limit=limit, offset=offset, escape=True)[report.id]
+            cr.execute(sql_query, newargs2)
             result = cr.fetchall()
             return map(lambda x: x[0], result)
+
+report_result()
+
+
+class report_creator(osv.osv):
+    """
+    Report Creator
+    """
+    _name = "base_report_creator.report"
+    _description = "Report"
+    model_set_id = False
+    #
+    # Should request only used fields
+    #
+    def export_data(self, cr, uid, ids, fields_to_export, context=None):
+        if context is None:
+            context = {}
+        data_l = self.read(cr, uid, ids, ['sql_query'], context=context)
+        final_datas = []
+        #start Loop
+        for record in data_l:
+            datas = []
+            for key in fields_to_export:
+                value = record.get(key,'')
+                if isinstance(value, tuple):
+                    datas.append(ustr(value[1]))
+                else:
+                    datas.append(ustr(value))
+            final_datas += [datas]
+            #End Loop
+        return {'datas': final_datas}
+
 
     def _path_get(self, cr, uid, models, filter_ids=[]):
         """
@@ -275,7 +268,7 @@ class report_creator(osv.osv):
         filter_list = []
         for model in models:
             model_dict[model.model] = self.pool.get(model.model)._table
-        
+
         model_list = model_dict.keys()
         reference_model_dict = {}
         for model in model_dict:
@@ -285,7 +278,7 @@ class report_creator(osv.osv):
             model_pool = self.pool.get(model)
             fields_get = model_pool.fields_get(cr, uid)
             model_columns = {}
-            
+
             def _get_inherit_fields(obj):
                 pool_model = self.pool.get(obj)
                 #Adding the columns of the model itself
@@ -294,11 +287,11 @@ class report_creator(osv.osv):
                 for record in pool_model._inherits.keys():
                     _get_inherit_fields(record)
 
-            _get_inherit_fields(model)         
-            
-            fields_filter = dict(filter(lambda x:x[1].get('relation', False) 
-                                        and x[1].get('relation') in rest_list 
-                                        and x[1].get('type') == 'many2one' 
+            _get_inherit_fields(model)
+
+            fields_filter = dict(filter(lambda x:x[1].get('relation', False)
+                                        and x[1].get('relation') in rest_list
+                                        and x[1].get('type') == 'many2one'
                                         and not (isinstance(model_columns[x[0]], fields.function) or isinstance(model_columns[x[0]], fields.related)), fields_get.items()))
             if fields_filter:
                 model in model_list and model_list.remove(model)
@@ -317,7 +310,7 @@ class report_creator(osv.osv):
                 if k in self.pool.get(model)._columns:
                     str_where = model_dict.get(model)+"."+ k + "=" + model_dict.get(v.get('relation'))+'.id'
                     where_list.append(str_where)
-                    
+
         if reference_model_dict:
             self.model_set_id = model_dict.get(reference_model_dict.keys()[reference_model_dict.values().index(min(reference_model_dict.values()))])
         if model_list and not len(model_dict.keys()) == 1:
@@ -349,23 +342,22 @@ class report_creator(osv.osv):
             if ret_str.endswith('or'):
                 ret_str = ret_str[0:len(ret_str)-2]
             ret_str = ret_str.strip()
-       
+
         return ret_str % {'uid': uid}
 
     def _id_get(self, cr, uid, id, context):
         """
         Get Model id
         """
-#       return 'min(sale_order_line.id)'
         return self.model_set_id and 'min('+self.model_set_id+'.id)'
 
-    def _sql_query_get(self, cr, uid, ids, prop, unknow_none, context, where_plus=[], limit=None, offset=None):
+    def _sql_query_get(self, cr, uid, ids, prop, unknow_none, context=None, where_plus=[], limit=None, offset=None, escape=False):
         """
         Get sql query which return on sql_query field.
-        @return: Dictionary of sql query. 
+        @return: Dictionary of sql query.
         """
         result = {}
-        for obj in self.browse(cr, uid, ids):
+        for obj in self.browse(cr, uid, ids, context=context):
             fields = []
             groupby = []
             i = 0
@@ -380,7 +372,7 @@ class report_creator(osv.osv):
                     groupby.append(t+'.'+f.field_id.name)
                 else:
                     fields.append('\t'+f.group_method+'('+t+'.'+f.field_id.name+')'+' as field'+str(i))
-                    
+
                 i += 1
             models = self._path_get(cr, uid, obj.model_ids, obj.filter_ids)
             check = self._id_get(cr, uid, ids[0], context)
@@ -403,62 +395,125 @@ class report_creator(osv.osv):
                     result[obj.id] += " offset "+str(offset)
             else:
                 result[obj.id] = False
+
+        # Custom SQL query
+        for res in self.browse(cr, uid, ids):
+            if res.manual_sql_query_enable:
+                report_sql = string.Template(res.manual_sql_query).safe_substitute(context.get('dates', {}))
+                if escape:
+                    report_sql =report_sql.replace('%', '%%')
+                result[res.id] = "WITH REPORT AS (%s) SELECT * FROM REPORT\n" % (report_sql.strip(';'))
+                if where_plus:
+                    result[res.id] += "WHERE %s\n" % ("\nAND ".join(where_plus))
+                if limit:
+                    result[res.id] += " LIMIT %d\n" % (limit)
+                if offset:
+                    result[res.id] += " OFFSET %d\n" % (offset)
         return result
 
     _columns = {
-        'name': fields.char('Report Name', size=64, required=True), 
+        'name': fields.char('Report Name', size=64, required=True),
         'type': fields.selection([('list', 'Rows And Columns Report'), ], 'Report Type', required=True), #('sum','Summation Report')
-        'active': fields.boolean('Active', help="If the active field is set to true, it will allow you to hide the report without removing it."), 
-        'view_type1': fields.selection([('form', 'Form'), 
-                                        ('tree', 'Tree'), 
-                                        ('graph', 'Graph'), 
-                                        ('calendar', 'Calendar')], 'First View', required=True), 
-        'view_type2': fields.selection([('', '/'), 
-                                        ('form', 'Form'), 
-                                        ('tree', 'Tree'), 
-                                        ('graph', 'Graph'), 
-                                        ('calendar', 'Calendar')], 'Second View'), 
-        'view_type3': fields.selection([('', '/'), 
-                                        ('form', 'Form'), 
-                                        ('tree', 'Tree'), 
-                                        ('graph', 'Graph'), 
-                                        ('calendar', 'Calendar')], 'Third View'), 
-        'view_graph_type': fields.selection([('pie', 'Pie Chart'), 
-                                             ('bar', 'Bar Chart')], 'Graph Type', required=True), 
-        'view_graph_orientation': fields.selection([('horz', 'Horizontal'), 
-                                                    ('vert', 'Vertical')], 'Graph Orientation', required=True), 
-        'model_ids': fields.many2many('ir.model', 'base_report_creator_report_model_rel', 'report_id', 'model_id', 'Reported Objects'), 
-        'field_ids': fields.one2many('base_report_creator.report.fields', 'report_id', 'Fields to Display'), 
-        'filter_ids': fields.one2many('base_report_creator.report.filter', 'report_id', 'Filters'), 
-        'state': fields.selection([
-                ('draft', 'Draft'), 
-                ('valid', 'Valid')], 
-                'State', required=True, 
-                help=' * The \'Draft\' state is used when a user is encoding a new and unconfirmed custom report. \
-                    \n* The \'Valid\' state is used when user validates the custom report.'), 
-        'sql_query': fields.function(_sql_query_get, method=True, type="text", string='SQL Query', store=True), 
-        'group_ids': fields.many2many('res.groups', 'base_report_creator_group_rel', 'report_id', 'group_id', 'Authorized Groups'), 
+        'active': fields.boolean('Active', help="If the active field is set to False, it will allow you to hide the report without removing it."),
+        'view_type1': fields.selection([('form', 'Form'),
+                                        ('tree', 'Tree'),
+                                        ('graph', 'Graph'),
+                                        ('calendar', 'Calendar')], 'First View', required=True),
+        'view_type2': fields.selection([('', '/'),
+                                        ('form', 'Form'),
+                                        ('tree', 'Tree'),
+                                        ('graph', 'Graph'),
+                                        ('calendar', 'Calendar')], 'Second View'),
+        'view_type3': fields.selection([('', '/'),
+                                        ('form', 'Form'),
+                                        ('tree', 'Tree'),
+                                        ('graph', 'Graph'),
+                                        ('calendar', 'Calendar')], 'Third View'),
+        'view_graph_type': fields.selection([('pie', 'Pie Chart'),
+                                             ('bar', 'Bar Chart')], 'Graph Type', required=True),
+        'view_graph_orientation': fields.selection([('horz', 'Horizontal'),
+                                                    ('vert', 'Vertical')], 'Graph Orientation', required=True),
+        'model_ids': fields.many2many('ir.model', 'base_report_creator_report_model_rel', 'report_id', 'model_id', 'Reported Objects'),
+        'field_ids': fields.one2many('base_report_creator.report.fields', 'report_id', 'Fields to Display'),
+        'filter_ids': fields.one2many('base_report_creator.report.filter', 'report_id', 'Filters'),
+        'sql_query': fields.function(_sql_query_get, method=True, type="text", string='SQL Query', store=True),
+        'group_ids': fields.many2many('res.groups', 'base_report_creator_group_rel', 'report_id', 'group_id', 'Authorized Groups'),
+        'menu_id': fields.many2one('ir.ui.menu', "Menu", readonly=True),
+        'manual_sql_query': fields.text('Manual SQL Query'),
+        'manual_sql_query_enable': fields.boolean('Enable Manual SQL Query', help='Use manually specified SQL Query'),
+        'manual_sql_query_date_range': fields.boolean('Use date range in manual SQL query',
+                                                      help='Prompt for date range when running report, use $from_date and $to_date '
+                                                      'to set the date in in the Manual SQL Query.'),
     }
     _defaults = {
-        'type': lambda *args: 'list', 
-        'state': lambda *args: 'draft', 
-        'active': lambda *args: True, 
-        'view_type1': lambda *args: 'tree', 
-        'view_type2': lambda *args: 'graph', 
-        'view_graph_type': lambda *args: 'bar', 
-        'view_graph_orientation': lambda *args: 'horz', 
+        'type': lambda *args: 'list',
+        'active': lambda *args: True,
+        'view_type1': lambda *args: 'tree',
+        'view_type2': lambda *args: 'graph',
+        'view_graph_type': lambda *args: 'bar',
+        'view_graph_orientation': lambda *args: 'horz',
     }
-    def _function_field(self, cr, uid, ids):
+
+    def open_report(self, cr, uid, ids, context=None):
         """
-        constraints function which specify that 
+        This Function opens base creator report  view
+        @param self: The object pointer
+        @param cr: the current row, from the database cursor,
+        @param uid: the current user’s ID for security checks,
+        @param ids: List of report open's IDs
+        @param context: A standard dictionary for contextual values
+        @return : Dictionary value for base creator report form
+        """
+        if context is None:
+            context = {}
+
+        rep = self.browse(cr, uid, ids, context=context)
+        if not rep:
+            return False
+
+        rep = rep[0]
+        view_mode = rep.view_type1
+        if rep.view_type2:
+            view_mode += ',' + rep.view_type2
+        if rep.view_type3:
+            view_mode += ',' + rep.view_type3
+        repview = {
+            'name': rep.name,
+            'view_type': 'form',
+            'view_mode': view_mode,
+            'res_model': 'base_report_creator_report.result',
+            'type': 'ir.actions.act_window',
+            'context': "{'report_id':%d}" % (rep.id,),
+            'nodestroy': True,
+        }
+        
+        if rep.manual_sql_query_enable and rep.manual_sql_query_date_range:
+            # Divert to wizard here
+            value = {
+                'name': 'Enter date range for %s' % (rep.name),
+                'view_type': 'form',
+                'view_mode': 'form',
+                'res_model': 'base_report_creator.date_wizard',
+                'type': 'ir.actions.act_window',
+                'context': "{'report_id':%d}" % (rep.id,),
+                'target': 'new',
+            }
+        else:
+            value = repview
+
+        return value
+
+    def _function_field(self, cr, uid, ids, context=None):
+        """
+        constraints function which specify that
                 not display field which are not stored in Database.
         @param cr: the current row, from the database cursor,
         @param uid: the current user’s ID for security checks,
-        @param ids: List of Report creator's id.       
+        @param ids: List of Report creator's id.
         @return: True if display field which are  stored in database.
                      or false if display field which are not store in dtabase.
         """
-        this_objs = self.browse(cr, uid, ids)
+        this_objs = self.browse(cr, uid, ids, context=context)
         for obj in this_objs:
             for fld in obj.field_ids:
                 # Allowing to use count(*)
@@ -469,34 +524,32 @@ class report_creator(osv.osv):
                     return False
         return True
 
-    def _aggregation_error(self, cr, uid, ids):
+    def _aggregation_error(self, cr, uid, ids, context=None):
         """
-        constraints function which specify that 
+        constraints function which specify that
                 aggregate function to the non calculated field..
         @param cr: the current row, from the database cursor,
         @param uid: the current user’s ID for security checks,
-        @param ids: List of Report creator's id.       
+        @param ids: List of Report creator's id.
         @return: True if model colume type is in integer or float.
                      or false model colume type is not in integer or float.
         """
-        
         aggregate_columns = ('integer', 'float')
         apply_functions = ('sum', 'min', 'max', 'avg', 'count')
-        this_objs = self.browse(cr, uid, ids)
+        this_objs = self.browse(cr, uid, ids, context=context)
         for obj in this_objs:
             for fld in obj.field_ids:
                 # Allowing to use count(*)
                 if not fld.field_id.model and fld.group_method == 'count':
                     continue
-                model_column = self.pool.get(fld.field_id.model)._columns[fld.field_id.name]                
+                model_column = self.pool.get(fld.field_id.model)._columns[fld.field_id.name]
                 if model_column._type not in aggregate_columns and fld.group_method in apply_functions:
                     return False
         return True
 
-    def _calander_view_error(self, cr, uid, ids):
-#       required_types = ['date_start','date_delay','color']
+    def _calander_view_error(self, cr, uid, ids, context=None):
         required_types = []
-        this_objs = self.browse(cr, uid, ids)
+        this_objs = self.browse(cr, uid, ids, context=context)
         for obj in this_objs:
             if obj.view_type1 == 'calendar' or obj.view_type2 == 'calendar' or obj.view_type3 == 'calendar':
                 for fld in obj.field_ids:
@@ -514,10 +567,11 @@ class report_creator(osv.osv):
                     return False
         return True
 
+
     _constraints = [
-        (_function_field, 'You can not display field which are not stored in Database.', ['field_ids']), 
-        (_aggregation_error, 'You can apply aggregate function to the non calculated field.', ['field_ids']), 
-        (_calander_view_error, "You must have to give calendar view's color,start date and delay.", ['field_ids']), 
+        (_function_field, 'You can not display field which are not stored in Database.', ['field_ids']),
+        (_aggregation_error, 'You can apply aggregate function to the non calculated field.', ['field_ids']),
+        (_calander_view_error, "You must have to give calendar view's color,start date and delay.", ['field_ids']),
     ]
 report_creator()
 
@@ -531,25 +585,27 @@ class report_creator_field(osv.osv):
     _rec_name = 'field_id'
     _order = "sequence,id"
     _columns = {
-        'sequence': fields.integer('Sequence', help="Gives the sequence order when displaying a list of fields."), 
-        'field_id': fields.many2one('ir.model.fields', 'Field'), 
-        'report_id': fields.many2one('base_report_creator.report', 'Report', on_delete='cascade'), 
-        'group_method': fields.selection([('group', 'Grouped'), 
-                                          ('sum', 'Sum'), 
-                                          ('min', 'Minimum'), 
-                                          ('count', 'Count'), 
-                                          ('max', 'Maximum'), 
-                                          ('avg', 'Average')], 'Grouping Method', required=True), 
-        'graph_mode': fields.selection([('', '/'), 
-                                        ('x', 'X Axis'), 
-                                        ('y', 'Y Axis')], 'Graph Mode'), 
-        'calendar_mode': fields.selection([('', '/'), 
-                                           ('date_start', 'Starting Date'), 
-                                           ('date_end', 'Ending Date'), ('date_delay', 'Delay'), ('date_stop', 'End Date'), ('color', 'Unique Colors')], 'Calendar Mode'), 
+        'sequence': fields.integer('Sequence', help="Gives the sequence order when displaying a list of fields."),
+        'field_id': fields.many2one('ir.model.fields', 'Field'),
+        'report_id': fields.many2one('base_report_creator.report', 'Report', on_delete='cascade'),
+        'group_method': fields.selection([('group', 'Grouped'),
+                                          ('sum', 'Sum'),
+                                          ('min', 'Minimum'),
+                                          ('count', 'Count'),
+                                          ('max', 'Maximum'),
+                                          ('avg', 'Average')], 'Grouping Method', required=True),
+        'graph_mode': fields.selection([('', '/'),
+                                        ('x', 'X Axis'),
+                                        ('y', 'Y Axis')], 'Graph Mode'),
+        'calendar_mode': fields.selection([('', '/'),
+                                           ('date_start', 'Starting Date'),
+                                           ('date_end', 'Ending Date'), ('date_delay', 'Delay'), ('date_stop', 'End Date'), ('color', 'Unique Colors')], 'Calendar Mode'),
+        'field_name': fields.char('Custom Field Name', size=100),
+        'field_type': fields.char('Custom Field Type', size=100),
     }
     _defaults = {
-        'group_method': lambda *args: 'group', 
-        'graph_mode': lambda *args: '', 
+        'group_method': lambda *args: 'group',
+        'graph_mode': lambda *args: '',
     }
 report_creator_field()
 
@@ -561,14 +617,15 @@ class report_creator_filter(osv.osv):
     _name = "base_report_creator.report.filter"
     _description = "Report Filters"
     _columns = {
-        'name': fields.char('Filter Name', size=64, required=True), 
-        'expression': fields.text('Value', required=True, help='Provide an expression for the field based on which you want to filter the records.\n e.g. res_partner.id=3'), 
-        'report_id': fields.many2one('base_report_creator.report', 'Report', on_delete='cascade'), 
-        'condition': fields.selection([('and', 'AND'), 
+        'name': fields.char('Filter Name', size=64, required=True),
+        'expression': fields.text('Value', required=True, help='Provide an expression for the field based on which you want to filter the records.\n e.g. res_partner.id=3'),
+        'report_id': fields.many2one('base_report_creator.report', 'Report', on_delete='cascade'),
+        'condition': fields.selection([('and', 'AND'),
                                         ('or', 'OR')], 'Condition')
     }
     _defaults = {
-        'condition': lambda *args: 'and', 
+        'condition': lambda *args: 'and',
     }
 report_creator_filter()
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+

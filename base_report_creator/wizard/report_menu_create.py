@@ -40,34 +40,60 @@ class report_menu_create(osv.osv_memory):
         @param ids: List of Report Menu Create's IDs
         @return: Dictionary {}.
         """
-        if not context:
+        if context is None:
             context = {}
         context_id = context and context.get('active_id', False) or False
+        obj_menu = self.pool.get('ir.ui.menu')
+        data_obj = self.pool.get('ir.model.data')
+        obj_board = self.pool.get('base_report_creator.report')
         if context_id:
-            board = self.pool.get('base_report_creator.report').browse(cr, uid, context_id)
+            data = self.browse(cr, uid, ids, context=context)
+            if not data:
+                return {'type': 'ir.actions.act_window_close'}
+            data = data[0]
+
+            board = obj_board.browse(cr, uid, context_id, context=context)
             view = board.view_type1
             if board.view_type2:
                 view += ',' + board.view_type2
             if board.view_type3:
                 view += ',' + board.view_type3
-            action_id = self.pool.get('ir.actions.act_window').create(cr, uid, {
+                    
+            result = data_obj._get_id(cr, uid, 'base_report_creator', 'view_report_filter')
+            res = data_obj.read(cr, uid, result, ['res_id'])
+            
+            repview = {
                 'name': board.name,
-                'view_type':'form',
-                'view_mode':view,
+                'view_type': 'form',
+                'view_mode': view,
+                'res_model': 'base_report_creator_report.result',
                 'context': "{'report_id':%d}" % (board.id,),
-                'res_model': 'base_report_creator.report'
-                })
-        obj_menu = self.pool.get('ir.ui.menu')
-        #start Loop
-        for data in self.read(cr, uid, ids):
-            obj_menu.create(cr, uid, {
-                'name': data.get('menu_name'),
-                'parent_id': data.get('menu_parent_id'),
+                'search_view_id': res['res_id']
+            }
+            
+            if board.manual_sql_query_enable and board.manual_sql_query_date_range:
+                # Divert to wizard here
+                repview['type'] = 'ir.actions.act_window'
+                value = {
+                    'name': 'Enter date range for %s' % (board.name),
+                    'view_type': 'form',
+                    'view_mode': 'form',
+                    'res_model': 'base_report_creator.date_wizard',
+                    'context': "{'report_id':%d, 'default_from_menu':True}" % (board.id,),
+                }
+            else:
+                value = repview
+
+            action_id = self.pool.get('ir.actions.act_window').create(cr, uid, value)
+            
+            menu_id = obj_menu.create(cr, uid, {
+                'name': data.menu_name,
+                'parent_id': data.menu_parent_id.id,
                 'icon': 'STOCK_SELECT_COLOR',
                 'action': 'ir.actions.act_window, ' + str(action_id)
                 }, context=context)
-            return {}
-        #End Loop
+            obj_board.write(cr, uid, context_id, {'menu_id': menu_id})
+        return {'type': 'ir.actions.act_window_close'}
 report_menu_create()
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
