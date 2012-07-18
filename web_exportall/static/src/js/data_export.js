@@ -31,7 +31,8 @@ openerp.web.DataExport = openerp.web.DataExport.extend({
                 ids: this.dataset.ids,
                 domain: this.dataset.domain,
                 import_compat: Boolean(
-                    this.$element.find("#import_compat").val())
+                    this.$element.find("#import_compat").val()),
+                context: self.dataset.get_context(),
             })},
             complete: $.unblockUI
         });

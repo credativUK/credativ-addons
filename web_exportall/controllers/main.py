@@ -64,12 +64,13 @@ class CSVExportAll(Export):
 
     @openerpweb.httprequest
     def index(self, req, data, token):
-        model, fields, ids, domain, import_compat = \
-            operator.itemgetter('model', 'fields', 'ids', 'domain',
-                                'import_compat')(
-                simplejson.loads(data))
-                
-        context = req.session.eval_context(req.context)
+        data_dict = simplejson.loads(data)
+        model = data_dict.get('model', False)
+        fields = data_dict.get('fields', [])
+        ids = data_dict.get('ids', [])
+        domain = data_dict.get('domain', False)
+        import_compat = data_dict.get('import_compat', False)
+        context  = data_dict.get('context', req.session.eval_context(req.context))
         Model = req.session.model(model)
         ids = itter_ids(Model.search(domain, 0, False, False, context))
 
@@ -131,10 +132,13 @@ class ExcelExportAll(Export):
 
     @openerpweb.httprequest
     def index(self, req, data, token):
-        model, fields, ids, domain, import_compat = \
-            operator.itemgetter('model', 'fields', 'ids', 'domain',
-                                'import_compat')(
-                simplejson.loads(data))
+        data_dict = simplejson.loads(data)
+        model = data_dict.get('model', False)
+        fields = data_dict.get('fields', [])
+        ids = data_dict.get('ids', [])
+        domain = data_dict.get('domain', False)
+        import_compat = data_dict.get('import_compat', False)
+        context  = data_dict.get('context', req.session.eval_context(req.context))
 
         context = req.session.eval_context(req.context)
         Model = req.session.model(model)

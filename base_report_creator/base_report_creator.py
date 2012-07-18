@@ -60,6 +60,10 @@ class report_result(osv.osv):
             for f in report.field_ids:
                 if f.field_id.model:
                     fields['field'+str(i)] = models[f.field_id.model][f.field_id.name]
+                    if f.field_name:
+                        fields['field'+str(i)]['string'] = f.field_name
+                    if f.field_type:
+                        fields['field'+str(i)]['type'] = f.field_type
                     i += 1
                 else:
                     fields['column_count'] = {'readonly': True, 'type': 'integer', 'string': 'Count', 'size': 64, 'name': 'column_count'}
@@ -176,12 +180,29 @@ class report_result(osv.osv):
         """
         if context is None:
             context = {}
+        where_plus = []
         report_id = context.get('active_id', False)
         report = self.pool.get('base_report_creator.report').browse(cr, user, context.get('report_id'), context=context)
-        cr.execute(report._sql_query_get('sql_query', None, context=context, where_plus=None, limit=None, offset=None, escape=False)[report.id])
+        if ids:
+            where_plus.append("id in (%s)" % (','.join([str(id) for id in ids])))
+        cr.execute(report._sql_query_get('sql_query', None, context=context, where_plus=where_plus, limit=None, offset=None, escape=False)[report.id])
         result = cr.dictfetchall()
         return result
 
+    def __export_row(self, cr, uid, row, fields_to_export, context):
+        exp_row = [row[key] for key in fields_to_export]
+        return [exp_row]
+
+    def export_data(self, cr, uid, ids, fields_to_export, context=None):
+        # This data can never be re-imported - so just export as raw data
+        if context is None:
+            context = {}
+        fields_to_export = [f != '.id' and f or 'id' for f in fields_to_export]
+        datas = []
+        for row in self.read(cr, uid, ids, fields_to_export,context):
+            datas += self.__export_row(cr, uid, row, fields_to_export, context)
+        return {'datas': datas}
+        
     def search(self, cr, user, args, offset=0, limit=None, order=None, context=None, count=False):
         """
         overrides  orm search method.
@@ -377,7 +398,7 @@ class report_creator(osv.osv):
                             'date': "''",
                             'integer': '0'
                         }
-                    coalesce_type = coalesce_types.get(f.field_id.ttype, 'NULL')
+                    coalesce_type = coalesce_types.get(f.field_type or f.field_id.ttype, 'NULL')
                     if f.field_id.ttype == 'date':
                         fields.append('\tcoalesce('+t+'.'+f.field_id.name+'::varchar,'+coalesce_type+') as field'+str(i))
                     else:
