@@ -33,7 +33,7 @@ class damagelog_osv(object):
         for data in self.browse(cr, uid, ids, context=context):
             move = self.pool.get('stock.move').browse(cr, uid, data.stock_move_id.id, context=context)
             if not move:
-                raise osv.except_osv(_('UserError'), _('A valid stock move must be selected' % (move_string)))
+                raise osv.except_osv(_('UserError'), _('A valid stock move must be selected'))
             product_supplier = move.product_id.seller_ids and move.product_id.seller_ids[0].name.id or False 
             damagelog_id = self.pool.get('sale.damagelog').create(cr,uid,{'stock_move_id':data.stock_move_id.id,'product_qty':move.product_qty, 'product_uom':move.product_uom.id, 'product_supplier':product_supplier},context=context)
         return {
