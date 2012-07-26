@@ -109,11 +109,15 @@
                     <label
                         string="Use %%(uid)s to filter by the connected user"
                         align="0.0" />
-</page><page string="Security">
+                </page><page string="Security">
                     <separator string="Authorized Groups (empty for all)" colspan="4"/>
                     <field name="group_ids" colspan="4" nolabel="1"/>
                 </page><page string="SQL Query">
                     <field name="sql_query" colspan="4" nolabel="1"/>
+                </page><page string="Manual SQL Query">
+                    <field name="manual_sql_query_enable" colspan="2"/>
+                    <field name="manual_sql_query_date_range" colspan="2"/>
+                    <field name="manual_sql_query" colspan="4" nolabel="1"/>
                 </page>
                 </notebook>
             </form>
