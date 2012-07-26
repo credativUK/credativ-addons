@@ -35,6 +35,7 @@ class sale_damagelog(osv.osv):
                 'product_id':fields.related('stock_move_id', 'product_id', type='many2one', relation='product.product',string='Product', readonly=True, store=True),
                 'product_sku': fields.related('product_id', 'default_code',type='char',size=16, string='Product Code', readonly=True),
                 'dispatch_date' : fields.related('stock_move_id', 'date', type='datetime', string='Dispatch Date',readonly=True, store=True),
+                'date_order' : fields.related('sale_order_id', 'date_order', type='datetime', string='Order Date',readonly=True, store=True),
                 'log_date':fields.datetime('Date Created', readonly=True),
                 'log_uid':fields.many2one('res.users','Created By', readonly=True),
                 'claim_ids':fields.one2many('crm.claim','damagelog_id','Claims'),

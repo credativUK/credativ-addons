@@ -109,7 +109,7 @@
                         <field name="name"/>
                         <field name="product_supplier"/>
                         <field name="product_id"/>
-                        <field name="dispatch_date"/>
+                        <field name="date_order"/>
                     </group>
                     <newline/>
                     <group expand="0" string="Group By..." colspan="4" col="4" groups="base.group_extended">
