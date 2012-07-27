@@ -87,6 +87,8 @@
                             <field name="field_id"
                                 domain="parent.model_ids and [('model_id','in',parent.model_ids[0][2]),('ttype','&lt;&gt;','many2many'),('ttype','&lt;&gt;','one2many')] or []"
                                 attrs="{'required':[('group_method','!=','count')]}" />
+                            <field name="field_name"/>
+                            <field name="field_type"/>
                             <field name="group_method"/>
                             <field name="graph_mode"/>
                             <field name="calendar_mode"/>
