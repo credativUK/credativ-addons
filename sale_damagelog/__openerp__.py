@@ -11,6 +11,7 @@
         'security/ir.model.access.csv',
         'sale_damagelog_view.xml',
         'wizard/create_damagelog.xml',
+        'wizard/damagelog_installer.xml',
         'sale_comprequest_view.xml',
         'sale_comprequest_sequence.xml',
     ],
