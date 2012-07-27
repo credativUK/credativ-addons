@@ -76,6 +76,8 @@
                                     <field name="field_description" />
                                 </tree>
                             </field>
+                            <field name="field_name"/>
+                            <field name="field_type"/>
                             <field name="group_method"/>
                             <field name="graph_mode"/>
                             <field name="calendar_mode"/>
