@@ -76,7 +76,11 @@ class sale_damagelog(osv.osv):
         return {'value':value}
     
     def create_refund(self, cr, uid, ids, context=None):
+<<<<<<< TREE
         return # Deprecated
+=======
+        #return # Deprecated
+>>>>>>> MERGE-SOURCE
         if context is None:
             context = {}
         invoice_obj = self.pool.get('account.invoice')
