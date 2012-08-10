@@ -1,9 +1,9 @@
 # -*- encoding: utf-8 -*-
 {
-    'name': 'Sale Damage Log',
+    'name': 'Sale Issue Log',
     'version': '1.0',
     'category': 'Generic Modules/Sales & Purchases',
-    'description': """This Module allows you to manage the log for damaged products.""",
+    'description': """This Module allows you to manage the log for products with issues.""",
     'author': 'Credativ',
     'depends': ['sale','crm','crm_claim','account'],
     'init_xml': [],

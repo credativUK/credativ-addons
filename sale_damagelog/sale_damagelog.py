@@ -57,7 +57,7 @@ class sale_damagelog(osv.osv):
                  }
     
     _constraints = [
-        (check_qty, 'You can not have damaged quantity greater than shipped quantity and It should have a positive value!', ['product_qty'])
+        (check_qty, 'You can not have product quantity greater than shipped quantity and It should have a positive value!', ['product_qty'])
     ]
 
     
@@ -117,7 +117,7 @@ class crm_claim(osv.osv):
     _inherit = 'crm.claim'
     
     _columns = {
-                'damagelog_id':fields.many2one('sale.damagelog','Damage Log'),
+                'damagelog_id':fields.many2one('sale.damagelog','Issue Log'),
                 }
     
 crm_claim()
