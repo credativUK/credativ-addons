@@ -27,9 +27,9 @@ class sale_comprequest(osv.osv):
             [('refund', 'Refund'), ('voucher', 'Voucher'),
              ('replace-same', 'Replacement - same'),
              ('replace-diff', 'Replacement - different'),
-             ('redispatch', 'Redispatch')], 'Refund Type', required=True, readonly=True, states={'draft': [('readonly', False)]}),
-        'refund_value': fields.float('Refund Value', readonly=True, states={'draft': [('readonly', False)]}),
-        'state': fields.selection([('draft', 'Draft'), ('confirmed', 'Confirmed'), ('cancel', 'Cancelled')], 'Refund Status', required=True, readonly=True),
+             ('redispatch', 'Redispatch')], 'Compensation Type', required=True, readonly=True, states={'draft': [('readonly', False)]}),
+        'refund_value': fields.float('Compensation Value', readonly=True, states={'draft': [('readonly', False)]}),
+        'state': fields.selection([('draft', 'Draft'), ('confirmed', 'Confirmed'), ('cancel', 'Cancelled')], 'Compensation Status', required=True, readonly=True),
         'voucher_code': fields.char('Voucher Code', size=200, readonly=True, states={'draft': [('readonly', False)]}),
         'repl_order_ref': fields.many2one('sale.order', 'Replacement / Redispatch Order Reference', readonly=True, states={'draft': [('readonly', False)]}),
         'comment_ids': fields.one2many('sale.comprequest.comment', 'comprequest_id'),
@@ -68,11 +68,11 @@ class sale_comprequest(osv.osv):
         comp_reqs = self.browse(cr, uid, ids, context=None)
         for comp_req in comp_reqs:
             if comp_req.refund_type in ('replace-same', 'replace-diff', 'redispatch') and not comp_req.repl_order_ref:
-                raise osv.except_osv('User Error', 'Replacement / Redispatch Order Reference is required for this refund type')
+                raise osv.except_osv('User Error', 'Replacement / Redispatch Order Reference is required for this Compensation type')
             if comp_req.refund_type == 'voucher' and not comp_req.voucher_code:
-                raise osv.except_osv('User Error', 'Voucher Code is required for this refund type')
+                raise osv.except_osv('User Error', 'Voucher Code is required for this Compensation type')
             if comp_req.refund_type in ('refund', 'voucher') and not comp_req.refund_value:
-                raise osv.except_osv('User Error', 'Refund Value is required for this refund type')
+                raise osv.except_osv('User Error', 'Compensation Value is required for this Compensation type')
         self.write(cr, uid, ids, {'state': 'confirmed', 'confirm_uid': uid, 'confirm_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=None)
 
 sale_comprequest()

@@ -21,17 +21,9 @@
                         <field name="sale_order_id" select="1" readonly="1"/>
                         <field name="dispatch_date" select="1"/>
                         <field name="sale_line_id" select="2"/>
+                        <field name="category" select="2"/>
                     </group> 
                     <separator colspan="4"/>
-                    <group colspan="2">
-                    </group>
-                    <group colspan="2">
-                        <group colspan="3"></group>
-                            <group colspan="1">
-                                <field name="flag_transport" select="2"/>
-                                <field name="flag_product_quality" select="2"/>
-                            </group>
-                        </group>
                         <notebook colspan="4">
                             <page string="Issue Details">
                                 <group colspan="4">
@@ -46,7 +38,7 @@
                                     <field name="product_supplier" select="1"/>
                                     <field name="num_attachments" select="2"/>
                                 </group>
-                                <separator string="Comments:"/>
+                                <separator string="Comments:" colspan="4"/>
                                 <field name="issue_description" colspan="4" nolabel="1"/>
                             </page>
                             <page string="Claims Details">
@@ -93,8 +85,7 @@
                     <field name="product_id"/>
                     <field name="product_sku"/>
                     <field name="product_supplier"/>
-                    <field name="flag_transport"/>
-                    <field name="flag_product_quality"/>
+                    <field name="category"/>
                 </tree>
             </field>
         </record>
