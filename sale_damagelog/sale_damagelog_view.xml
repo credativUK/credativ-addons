@@ -108,7 +108,7 @@
                     <group col="10" colspan="4">
                         <field name="name"/>
                         <field name="product_supplier"/>
-                        <field name="product_id"/>
+                        <field name="product_sku" filter_domain="['|', ('product_id.name','ilike',self),('product_id.default_code','ilike',self)]" string="Product"/>
                         <field name="date_order"/>
                     </group>
                     <newline/>
