@@ -230,6 +230,8 @@ class report_result(osv.osv):
             newargs = []
             newargs2 = []
             for a in args:
+                if a in ('&', '|'):
+                    continue
                 if fields[a[0]][0]:
                     res = self.pool.get(fields[a[0]][0])._where_calc(cr, user, [[fields[a[0]][1], a[1], a[2]]], active_test = False, context = context)
                     for searches in res.where_clause:
