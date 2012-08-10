@@ -45,8 +45,12 @@ openerp.web.search.DateField = openerp.web.search.DateField.extend({
 
 openerp.web.search.DateTimeField = openerp.web.search.DateField.extend({
     make_domain2: function (name, value1, value2) {
-        value1 = value1 + ' 00:00:00';
-        value2 = value2 + ' 23:59:59';
+        if (value1 != null && value1 != '') {
+            value1 = value1 + ' 00:00:00';
+        }
+        if (value2 != null && value2 != '') {
+            value2 = value2 + ' 23:59:59';
+        }
         return this._super(name, value1, value2);
     }
 });
