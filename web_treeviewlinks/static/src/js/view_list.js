@@ -22,7 +22,7 @@ openerp.web.ListView.List = openerp.web.ListView.List.extend({
                 if(self.columns[i].type === 'many2one') {
                     var $cell = $row.find((_.str.sprintf('[data-field=%s]', self.columns[i].id)));
                     $cell.html(_.template('<a class="oe_form_uri" href="#" data-model="<%-model%>" data-id="<%-id%>"><%-text%></a>', {
-                        text: _.escape(openerp.web.format_value(record.get(self.columns[i].id), self.columns[i], '')),
+                        text: openerp.web.format_value(record.get(self.columns[i].id), self.columns[i], ''),
                         model: self.columns[i].relation,
                         id: record.get(self.columns[i].id)[0]
                     }));
@@ -65,7 +65,7 @@ openerp.web.form.One2ManyList = openerp.web.ListView.List.extend({
                 if(self.columns[i].type === 'many2one') {
                     var $cell = $row.find((_.str.sprintf('[data-field=%s]', self.columns[i].id)));
                     $cell.html(_.template('<a class="oe_form_uri" href="#" data-model="<%-model%>" data-id="<%-id%>"><%-text%></a>', {
-                        text: _.escape(openerp.web.format_value(record.get(self.columns[i].id), self.columns[i], '')),
+                        text: openerp.web.format_value(record.get(self.columns[i].id), self.columns[i], ''),
                         model: self.columns[i].relation,
                         id: record.get(self.columns[i].id)[0]
                     }));
