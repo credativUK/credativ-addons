@@ -53,13 +53,13 @@ class stock_dispatch(osv.osv):
         'dispatch_date': lambda *a: time.strftime('%Y-%m-%d'),
     }
 
-    def on_change_stock_moves(self, cr, uid, id, stock_moves, context=None):
+    def on_change_stock_moves(self, cr, uid, ids, stock_moves, context=None):
         move_list = []
         move_string = ''
         warning = False
         if stock_moves[0][2]:
             for move in self.pool.get('stock.move').browse(cr, uid, stock_moves[0][2]):
-                if move.dispatch_id and move.dispatch_id.id != id[0]:
+                if move.dispatch_id and move.dispatch_id.id != ids[0]:
                     warning = True
                     move_string += ' (id:%d,dispatch_id:%d)' % (move.id, move.dispatch_id.id)
                 else: move_list.append(move.id)
@@ -69,7 +69,7 @@ class stock_dispatch(osv.osv):
                                      'message': 'One or more moves are already part of another dispatch and' \
                                      ' have not been added:%s' % (move_string)}
             if sorted(stock_moves[0][2]) == sorted(move_list):
-              return {} # Prevent update when there is no actual change
+                return {} # Prevent update when there is no actual change
             return result
         return {}
 
@@ -92,7 +92,6 @@ class stock_dispatch(osv.osv):
         
         for dispatch in self.browse(cr, uid, ids):
             context['from_dispatch'] = dispatch.id
-            picking_obj = self.pool.get('stock.picking')
             move_ids = [x.id for x in dispatch.stock_moves]
             self.pool.get('stock.move').action_done(cr, uid, move_ids, context=context)
             
