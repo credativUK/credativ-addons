@@ -123,7 +123,7 @@ class stock_dispatch(osv.osv):
                     # cause workflow to update since we called move.action_done
                     wkf_service.trg_write(uid, 'stock.picking', move.picking_id.id, cr)
 
-        self.write(cr, uid, ids, {'state': 'done', 'complete_date': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), 'complete_uid': uid})
+        self.write(cr, uid, ids, {'state': 'done', 'complete_date': datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), 'complete_uid': uid})
         return True
 
     def action_cancel(self, cr, uid, ids, context=None):
