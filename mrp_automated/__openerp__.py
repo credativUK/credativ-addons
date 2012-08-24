@@ -43,5 +43,3 @@
     'active': False,
 }
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
-
-bzr commit -m "[IMP] Added workflow transition for mrp_auto_from_stock_move"
