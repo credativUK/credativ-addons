@@ -113,12 +113,12 @@ class stock_move(osv.osv):
             if prodlots:
                 available_stock = 0
                 for prodlot in prodlots:
-                    if prodlot_obj._get_stock(cr, uid, prodlot, prodlot, context)[prodlot] > move_item.product_qty:
+                    if prodlot_obj._get_stock(cr, uid, prodlot, prodlot, context)[prodlot] >= move_item.product_qty:
                         move_obj.write(cr, uid, move_item.id, {'prodlot_id': prodlot}, context)
                         return True
                     else:
                         available_stock += prodlot_obj._get_stock(cr, uid, prodlot, prodlot, context)[prodlot]
-                if available_stock > move_item.product_qty:
+                if available_stock >= move_item.product_qty:
                     raise osv.except_osv('Split Required','There are enough production lots available but the stock move will need to be split')
                     return False
                 else:
