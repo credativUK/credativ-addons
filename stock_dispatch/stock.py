@@ -46,8 +46,8 @@ class stock_move(osv.osv):
             if move.dispatch_id and move.dispatch_id.id != context.get('from_dispatch', False):
                 raise except_orm(_('UserError'),
                         _('This move is part of a dispatch and can only' \
-                          ' be completed through the dispatch view: (name: "%s", id: %d)') % \
-                          (move.name, move.id,))
+                          ' be completed through the dispatch view: (name: "%s", id: %d, dispatch: %s)') % \
+                          (move.name, move.id, move.dispatch_id.name))
         
         return super(stock_move, self).action_done(cr, uid, ids, context)
 
@@ -58,7 +58,43 @@ class stock_move(osv.osv):
         return super(stock_move, self).copy_data(cr, uid, id, default, context)
         
     def action_cancel(self, cr, uid, ids, context=None):
-        self.write(cr, uid, ids, {'dispatch_id': False})
+        for move in self.browse(cr, uid, ids):
+            # Only allow cancel if not in dispatch
+            if move.dispatch_id and move.dispatch_id.state in ('done', 'confirmed'):
+                raise except_orm(_('UserError'), _('This move is part of a confirmed dispatch and cannot be cancelled: (name: "%s", id: %d, dispatch: %s)') % (move.name, move.id, move.dispatch_id.name))
         return super(stock_move, self).action_cancel(cr, uid, ids, context)
+
+    def action_scrap(self, cr, uid, ids, quantity, location_id, context=None):
+        for move in self.browse(cr, uid, ids):
+            # Only allow scrap if not in dispatch
+            if move.dispatch_id and move.dispatch_id.state in ('done', 'confirmed'):
+                raise except_orm(_('UserError'), _('This move is part of a confirmed dispatch and cannot be scapped: (name: "%s", id: %d, dispatch: %s)') % (move.name, move.id, move.dispatch_id.name))
+        return super(stock_move, self).action_scrap(cr, uid, ids, quantity, location_id, context=context)
+
+    def action_split(self, cr, uid, ids, quantity, split_by_qty=1, prefix=False, with_lot=True, context=None):
+        for move in self.browse(cr, uid, ids):
+            # Only allow split if not in dispatch
+            if move.dispatch_id and move.dispatch_id.state in ('done', 'confirmed'):
+                raise except_orm(_('UserError'), _('This move is part of a confirmed dispatch and cannot be split: (name: "%s", id: %d, dispatch: %s)') % (move.name, move.id, move.dispatch_id.name))
+        return super(stock_move, self).action_split(cr, uid, ids, quantity, split_by_qty=split_by_qty, prefix=prefix, with_lot=with_lot, context=context)
+
+    def do_partial(self, cr, uid, ids, partial_datas, context=None):
+        for move in self.browse(cr, uid, ids):
+            # Only allow partial if not in dispatch
+            if move.dispatch_id and move.dispatch_id.state in ('done', 'confirmed'):
+                raise except_orm(_('UserError'), _('This move is part of a confirmed dispatch and cannot be partially picked: (name: "%s", id: %d, dispatch: %s)') % (move.name, move.id, move.dispatch_id.name))
+        return super(stock_move, self).do_partial(cr, uid, ids, partial_datas, context=context)
+
+    def write(self, cr, uid, ids, vals, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+        frozen_fields = set(['product_qty', 'product_uom', 'product_uos_qty', 'product_uos', 'location_id', 'location_dest_id',
+                             'product_id', 'name', 'priority', 'address_id', 'prodlot_id', 'price_unit', 'price_currency_id', 'backorder_id'])
+        for move in self.browse(cr, uid, ids, context=context):
+            if move.dispatch_id and move.dispatch_id.state in ('done', 'confirmed'):
+                if frozen_fields.intersection(vals):
+                    raise osv.except_osv(_('UserError'),
+                                            _('This move is part of a confirmed dispatch and this field cannot be edited: (name: %s, id: %d, dispatch: %s)') % (move.name, move.id, move.dispatch_id.name))
+        return super(stock_move, self).write(cr, uid, ids, vals, context=context)
 
 stock_move()
