@@ -9,11 +9,10 @@
             <field name="priority">22</field>
             <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
             <field name="arch" type="xml">
-                <xpath expr="/form/notebook/page/field[@name='move_prod_id']" position="after">
+                <field name="move_prod_id" position="after">
                     <field name="incoming_shipment_id" groups="base.group_extended"/>
-                </xpath>
+                </field>
             </field>
         </record>
-
     </data>
 </openerp>

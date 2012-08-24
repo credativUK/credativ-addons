@@ -28,7 +28,6 @@ class mrp_production(osv.osv):
         ir_sequence = self.pool.get('ir.sequence')
         stock_picking = self.pool.get('stock.picking')
         routing_loc = None
-        pick_type = 'in'
         address_id = False
 
         # Take routing address as a Shipment Address.
@@ -42,7 +41,7 @@ class mrp_production(osv.osv):
         picking_id = stock_picking.create(cr, uid, {
             'name': pick_name,
             'origin': (production.origin or '').split(':')[0] + ':' + production.name,
-            'type': pick_type,
+            'type': 'in',
             'move_type': 'one',
             'state': 'draft',
             'address_id': address_id,
@@ -69,10 +68,9 @@ class mrp_production(osv.osv):
         @return: True or False
         """
         wf_service = netsvc.LocalService("workflow")
-        prod_obj = self.pool.get('mrp.production')
         move_obj = self.pool.get('stock.move')
         res = False
-        prod_items = prod_obj.browse(cr, uid, ids)
+        prod_items = self.browse(cr, uid, ids)
         for prod in prod_items:
             if prod.bom_id and prod.bom_id.type == 'automatic':
                 res = True
