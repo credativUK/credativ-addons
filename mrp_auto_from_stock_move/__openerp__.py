@@ -2,7 +2,7 @@
 {
     "name" : "Delivery Driven Automatic Manufacturing",
     "version" : "1.1",
-    "author" : "Credativ",
+    "author" : "credativ",
     "website" : "http://www.credativ.com",
     "category" : "Manufacturing",
     "sequence": 18,
@@ -20,6 +20,7 @@ Features:
     """,
     'init_xml': [],
     'update_xml': [
+        'mrp_workflow.xml',
         'mrp_view.xml',
     ],
     'demo_xml': [],
