@@ -26,7 +26,7 @@ class sale_damagelog(osv.osv):
         return True
     
     _columns = {
-                'name':fields.function(_get_name,method=True,type='char',string='Name'),
+                'name':fields.function(_get_name,method=True,type='char',string='Name',store=True),
                 'ticket_id':fields.char('Ticket ID',size=16),
                 'stock_move_id':fields.many2one('stock.move', 'Stock Move', required=True),
                 'sale_line_id':fields.related('stock_move_id','sale_line_id',type='many2one',relation='sale.order.line',string='Sale Order Line', readonly=True),
