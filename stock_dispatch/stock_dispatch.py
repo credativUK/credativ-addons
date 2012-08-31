@@ -46,7 +46,7 @@ class stock_dispatch(osv.osv):
 
     _sql_constraints = [
         ('name_uniq', 'unique(name)', 'Dispatch Name must be unique !'),
-        ('cutoff_before_dispatch', 'CHECK (cutoff_before_dispatch<dispatch_date)',  'The cutoff date must occur before the dispatch'),
+        ('cutoff_before_dispatch', 'CHECK (cutoff_date<dispatch_date)',  'The cutoff date must occur before the dispatch'),
     ]
 
     _order = 'name desc'
