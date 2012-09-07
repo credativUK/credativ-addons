@@ -106,12 +106,6 @@ class SaleOrderTestCase(util.ERPTestCase):
         edit_order = self.refresh(edit_order)
         
         self.assertEqual(self.pool.get('project.project').search(self.cr, self.uid, [('order_id', '=', order.id)]), [])
-        edit_project = self.search_browse('project.project', [('order_id', '=', edit_order.id)])
+        edit_project = self.search_browse('project.project', [('order_id', '=', edit2_order.id)])
         self.assertEqual(set(task.name for task in edit_project.tasks), set(['Worker', 'Employee']))
 
-    def test_unique(self):
-        order = util.create_empty_sale_order(self, {'order_policy': 'manual'})
-        util.add_product_sale_order_line(self, order.id, self.id_get('product.product_product_worker0'), 1)
-        util.add_product_sale_order_line(self, order.id, self.id_get('product.product_product_worker0'), 1)
-        self.assertRaises(osv.except_osv, self.click, 'sale.order', None, 'Confirm Order', order)
-                
