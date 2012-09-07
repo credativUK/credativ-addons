@@ -56,7 +56,15 @@ class stock_move(osv.osv):
             default = {}
         default['dispatch_id'] = False
         return super(stock_move, self).copy_data(cr, uid, id, default, context)
-        
+
+    def cancel_assign(self, cr, uid, ids, context=None):
+        for move in self.browse(cr, uid, ids):
+            # Only allow cancel if not in dispatch
+            if move.dispatch_id and move.dispatch_id.state in ('done', 'confirmed'):
+                raise except_orm(_('UserError'), _('This move is part of a confirmed dispatch and assignment cannot be cancelled: (name: "%s", id: %d, dispatch: %s)') % (move.name, move.id, move.dispatch_id.name))
+        self.write(cr, uid, ids, {'dispatch_id': False})
+        return super(stock_move, self).cancel_assign(cr, uid, ids, context)
+
     def action_cancel(self, cr, uid, ids, context=None):
         for move in self.browse(cr, uid, ids):
             # Only allow cancel if not in dispatch
