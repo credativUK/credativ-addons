@@ -136,6 +136,10 @@ class order_edit(object):
         return line_moves
 
     def copy_for_edit(self, cr, uid, id, context=None):
+        if context is None:
+            context = {}
+        context = context.copy()
+        context['order_edit'] = True
         try:
             if len(id) == 1:
                 id = id[0]
@@ -376,3 +380,23 @@ class sale_order(osv.osv, order_edit):
         return res
 
 sale_order()
+
+
+class sale_order_line(osv.osv):
+    _inherit = 'sale.order.line'
+    
+    _columns = {
+        'order_edit_original_line_id': fields.many2one('sale.order.line', 'Order Edit Original Line',
+                                                    help='A reference to the line this was copied from, if any'), 
+    }
+
+    def copy_data(self, cr, uid, id_, default=None, context=None):
+        if context and context.get('order_edit'):
+            if not default:
+                default = {}
+            default['order_edit_original_line_id'] = id_
+        return super(sale_order_line, self).copy_data(cr, uid, id_, default, context)
+
+
+sale_order_line()
+
