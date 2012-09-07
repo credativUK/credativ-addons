@@ -46,16 +46,20 @@ class stock_dispatch(osv.osv):
 
     _sql_constraints = [
         ('name_uniq', 'unique(name)', 'Dispatch Name must be unique !'),
-        ('cutoff_before_dispatch', 'CHECK (cutoff_before_dispatch<dispatch_date)',  'The cutoff date must occur before the dispatch'),
+        ('cutoff_before_dispatch', 'CHECK (cutoff_date<dispatch_date)',  'The cutoff date must occur before the dispatch'),
     ]
 
     _order = 'name desc'
+
+    def _default_cutoff_date(self, cr, uid, context):
+        return self.on_change_dispatch_date(cr, uid, 0, datetime.datetime.utcnow().strftime('%Y-%m-%d'), context=context)['value']['cutoff_date']
 
     _defaults = {
         'name': lambda obj, cr, uid, context: obj.pool.get('ir.sequence').get(cr, uid, 'stock.dispatch'),
         'state': lambda *a: 'draft',
         'date': lambda *a: datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
         'dispatch_date': lambda *a: datetime.datetime.utcnow().strftime('%Y-%m-%d'),
+        'cutoff_date': _default_cutoff_date,
     }
 
     def on_change_dispatch_date(self, cr, uid, id, dispatch_date, context=None):
@@ -165,4 +169,9 @@ class stock_dispatch(osv.osv):
         default['stock_moves'] = []
         return super(stock_dispatch, self).copy_data(cr, uid, id, default, context)
 
+    def create(self, cr, uid, data, context=None):
+        if not data.get('cutoff_date', False):
+            data['cutoff_date'] = self.on_change_dispatch_date(cr, uid, 0, data.get('dispatch_date', datetime.datetime.utcnow().strftime('%Y-%m-%d')), context=context)['value']['cutoff_date']
+        return super(stock_dispatch, self).create(cr, uid, data, context=context)
+    
 stock_dispatch()
