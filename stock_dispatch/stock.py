@@ -62,6 +62,7 @@ class stock_move(osv.osv):
             # Only allow cancel if not in dispatch
             if move.dispatch_id and move.dispatch_id.state in ('done', 'confirmed'):
                 raise except_orm(_('UserError'), _('This move is part of a confirmed dispatch and cannot be cancelled: (name: "%s", id: %d, dispatch: %s)') % (move.name, move.id, move.dispatch_id.name))
+        self.write(cr, uid, ids, {'dispatch_id': False})
         return super(stock_move, self).action_cancel(cr, uid, ids, context)
 
     def action_scrap(self, cr, uid, ids, quantity, location_id, context=None):
@@ -69,6 +70,7 @@ class stock_move(osv.osv):
             # Only allow scrap if not in dispatch
             if move.dispatch_id and move.dispatch_id.state in ('done', 'confirmed'):
                 raise except_orm(_('UserError'), _('This move is part of a confirmed dispatch and cannot be scapped: (name: "%s", id: %d, dispatch: %s)') % (move.name, move.id, move.dispatch_id.name))
+        self.write(cr, uid, ids, {'dispatch_id': False})
         return super(stock_move, self).action_scrap(cr, uid, ids, quantity, location_id, context=context)
 
     def action_split(self, cr, uid, ids, quantity, split_by_qty=1, prefix=False, with_lot=True, context=None):
@@ -76,6 +78,7 @@ class stock_move(osv.osv):
             # Only allow split if not in dispatch
             if move.dispatch_id and move.dispatch_id.state in ('done', 'confirmed'):
                 raise except_orm(_('UserError'), _('This move is part of a confirmed dispatch and cannot be split: (name: "%s", id: %d, dispatch: %s)') % (move.name, move.id, move.dispatch_id.name))
+        self.write(cr, uid, ids, {'dispatch_id': False})
         return super(stock_move, self).action_split(cr, uid, ids, quantity, split_by_qty=split_by_qty, prefix=prefix, with_lot=with_lot, context=context)
 
     def do_partial(self, cr, uid, ids, partial_datas, context=None):
@@ -83,6 +86,7 @@ class stock_move(osv.osv):
             # Only allow partial if not in dispatch
             if move.dispatch_id and move.dispatch_id.state in ('done', 'confirmed'):
                 raise except_orm(_('UserError'), _('This move is part of a confirmed dispatch and cannot be partially picked: (name: "%s", id: %d, dispatch: %s)') % (move.name, move.id, move.dispatch_id.name))
+        self.write(cr, uid, ids, {'dispatch_id': False})
         return super(stock_move, self).do_partial(cr, uid, ids, partial_datas, context=context)
 
     def write(self, cr, uid, ids, vals, context=None):
