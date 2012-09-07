@@ -115,6 +115,10 @@ class stock_dispatch(osv.osv):
 
         for dispatch in self.browse(cr, uid, ids):
             context['from_dispatch'] = dispatch.id
+            for move in dispatch.stock_moves:
+                if move.state == 'cancel':
+                    raise osv.except_osv('Could not complete dispatch',
+                        'This dispatch contains a cancelled stock move. This may be due to a cancellation during the complete action.')
             move_ids = [x.id for x in dispatch.stock_moves]
             self.pool.get('stock.move').action_done(cr, uid, move_ids, context=context)
             
@@ -149,6 +153,10 @@ class stock_dispatch(osv.osv):
             if len(move_ids) == 0:
                 raise osv.except_osv('Could not confirm dispatch',
                       'A dispatch must have atleast one stock move assigned to it')
+            for move in dispatch.stock_moves:
+                if move.state == 'cancel':
+                    raise osv.except_osv('Could not confirm dispatch',
+                        'This dispatch contains a cancelled stock move. This may be due to a cancellation during the confirm action.')
         self.write(cr, uid, ids, {'state': 'confirmed'})
         return True
 
