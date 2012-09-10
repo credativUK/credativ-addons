@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+    	<menuitem id="action_holiday" name="Holidays"/>
+    	<!-- Days of week -->
+    	<record id="res_weekdays_form" model="ir.ui.view">
+            <field name="name">res.weekdays.form</field>
+            <field name="model">res.weekdays</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+				<form string="Days of week">
+					<field name="name"/>
+				</form>
+			</field>
+		</record>        
+        
+        <record id="res_weekdays_tree" model="ir.ui.view">
+            <field name="name">res.weekdays.tree</field>
+            <field name="model">res.weekdays</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+				<tree string="Days of week">
+					<field name="name"/>
+				</tree>
+			</field>
+		</record>  
+		
+		<record id="action_res_weekdays_tree" model="ir.actions.act_window">
+            <field name="name">Days of Week</field>
+            <field name="res_model">res.weekdays</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+        
+        <menuitem id="menu_action_res_weekdays_tree" parent="action_holiday" sequence="1"
+            action="action_res_weekdays_tree"/>      
+    	<!-- Country Inherit view -->
+		<record id="res_country_weekend_form" model="ir.ui.view">
+            <field name="name">res.country.weekend.form</field>
+            <field name="model">res.country</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="base.view_country_form"/>
+            <field name="arch" type="xml">
+        		<field name="code" position="after">
+        			<field name="weekend_ids" colspan="4"/>
+        		</field>
+        	</field>
+        </record>
+        
+    	<!-- Public Holiday Rule -->
+    	<record id="hr_public_holiday_rule_form" model="ir.ui.view">
+            <field name="name">Public Holiday Rule</field>
+            <field name="model">hr.public.holiday.rule</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+            	<form string="Public Holiday Rule">
+					<field name="name"/>
+					<field name="holiday_date" attrs="{'required':[('is_recurring','=',False)]}"/>
+					<field name="is_recurring"/>
+					<field name="active"/>
+					<group col="3" colspan="4" attrs="{'invisible':[('is_recurring','=',False)]}">
+						<field name="recurring_week" attrs="{'required':[('is_recurring','=',True)]}"/>
+						<field name="recurring_day" attrs="{'required':[('is_recurring','=',True)]}" widget="selection"/>
+						<field name="recurring_month" attrs="{'required':[('is_recurring','=',True)]}"/>
+					</group>
+					<newline/>
+					<separator string="Countries" colspan="4"/>
+					<field name="country_ids" nolabel="1" colspan="4"/>
+            	</form>
+            </field>
+        </record>
+        
+        <record id="hr_public_holiday_rule_tree" model="ir.ui.view">
+            <field name="name">Public Holidays Rules</field>
+            <field name="model">hr.public.holiday.rule</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+            	<tree string="Public Holidays Rules">
+					<field name="name"/>
+					<field name="holiday_date"/>
+					<field name="is_recurring"/>
+					<field name="active"/>
+            	</tree>
+            </field>
+        </record>
+
+		<record id="action_hr_public_holiday_rule" model="ir.actions.act_window">
+            <field name="name">Define Public Holidays</field>
+            <field name="res_model">hr.public.holiday.rule</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="help">You will find here the rules for recurring public holidays</field>
+        </record>
+        <menuitem id="menu_action_hr_public_holiday_rule" parent="action_holiday" sequence="1"
+            action="action_hr_public_holiday_rule"/>
+            
+        <!-- Public Holiday --> 
+    	<record id="hr_public_holiday_form" model="ir.ui.view">
+            <field name="name">Public Holidays</field>
+            <field name="model">hr.public.holiday</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+            	<form string="Public Holiday">
+					<field name="effective_date"/>
+					<field name="actual_date"/>
+					<field name="previous_holiday"/>
+					<field name="next_holiday"/>
+					<field name="rule_id" readonly="1"/>
+            	</form>
+            </field>
+        </record>
+        
+        <record id="hr_public_holiday_tree" model="ir.ui.view">
+            <field name="name">Public Holidays</field>
+            <field name="model">hr.public.holiday</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+            	<tree string="Public Holidays">
+					<field name="effective_date"/>
+					<field name="actual_date"/>
+					<field name="previous_holiday"/>
+					<field name="next_holiday"/>
+            	</tree>
+            </field>
+        </record>
+
+		<record id="action_hr_public_holiday" model="ir.actions.act_window">
+            <field name="name">Public Holidays</field>
+            <field name="res_model">hr.public.holiday</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="help">You will find here the list of public holidays</field>
+        </record>
+        <menuitem id="menu_action_hr_public_holiday" parent="action_holiday" sequence="2"
+            action="action_hr_public_holiday"/>
+            
+    </data>
+</openerp>
