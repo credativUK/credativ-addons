@@ -29,6 +29,7 @@ class mrp_production(osv.osv):
         stock_picking = self.pool.get('stock.picking')
         routing_loc = None
         address_id = False
+        pick_type = 'in'
 
         # Take routing address as a Shipment Address.
         if production.bom_id.routing_id and production.bom_id.routing_id.location_id:
@@ -41,7 +42,7 @@ class mrp_production(osv.osv):
         picking_id = stock_picking.create(cr, uid, {
             'name': pick_name,
             'origin': (production.origin or '').split(':')[0] + ':' + production.name,
-            'type': 'in',
+            'type': pick_type,
             'move_type': 'one',
             'state': 'draft',
             'address_id': address_id,
