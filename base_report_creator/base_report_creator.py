@@ -230,14 +230,13 @@ class report_result(osv.osv):
             newargs = []
             newargs2 = []
             for a in args:
+                if a in ('&', '|'):
+                    continue
                 if fields[a[0]][0]:
                     res = self.pool.get(fields[a[0]][0])._where_calc(cr, user, [[fields[a[0]][1], a[1], a[2]]], active_test = False, context = context)
-                    if report.manual_sql_query_enable:
-                        for searches in res.where_clause:
-                            to_replace = "%s.\"%s\"" % (self.pool.get(fields[a[0]][0])._table, fields[a[0]][1])
-                            newargs+=[searches.replace(to_replace, a[0])]
-                    else:
-                        newargs += res.where_clause
+                    for searches in res.where_clause:
+                        to_replace = "%s.\"%s\"" % (self.pool.get(fields[a[0]][0])._table, fields[a[0]][1])
+                        newargs+=[searches.replace(to_replace, a[0])]
                     newargs2 += res.where_clause_params
                 else:
                     newargs += [("count(*) " + a[1] +" " + str(a[2]))]
@@ -421,8 +420,9 @@ class report_creator(osv.osv):
                 """ % (',\n'.join(fields), models)
                 if groupby:
                     result[obj.id] += "group by\n\t"+', '.join(groupby)
+                result[obj.id] = "WITH REPORT AS (%s) SELECT * FROM REPORT\n" % (result[obj.id],)
                 if where_plus:
-                    result[obj.id] += "\nhaving \n\t"+"\n\t and ".join(where_plus)
+                    result[obj.id] += "\nwhere \n\t"+"\n\t and ".join(where_plus)
                 if limit:
                     result[obj.id] += " limit "+str(limit)
                 if offset:

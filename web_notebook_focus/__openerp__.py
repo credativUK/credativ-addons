@@ -19,10 +19,10 @@
 #
 ##############################################################################
 {
-    "name": "List View Auto Save",
+    "name": "Notebook Focus",
     "description":
         """
-        OpenERP Web module which auto saves rows in the list view when another row is edited
+        OpenERP Web module which allows Notebook Page elements to use attrs with default_focus and domains to choose which notebook page opens first
         """,
     "version": "1.0",
     "author" : "credativ Ltd",
@@ -30,7 +30,7 @@
     "category" : "Tools",
     "depends" : ["web"],
     "js": [
-        "static/src/js/view_list_editable.js",
+        "static/src/js/view_form.js",
     ],
     "auto_install": False,
 }

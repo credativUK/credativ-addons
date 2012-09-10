@@ -7,7 +7,7 @@ class sale_comprequest(osv.osv):
 
     _columns = {
         'name' : fields.char('Name', size=128, required=True),
-        'damagelog_id': fields.many2one('sale.damagelog', 'Damage Log', required=True, readonly=True, states={'draft': [('readonly', False)]}),
+        'damagelog_id': fields.many2one('sale.damagelog', 'Issue Log', required=True, readonly=True, states={'draft': [('readonly', False)]}),
         'create_date': fields.datetime('Date Created', readonly=True),
         'create_uid': fields.many2one('res.users', 'Created By', readonly=True),
         'write_date': fields.datetime('Last Updated', readonly=True),

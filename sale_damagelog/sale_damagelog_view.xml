@@ -9,7 +9,7 @@
             <field name="model">sale.damagelog</field>
             <field name="type">form</field>
             <field name="arch" type="xml">
-                <form string="Sale Damage Log">
+                <form string="Sale Issue Log">
                     <field name="name" select="2" invisible="True"/>
                     <group colspan="4">
                         <field name="ticket_id" select="2"/>
@@ -25,7 +25,7 @@
                     </group> 
                     <separator colspan="4"/>
                         <notebook colspan="4">
-                            <page string="Damage Details">
+                            <page string="Issue Details">
                                 <group colspan="4">
                                     <field name="product_sku" select="1"/>
                                     <field name="product_id" select="1" readonly="1"/>
@@ -74,7 +74,7 @@
             <field name="model">sale.damagelog</field>
             <field name="type">tree</field>
             <field name="arch" type="xml">
-                <tree string="Sale Damage Log">
+                <tree string="Sale Issue Log">
                     <field name="name"/>
                     <field name="partner_id"/>
                     <field name="sale_order_id"/>
@@ -95,12 +95,12 @@
             <field name="model">sale.damagelog</field>
             <field name="type">search</field>
             <field name="arch" type="xml">
-                <search string="Search Damage Log">
+                <search string="Search Issue Log">
                     <group col="10" colspan="4">
                         <field name="name"/>
                         <field name="product_supplier"/>
-                        <field name="product_id"/>
-                        <field name="dispatch_date"/>
+                        <field name="product_sku" filter_domain="['|', ('product_id.name','ilike',self),('product_id.default_code','ilike',self)]" string="Product"/>
+                        <field name="date_order"/>
                     </group>
                     <newline/>
                     <group expand="0" string="Group By..." colspan="4" col="4" groups="base.group_extended">
@@ -115,7 +115,7 @@
         <!-- Action for the view -->
             
         <record id="action_sale_damagelog_tree" model="ir.actions.act_window">
-            <field name="name">Sale Damage Log</field>
+            <field name="name">Sale Issue Log</field>
             <field name="type">ir.actions.act_window</field>
             <field name="res_model">sale.damagelog</field>
             <field name="view_type">form</field>
@@ -124,7 +124,7 @@
         </record>
         
         <record id="action_sale_damagelog_form" model="ir.actions.act_window">
-            <field name="name">Sale Damage Log</field>
+            <field name="name">Sale Issue Log</field>
             <field name="type">ir.actions.act_window</field>
             <field name="res_model">sale.damagelog</field>
             <field name="view_type">form</field>
@@ -138,11 +138,11 @@
 
         <!-- Link from Products to Damage Log -->
 
-        <act_window domain="[('product_id', '=', active_id)]" id="act_product_sale_damagelog" name="Damaged Items" res_model="sale.damagelog" src_model="product.product"/>
+        <act_window domain="[('product_id', '=', active_id)]" id="act_product_sale_damagelog" name="Product Items" res_model="sale.damagelog" src_model="product.product"/>
     
         <!-- Link from Sale Orders to Damage Log -->
     
-        <act_window domain="[('sale_order_id', '=', active_id)]" id="act_sale_order_sale_damagelog" name="Damage Log" res_model="sale.damagelog" src_model="sale.order"/>
+        <act_window domain="[('sale_order_id', '=', active_id)]" id="act_sale_order_sale_damagelog" name="Issue Log" res_model="sale.damagelog" src_model="sale.order"/>
     
     </data>
 </openerp>

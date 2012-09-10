@@ -37,7 +37,7 @@ class damagelog_osv(object):
             product_supplier = move.product_id.seller_ids and move.product_id.seller_ids[0].name.id or False 
             damagelog_id = self.pool.get('sale.damagelog').create(cr,uid,{'stock_move_id':data.stock_move_id.id,'product_qty':move.product_qty, 'product_uom':move.product_uom.id, 'product_supplier':product_supplier},context=context)
         return {
-                'name': 'Damage Log',
+                'name': 'Issue Log',
                 'view_type': 'form',
                 'view_mode': 'form,tree',
                 'res_model': 'sale.damagelog',
@@ -48,7 +48,7 @@ class damagelog_osv(object):
 
 class sale_create_damagelog_from_product(damagelog_osv, osv.osv_memory):
     _name = "sale.create.damagelog.from.product"
-    _description = "Create Damage Log From Product"
+    _description = "Create Issue Log From Product"
     _columns = {
         'stock_move_id' : fields.many2one('stock.move', 'Stock Move', domain=[('product_id','=','product_id')], required=True),
         'product_id' : fields.many2one('product.product', 'Product'),
@@ -63,7 +63,7 @@ sale_create_damagelog_from_product()
 
 class sale_create_damagelog_from_outgoing(damagelog_osv, osv.osv_memory):
     _name = "sale.create.damagelog.from.outgoing"
-    _description = "Create Damage Log From Packing"
+    _description = "Create Issue Log From Packing"
     _columns = {
         'stock_move_id' : fields.many2one('stock.move', 'Stock Move', domain=[('picking_id','=','picking_id')], required=True),
         'picking_id' : fields.many2one('stock.picking', 'Picking'),
@@ -78,7 +78,7 @@ sale_create_damagelog_from_outgoing()
 
 class sale_create_damagelog_from_saleorder(damagelog_osv, osv.osv_memory):
     _name = "sale.create.damagelog.from.saleorder"
-    _description = "Create Damage Log From Sale Order"
+    _description = "Create Issue Log From Sale Order"
     _columns = {
         'stock_move_id' : fields.many2one('stock.move', 'Stock Move', domain=[('sale_line_id.order_id','=','sale_order_id')], required=True),
         'sale_order_id' : fields.many2one('sale.order', 'Sale Order'),

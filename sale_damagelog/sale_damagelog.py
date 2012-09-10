@@ -26,7 +26,7 @@ class sale_damagelog(osv.osv):
         return True
     
     _columns = {
-                'name':fields.function(_get_name,method=True,type='char',string='Name'),
+                'name':fields.function(_get_name,method=True,type='char',string='Name',store=True),
                 'ticket_id':fields.char('Ticket ID',size=16),
                 'stock_move_id':fields.many2one('stock.move', 'Stock Move', required=True),
                 'sale_line_id':fields.related('stock_move_id','sale_line_id',type='many2one',relation='sale.order.line',string='Sale Order Line', readonly=True),
@@ -35,6 +35,7 @@ class sale_damagelog(osv.osv):
                 'product_id':fields.related('stock_move_id', 'product_id', type='many2one', relation='product.product',string='Product', readonly=True, store=True),
                 'product_sku': fields.related('product_id', 'default_code',type='char',size=16, string='Product Code', readonly=True),
                 'dispatch_date' : fields.related('stock_move_id', 'date', type='datetime', string='Dispatch Date',readonly=True, store=True),
+                'date_order' : fields.related('sale_order_id', 'date_order', type='datetime', string='Order Date',readonly=True, store=True),
                 'log_date':fields.datetime('Date Created', readonly=True),
                 'log_uid':fields.many2one('res.users','Created By', readonly=True),
                 'claim_ids':fields.one2many('crm.claim','damagelog_id','Claims'),
@@ -68,7 +69,7 @@ class sale_damagelog(osv.osv):
                  }
     
     _constraints = [
-        (check_qty, 'You can not have damaged quantity greater than shipped quantity and It should have a positive value!', ['product_qty'])
+        (check_qty, 'You can not have product quantity greater than shipped quantity and It should have a positive value!', ['product_qty'])
     ]
 
     
@@ -128,7 +129,7 @@ class crm_claim(osv.osv):
     _inherit = 'crm.claim'
     
     _columns = {
-                'damagelog_id':fields.many2one('sale.damagelog','Damage Log'),
+                'damagelog_id':fields.many2one('sale.damagelog','Issue Log'),
                 }
     
 crm_claim()

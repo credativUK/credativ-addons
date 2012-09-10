@@ -69,9 +69,10 @@
             <field name="arch" type="xml">
                 <form string="Dispatch">
                     <group colspan="4">
-                        <field name="name" select="1"/>
-                        <field name="carrier_id" select="1" domain="[('category_id', 'child_of', [%(res_partner_category_dispatch)d])]"/>
-                        <field name="dispatch_date" select="1"/>
+                        <field name="name"/>
+                        <field name="carrier_id" domain="[('category_id', 'child_of', [%(res_partner_category_dispatch)d])]"/>
+                        <field name="dispatch_date" on_change="on_change_dispatch_date(dispatch_date)"/>
+                        <field name="cutoff_date"/>
                         <field name="date"/>
                         <field name="complete_date"/>
                     </group>
