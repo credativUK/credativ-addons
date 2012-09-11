@@ -101,10 +101,12 @@
             <field name="type">form</field>
             <field name="arch" type="xml">
             	<form string="Public Holiday">
-					<field name="effective_date"/>
+					<field name="name"/>
+					<field name="effective_date" on_change="onchange_holidays(effective_date,country_id,rule_id)"/>
 					<field name="actual_date"/>
 					<field name="previous_holiday"/>
 					<field name="next_holiday"/>
+					<field name="country_id" on_change="onchange_holidays(effective_date,country_id,rule_id)"/>
 					<field name="rule_id" readonly="1"/>
             	</form>
             </field>
@@ -116,10 +118,12 @@
             <field name="type">tree</field>
             <field name="arch" type="xml">
             	<tree string="Public Holidays">
+            		<field name="name"/>
 					<field name="effective_date"/>
 					<field name="actual_date"/>
 					<field name="previous_holiday"/>
 					<field name="next_holiday"/>
+					<field name="country_id"/>
             	</tree>
             </field>
         </record>
