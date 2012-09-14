@@ -12,7 +12,7 @@
     'init_xml': [],
     'update_xml': ["public_holiday_view.xml", 
                    "holiday_data.xml",
-#                   "wizard/holiday_test_view.xml"
+                   "wizard/wiz_holiday_view.xml"
                    ],
     'demo_xml': [],
     'test': [],
