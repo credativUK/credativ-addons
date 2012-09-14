@@ -85,7 +85,7 @@
         </record>
 
 		<record id="action_hr_public_holiday_rule" model="ir.actions.act_window">
-            <field name="name">Define Public Holidays</field>
+            <field name="name">Define Recurring Public Holidays</field>
             <field name="res_model">hr.public.holiday.rule</field>
             <field name="view_type">form</field>
             <field name="view_mode">tree,form</field>

@@ -1,7 +1,6 @@
 from osv import osv, fields
 from tools.translate import _
-import datetime
-import calendar
+import time
 
 class wiz_holiday(osv.osv_memory):
     _name = 'wiz.holiday'
@@ -17,7 +16,8 @@ class wiz_holiday(osv.osv_memory):
     }
     
     _defaults = {
-         'dummy_check': False
+         'dummy_check': False,
+         'h_date': lambda *a: time.strftime('%Y-%m-%d')
     }
     
     def check_func(self, cr, uid, ids, context=None):
