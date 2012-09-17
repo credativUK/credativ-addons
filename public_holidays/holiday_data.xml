@@ -33,7 +33,7 @@
         
         <!-- Rule -->
     	<record id="uk_may_day" model="hr.public.holiday.rule">
-            <field name="name">May Day</field>
+            <field name="name">Early May Bank Holiday</field>
             <field name="is_recurring">True</field>
             <field name="recurring_week">0</field>
             <field name="recurring_day" ref="monday"/>
@@ -42,7 +42,7 @@
         </record>
         
         <record id="uk_spring_day" model="hr.public.holiday.rule">
-            <field name="name">Spring Day</field>
+            <field name="name">Spring Bank Holiday</field>
             <field name="is_recurring">True</field>
             <field name="recurring_week">-1</field>
             <field name="recurring_day" ref="monday"/>
@@ -53,18 +53,10 @@
         <record id="uk_summer_day" model="hr.public.holiday.rule">
             <field name="name">Summer Bank Holiday</field>
             <field name="is_recurring">True</field>
-            <field name="recurring_week">0</field>
+            <field name="recurring_week">-1</field>
             <field name="recurring_day" ref="monday"/>
             <field name="recurring_month">08</field>
-        </record>
-        
-        <record id="uk_may_day" model="hr.public.holiday.rule">
-            <field name="name">May Day</field>
-            <field name="is_recurring">True</field>
-            <field name="recurring_week">0</field>
-            <field name="recurring_day" ref="monday"/>
-            <field name="recurring_month">05</field>
-            <field name="country_ids" eval="[(6,0,[ref('base.uk'),ref('base.us')])]"/>
+            <field name="country_ids" eval="[(6,0,[ref('base.uk')])]"/>
         </record>
         
         <!-- Scheduler -->
