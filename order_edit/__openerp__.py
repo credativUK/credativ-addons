@@ -32,6 +32,7 @@
         'sale',
         'purchase',
         'mail',
+        'base_sale_multichannels'
         ],
     'init_xml': [
         ],

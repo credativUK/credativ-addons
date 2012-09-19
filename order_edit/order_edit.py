@@ -203,7 +203,8 @@ class sale_order(osv.osv, order_edit):
             raise osv.except_osv(_('Configuration Error'), _('Please define a payment account for this shop'))
         return sale.shop_id.default_customer_account.id
 
-    def _cancel_pickings(self, sale):
+    def _cancel_pickings(self, cr, uid, sale, accept_done):
+        wf_service = netsvc.LocalService("workflow")
         for pick in sale.picking_ids:
             if pick.state == 'cancel' or (accept_done and pick.state == 'done'):
                 continue
@@ -228,7 +229,7 @@ class sale_order(osv.osv, order_edit):
                     _('Could not cancel sale order'),
                     _('There was a problem cancelling the associated stock moves.'))
 
-    def _refund_invoices(self, invoices, refund_account_id):
+    def _refund_invoices(self, cr, uid, sale, invoices, refund_account_id):
         invoice_obj = self.pool.get('account.invoice')
         wf_service = netsvc.LocalService("workflow")
 
@@ -241,7 +242,7 @@ class sale_order(osv.osv, order_edit):
                 refund_journal_id = refund_journal_ids[0]
             else:
                 refund_journal_id = None
-            refund_id = invoice_obj.refund(cr, uid, [inv.id], description=description, journal_id=refund_journal_id)[0]
+            refund_id = invoice_obj.refund(cr, uid, [inv.id], description=False, journal_id=refund_journal_id)[0]
             # Confirm invoice
             invoice_obj.button_compute(cr, uid, [refund_id])
             wf_service.trg_validate(uid, 'account.invoice', refund_id, 'invoice_open', cr)
@@ -268,10 +269,10 @@ class sale_order(osv.osv, order_edit):
         for sale in self.browse(cr, uid, ids, context):
             self._refund_check_order(sale, cancel_assigned, accept_done)
             invoices = self._check_invoices(sale)
-            self._cancel_pickings(sale)
+            self._cancel_pickings(cr, uid, sale, accept_done)
             if invoices:
                 refund_account_id = self._check_refund_account(sale)
-                self._refund_invoices(invoices, refund_account_id)
+                self._refund_invoices(cr, uid, sale, invoices, refund_account_id)
             event_vals = {'subject': 'Sale Order Refunded: %s' % sale.name,
                       'body_text': 'Sale Order Refunded: %s' % sale.name,
                       'partner_id': sale.partner_id.id,
@@ -285,7 +286,7 @@ class sale_order(osv.osv, order_edit):
             self.write(cr, uid, [sale.id], {'state': 'cancel'})
             util.log(self, 'Cancelled sale order %s' % sale.name, logging.INFO)
 
-    def _refund(self, cr, uid, original, context):
+    def _refund(self, cr, uid, original, order, context):
         acc_move_line_obj = self.pool.get('account.move.line')
         
         # 1. Grab old invoice and payments
@@ -293,28 +294,29 @@ class sale_order(osv.osv, order_edit):
         
         if len(old_invoices) == 1:
             has_invoice = True
-        if len(old_invoices) == 0:
+        elif len(old_invoices) == 0:
             has_invoice = False
         else:
-            raise osv.except_osv('Multiple Invoices to Refund')
+            raise osv.except_osv(('Error!'),('Multiple Invoices to Refund'))
         
+        # 2. Unreconcile old invoice
         if has_invoice:
             invoice_old = old_invoices[0]
             payments = [p for p in invoice_old.payment_ids]
             payment_ids = [p.id for p in payments]
-            p_acc_id = acc_move_line_obj.browse(cr, uid, payment_ids[0]).account_id.id
+            if payment_ids:
+                p_acc_id = acc_move_line_obj.browse(cr, uid, payment_ids[0]).account_id.id
         
-            # 2. Unreconcile old invoice
-            recs = acc_move_line_obj.read(cr, uid, payment_ids, ['reconcile_id','reconcile_partial_id'])
-            unlink_ids = []
-            full_recs = filter(lambda x: x['reconcile_id'], recs)
-            rec_ids = [rec['reconcile_id'][0] for rec in full_recs]
-            part_recs = filter(lambda x: x['reconcile_partial_id'], recs) # Should not be partial - but for completeness it is included
-            part_rec_ids = [rec['reconcile_partial_id'][0] for rec in part_recs]
-            unlink_ids += rec_ids
-            unlink_ids += part_rec_ids
-            if len(unlink_ids):
-               self.pool.get('account.move.reconcile').unlink(cr, uid, unlink_ids)
+                recs = acc_move_line_obj.read(cr, uid, payment_ids, ['reconcile_id','reconcile_partial_id'])
+                unlink_ids = []
+                full_recs = filter(lambda x: x['reconcile_id'], recs)
+                rec_ids = [rec['reconcile_id'][0] for rec in full_recs]
+                part_recs = filter(lambda x: x['reconcile_partial_id'], recs) # Should not be partial - but for completeness it is included
+                part_rec_ids = [rec['reconcile_partial_id'][0] for rec in part_recs]
+                unlink_ids += rec_ids
+                unlink_ids += part_rec_ids
+                if len(unlink_ids):
+                   self.pool.get('account.move.reconcile').unlink(cr, uid, unlink_ids)
         
         # 3. Refund with credit note and reconcile with origional invoice
         self.refund(cr, uid, [original.id], 'Edit Refund:%s' % original.name, context=context, accept_done=True, cancel_assigned=True)
@@ -326,24 +328,27 @@ class sale_order(osv.osv, order_edit):
             invoice = self.pool.get('account.invoice').browse(cr, uid, [invoice_id], context=context)[0]
             wkf_service = netsvc.LocalService('workflow')
             wkf_service.trg_validate(uid, 'account.invoice', invoice.id, 'invoice_open', cr)
-            payment_ids.extend([pmnt.id for pmnt in invoice.move_id.line_id if pmnt.account_id.id == p_acc_id])
+            if payment_ids:
+                payment_ids.extend([pmnt.id for pmnt in invoice.move_id.line_id if pmnt.account_id.id == p_acc_id])
             payment_diff = invoice.amount_total - payment_credit
             
             # 5. If difference then generate a payment for the difference
             if payment_diff:
                voucher_id = self.generate_payment_with_pay_code(cr, uid, 'paypal_standard', order.partner_id.id, payment_diff, order.name, order.name, order.date_order, True, context)
                voucher = self.pool.get('account.voucher').browse(cr, uid, voucher_id)
-               payment_ids.extend([pmnt.id for pmnt in voucher.move_id.line_id if pmnt.account_id.id == p_acc_id])
+               if payment_ids:
+                   payment_ids.extend([pmnt.id for pmnt in voucher.move_id.line_id if pmnt.account_id.id == p_acc_id])
             
             # 6. Reconcile all payments with current invoice
-            acc_move_line_obj.reconcile(cr, uid, payment_ids, context=context)
+            if payment_ids:
+                acc_move_line_obj.reconcile(cr, uid, payment_ids, context=context)
 
     def _unreconcile_refund_and_cancel(self, cr, uid, original_id, order, context):
         if context == None:
             context = {}
         original = self.browse(cr, uid, original_id, context)
         try:
-            self._refund(cr, uid, original, context)
+            self._refund(cr, uid, original, order, context)
         except osv.except_osv, e:
             raise osv.except_osv('Error while refunding %s' % original.name, e.value)
 
