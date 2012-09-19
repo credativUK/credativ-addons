@@ -107,13 +107,18 @@ class procurement_compute_all(osv.osv_memory):
     lock = RunAgainLock()
 
     def _procure_calculation_all(self, cr, uid, ids, context=None):
+        logger = logging.getLogger('procurement.order')
+
         if self.lock.acquire():
             while True:
                 res = super(procurement_compute_all, self)._procure_calculation_all(cr, uid, ids, context=context)
+                logger.info('The scheduler is trying to get a lock')
                 if not self.lock.run_again():
                     break
             self.lock.release()
+            logger.info('The scheduler has released the lock')
         else:
+            logger.warn('The scheduler could not get a lock')
             res = {}
         return res
 
