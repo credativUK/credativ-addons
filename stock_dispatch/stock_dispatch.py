@@ -21,10 +21,12 @@
 ##############################################################################
 
 from osv import osv, fields
-import time
+import datetime, time
 from osv.orm import except_orm
 from tools.translate import _
 import netsvc
+import pytz
+import tools
 
 class stock_dispatch(osv.osv):
     _name = 'stock.dispatch'
@@ -37,22 +39,47 @@ class stock_dispatch(osv.osv):
         'complete_uid': fields.many2one('res.users', 'Completed User', readonly=True),
         'complete_date': fields.datetime('Completed date', readonly=True),
         'date': fields.datetime('Date created', readonly=True),
-        'state': fields.selection([('draft', 'New'), ('waiting', 'Waiting Another Move'), ('confirmed', 'Waiting Availability'), ('assigned', 'Available'), ('done', 'Done'), ('cancel', 'Cancelled')], 'Status', readonly=True, select=True),
+        'state': fields.selection([('draft', 'Draft'), ('waiting', 'Waiting Another Move'), ('confirmed', 'Confirmed'), ('assigned', 'Available'), ('done', 'Done'), ('cancel', 'Cancelled')], 'Status', readonly=True, select=True),
         'dispatch_date': fields.date('Planned Dispatch Date', required=True, readonly=True, states={'draft':[('readonly',False)]}),
+        'cutoff_date': fields.datetime('Cutoff Date', required=True, readonly=True, states={'draft':[('readonly',False)]}),
         }
 
     _sql_constraints = [
         ('name_uniq', 'unique(name)', 'Dispatch Name must be unique !'),
+        ('cutoff_before_dispatch', 'CHECK (cutoff_date<dispatch_date)',  'The cutoff date must occur before the dispatch'),
     ]
+
     _order = 'name desc'
+
+    def _default_cutoff_date(self, cr, uid, context):
+        return self.on_change_dispatch_date(cr, uid, 0, datetime.datetime.utcnow().strftime('%Y-%m-%d'), context=context)['value']['cutoff_date']
 
     _defaults = {
         'name': lambda obj, cr, uid, context: obj.pool.get('ir.sequence').get(cr, uid, 'stock.dispatch'),
         'state': lambda *a: 'draft',
-        'date': lambda *a: time.strftime('%Y-%m-%d %H:%M:%S'),
-        'dispatch_date': lambda *a: time.strftime('%Y-%m-%d'),
+        'date': lambda *a: datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+        'dispatch_date': lambda *a: datetime.datetime.utcnow().strftime('%Y-%m-%d'),
+        'cutoff_date': _default_cutoff_date,
     }
 
+    def on_change_dispatch_date(self, cr, uid, id, dispatch_date, context=None):
+        res = {'value': {}}
+        if dispatch_date:
+            tz = self.pool.get('res.users').read(cr, uid, uid, ['context_tz'])['context_tz']
+            cutoff = (datetime.datetime.strptime(dispatch_date, '%Y-%m-%d') - datetime.timedelta(days=1)).replace(hour=15, minute=0, second=0)
+            # FIXME: DST not working correctly in OpenERP - no idea why it is failing, but I have resorted to hard coding European DST date ranges to get the default value
+            if tz == 'GMT':
+                dst_start = 31 - ((((5 * cutoff.year) / 4) + 4) % 7)
+                dst_end = 31 - ((((5 * cutoff.year) / 4) + 1) % 7)
+                if ((cutoff.month == 3 and cutoff.day >= dst_start) or
+                   (cutoff.month > 3 and cutoff.month < 10) or
+                   (cutoff.month == 10 and cutoff.day <= dst_end)):
+                    cutoff = cutoff.replace(hour=14)
+            # FIXME: End
+            cutoff = cutoff.strftime('%Y-%m-%d %H:%M:%S')
+            res['value']['cutoff_date'] = tools.server_to_local_timestamp(cutoff, '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S', tz)
+        return res
+        
     def on_change_stock_moves(self, cr, uid, ids, stock_moves, context=None):
         move_list = []
         move_string = ''
@@ -86,12 +113,12 @@ class stock_dispatch(osv.osv):
         if context is None:
             context = {}
 
-        logger = netsvc.Logger()
-        start_time = time.time()
-        logger.notifyChannel('stock.dispatch', netsvc.LOG_DEBUG, 'action_done: start %s' % ids)
-        
         for dispatch in self.browse(cr, uid, ids):
             context['from_dispatch'] = dispatch.id
+            for move in dispatch.stock_moves:
+                if move.state == 'cancel':
+                    raise osv.except_osv('Could not complete dispatch',
+                        'This dispatch contains a cancelled stock move. This may be due to a cancellation during the complete action.')
             move_ids = [x.id for x in dispatch.stock_moves]
             self.pool.get('stock.move').action_done(cr, uid, move_ids, context=context)
             
@@ -103,8 +130,7 @@ class stock_dispatch(osv.osv):
                     # cause workflow to update since we called move.action_done
                     wkf_service.trg_write(uid, 'stock.picking', move.picking_id.id, cr)
 
-        self.write(cr, uid, ids, {'state': 'done', 'complete_date': time.strftime('%Y-%m-%d %H:%M:%S'), 'complete_uid': uid})
-        logger.notifyChannel('stock.dispatch', netsvc.LOG_DEBUG, 'action_done: finished in %s' % (time.time() - start_time, ))
+        self.write(cr, uid, ids, {'state': 'done', 'complete_date': datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), 'complete_uid': uid})
         return True
 
     def action_cancel(self, cr, uid, ids, context=None):
@@ -127,6 +153,10 @@ class stock_dispatch(osv.osv):
             if len(move_ids) == 0:
                 raise osv.except_osv('Could not confirm dispatch',
                       'A dispatch must have atleast one stock move assigned to it')
+            for move in dispatch.stock_moves:
+                if move.state == 'cancel':
+                    raise osv.except_osv('Could not confirm dispatch',
+                        'This dispatch contains a cancelled stock move. This may be due to a cancellation during the confirm action.')
         self.write(cr, uid, ids, {'state': 'confirmed'})
         return True
 
@@ -147,4 +177,9 @@ class stock_dispatch(osv.osv):
         default['stock_moves'] = []
         return super(stock_dispatch, self).copy_data(cr, uid, id, default, context)
 
+    def create(self, cr, uid, data, context=None):
+        if not data.get('cutoff_date', False):
+            data['cutoff_date'] = self.on_change_dispatch_date(cr, uid, 0, data.get('dispatch_date', datetime.datetime.utcnow().strftime('%Y-%m-%d')), context=context)['value']['cutoff_date']
+        return super(stock_dispatch, self).create(cr, uid, data, context=context)
+    
 stock_dispatch()

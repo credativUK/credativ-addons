@@ -1,8 +1,9 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution    
-#    Copyright (C) 2011 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
+#    OpenERP, Open Source Management Solution	
+#    Copyright (C) 2012 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
+#    $Id$
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,26 +22,21 @@
 
 
 {
-    'name': 'Sale Order Edit',
-    'version': '0.1',
-    'category': 'Sales & Purchases',
+    'name': 'stock_levels',
+    'version': '0.6',
+    'category': 'Generic Modules/Inventory Control',
     'description': """
-    Sale Order Edit
+    Adds a new view showing current stock levels for each product and location.
+
+    This module is similar to the stock by location view, but it does not show
+    empty locations or their parent locations, and allows filtering by product and location.
     """,
     'author': 'credativ',
-    'depends': [
-        'sale',
-        'purchase',
-        'mail',
-        'base_sale_multichannels'
-        ],
-    'init_xml': [
-        ],
-    'update_xml': [
-        'wizard/order_edit_wizard_view.xml',
-    ],
-    'demo_xml': [
-    ],
+    'depends': ['stock'],
+    #'update_xml': ['stock_levels_view.xml',
+    #                'security/ir.model.access.csv'],
+    'update_xml': ['stock_levels_view.xml'],
+    'demo_xml': [],
     'installable': True,
     'active': False,
 }

@@ -1,8 +1,9 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution    
-#    Copyright (C) 2011 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
+#    OpenERP, Open Source Management Solution
+#    Copyright (C) 2012 credativ Ltd (<http://credativ.co.uk>).
+#    All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -19,29 +20,18 @@
 #
 ##############################################################################
 
+from osv import osv, fields
+from tools.translate import _
 
-{
-    'name': 'Sale Order Edit',
-    'version': '0.1',
-    'category': 'Sales & Purchases',
-    'description': """
-    Sale Order Edit
-    """,
-    'author': 'credativ',
-    'depends': [
-        'sale',
-        'purchase',
-        'mail',
-        'base_sale_multichannels'
-        ],
-    'init_xml': [
-        ],
-    'update_xml': [
-        'wizard/order_edit_wizard_view.xml',
-    ],
-    'demo_xml': [
-    ],
-    'installable': True,
-    'active': False,
-}
-# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+class res_company(osv.osv):
+    _inherit = "res.company"
+
+    _columns = {
+        'po_name_regex': fields.char('Purchase Order Reference Format', size=64, help="The regex used to match the supplier reference to the PO name. eg (?<=^.{2}).{3}  will get the 3rd, 4th and 5th characters as the supplier reference."),
+    }
+    
+    _defaults = {
+        'po_name_regex': '(?<=^.{2}).{3}'
+    }
+
+res_company()

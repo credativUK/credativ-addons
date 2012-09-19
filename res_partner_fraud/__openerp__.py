@@ -1,8 +1,9 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution    
-#    Copyright (C) 2011 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
+#    OpenERP, Open Source Management Solution
+#    Copyright (C) 2012 credativ Ltd (<http://credativ.co.uk>).
+#    All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -18,30 +19,28 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-
-
 {
-    'name': 'Sale Order Edit',
-    'version': '0.1',
-    'category': 'Sales & Purchases',
-    'description': """
-    Sale Order Edit
-    """,
-    'author': 'credativ',
-    'depends': [
+    'name' : 'Partner Fraud Flag',
+    'version' : '1.0.0.0',
+    'author' : 'credativ',
+    'website' : 'http://credativ.co.uk',
+    'depends' : [
+        'base',
         'sale',
-        'purchase',
-        'mail',
-        'base_sale_multichannels'
-        ],
-    'init_xml': [
-        ],
-    'update_xml': [
-        'wizard/order_edit_wizard_view.xml',
     ],
-    'demo_xml': [
+    'category' : 'Custom Modules',
+    'description': '''
+A manual flag for Fraud set on Partners which will show in Sale Orders
+''',
+    'init_xml' : [
     ],
-    'installable': True,
+    'demo_xml' : [
+    ],
+    'update_xml' : [
+        'res_partner_view.xml',
+        'sale_view.xml',
+    ],
     'active': False,
+    'installable': True
 }
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
