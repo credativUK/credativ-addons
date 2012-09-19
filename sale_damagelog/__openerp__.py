@@ -13,6 +13,7 @@
         'wizard/create_damagelog.xml',
         'sale_comprequest_view.xml',
         'sale_comprequest_sequence.xml',
+        'wizard/wizard_compensation_request.xml',
     ],
     'demo_xml': [],
     'installable': True,

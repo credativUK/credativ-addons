@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>wizard_sale_damagelog_compensation_request
+        <record id="view_wizard_sale_damagelog_compensation_request" model="ir.ui.view">
+            <field name="name">Approve Compensation Request</field>
+            <field name="model">sale.damagelog.compensation.request</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Approve Compensation Request">
+                    <group col="2" colspan="2">
+                        <button special="cancel" string="_Cancel" icon="gtk-cancel"/>
+                        <button name="approve_compensation" string="_Approve" type="object" icon="terp-gtk-go-back-rtl" groups="base.group_sale_manager"/>
+                    </group>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_wizard_sale_damagelog_compensation_request" model="ir.actions.act_window">
+            <field name="name">Approve Compensation Request</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">wizard_compensation_request</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_wizard_sale_damagelog_compensation_request"/>
+            <field name="target">new</field>
+        </record>
+
+        <record model="ir.values" id="wizard_sale_damagelog_compensation_request">
+            <field name="model_id" ref="model_wizard_compensation_request"/>
+            <field name="object" eval="1"/>
+            <field name="name">Approve Compensation Request</field>
+            <field name="key2">client_action_multi</field>
+            <field name="value" eval="'ir.actions.act_window,' + str(ref('action_wizard_sale_damagelog_compensation_request'))"/>
+            <field name="key">action</field>
+            <field name="model">sale.comprequest</field>
+        </record>
+    </data>
+</openerp>
