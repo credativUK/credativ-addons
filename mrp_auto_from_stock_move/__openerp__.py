@@ -7,7 +7,10 @@
     "category" : "Manufacturing",
     "sequence": 18,
     "images" : [],
-    "depends" : ["mrp"],
+    "depends" : [
+        "mrp",
+        "stock",
+        ],
     "description": """
 This is the base module to manage the manufacturing process in OpenERP.
 =======================================================================
