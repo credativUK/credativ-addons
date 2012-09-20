@@ -51,6 +51,7 @@
                                         <field name="refund_type"/>
                                         <field name="refund_value"/>
                                         <field name="state"/>
+                                        <field name="notes"/>
                                         <field name="repl_order_ref"/>
                                         <field name="write_date"/>
                                         <field name="write_uid"/>

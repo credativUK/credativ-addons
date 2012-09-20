@@ -75,6 +75,7 @@
           <field name="refund_type"/>
           <field name="refund_value"/>
           <field name="state"/>
+          <field name="notes"/>
           <field name="repl_order_ref"/>
           <field name="create_date"/>
           <field name="create_uid"/>
@@ -163,5 +164,30 @@
         </form>
       </field>
     </record>
+
+    <record model="ir.ui.view" id="view_order_form_made_compreqs">
+        <field name="name">sale.order.form.compreqs</field>
+        <field name="model">sale.order</field>
+        <field name="type">form</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <data>
+                <xpath expr="/form/notebook/page[last()]" position="after">
+                    <page string="Compensation Requests">
+                        <separator colspan="4" string="Compensation Requests"/>
+                        <field colspan="4" name="comp_reqs" nolabel="1"/>
+                    </page>
+                </xpath>
+            </data>
+        </field>
+    </record>
+
+    <act_window
+        domain="[('sale_order_id', 'in', active_ids)]" 
+        id="act_sale_order_2_compreq" 
+        name="Compensation Requests"
+        res_model="sale.comprequest"
+        src_model="sale.order"
+    />
   </data>
 </openerp>
