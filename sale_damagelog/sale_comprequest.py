@@ -69,17 +69,16 @@ class sale_comprequest(osv.osv):
         raise_errors = []
         for comp_req in comp_reqs:
             if comp_req.refund_type in ('replace-same', 'replace-diff', 'redispatch') and not comp_req.repl_order_ref:
-                raise_text = 'Replacement / Redispatch Order Reference is required for this Compensation type in record ' + str(comp_req.name)
+                raise_text = 'Replacement / Redispatch Order Reference is required for this Compensation type in record %s' % (comp_req.name or '',)
                 raise_errors.append(raise_text)
             if comp_req.refund_type == 'voucher' and not comp_req.voucher_code:
-                raise_text = 'Voucher Code is required for this Compensation type in record ' + str(comp_req.name)
+                raise_text = 'Voucher Code is required for this Compensation type in record %s' % (comp_req.name or '',)
                 raise_errors.append(raise_text)
             if comp_req.refund_type in ('refund', 'voucher') and not comp_req.refund_value:
-                raise_text = 'Compensation Value is required for this Compensation type in record ' + str(comp_req.name)
+                raise_text = 'Compensation Value is required for this Compensation type in record %s' % (comp_req.name or '',)
                 raise_errors.append(raise_text)
         if raise_errors:
             raise osv.except_osv('User Error', '\n\n'.join(raise_errors)) # raise_errors is a list of strings
-            #raise osv.except_osv('User Error', raise_errors[0], raise_errors[1], raise_errors[2], raise_errors[3], raise_errors[4])
         self.write(cr, uid, ids, {'state': 'confirmed', 'confirm_uid': uid, 'confirm_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=None)
 
 sale_comprequest()
