@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+    
+    	<!-- Days of Week -->
+    	<record id="monday" model="res.weekdays">
+            <field name="name">Monday</field>
+        </record>
+        
+        <record id="tuesday" model="res.weekdays">
+            <field name="name">Tuesday</field>
+        </record>
+        
+        <record id="wednesday" model="res.weekdays">
+            <field name="name">Wednesday</field>
+        </record>
+        
+        <record id="thursday" model="res.weekdays">
+            <field name="name">Thursday</field>
+        </record>
+        
+        <record id="friday" model="res.weekdays">
+            <field name="name">Friday</field>
+        </record>
+        
+        <record id="saturday" model="res.weekdays">
+            <field name="name">Saturday</field>
+        </record>
+        
+        <record id="sunday" model="res.weekdays">
+            <field name="name">Sunday</field>
+        </record>
+        
+        <!-- Rule -->
+    	<record id="uk_may_day" model="hr.public.holiday.rule">
+            <field name="name">Early May Bank Holiday</field>
+            <field name="is_recurring">True</field>
+            <field name="recurring_week">0</field>
+            <field name="recurring_day" ref="monday"/>
+            <field name="recurring_month">05</field>
+            <field name="country_ids" eval="[(6,0,[ref('base.uk'),ref('base.us')])]"/>
+        </record>
+        
+        <record id="uk_spring_day" model="hr.public.holiday.rule">
+            <field name="name">Spring Bank Holiday</field>
+            <field name="is_recurring">True</field>
+            <field name="recurring_week">-1</field>
+            <field name="recurring_day" ref="monday"/>
+            <field name="recurring_month">05</field>
+            <field name="country_ids" eval="[(6,0,[ref('base.uk')])]"/>
+        </record>
+        
+        <record id="uk_summer_day" model="hr.public.holiday.rule">
+            <field name="name">Summer Bank Holiday</field>
+            <field name="is_recurring">True</field>
+            <field name="recurring_week">-1</field>
+            <field name="recurring_day" ref="monday"/>
+            <field name="recurring_month">08</field>
+            <field name="country_ids" eval="[(6,0,[ref('base.uk')])]"/>
+        </record>
+        
+        <!-- Scheduler -->
+        <record forcecreate="True" id="ir_cron_holiday_action" model="ir.cron">
+            <field name="name">Run scheduler to calculate the actual date of holiday</field>
+            <field eval="True" name="active"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+            <field eval="False" name="doall"/>
+            <field name="model">hr.public.holiday.rule</field>
+            <field name="function">_fetch_holidays</field>
+            <field name="args">()</field>
+        </record>
+        
+    </data>
+</openerp>
