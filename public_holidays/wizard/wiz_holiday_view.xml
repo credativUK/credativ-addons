@@ -36,6 +36,6 @@
 
         <menuitem icon="STOCK_PRINT" action="action_view_wiz_holiday"
             id="menu_action_view_wiz_holiday"
-            parent="public_holidays.action_holiday" />
+            parent="public_holidays.menu_open_holidays" />
     </data>
 </openerp>

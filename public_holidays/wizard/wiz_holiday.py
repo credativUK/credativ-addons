@@ -1,6 +1,9 @@
 from osv import osv, fields
 from tools.translate import _
 import time
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+import calendar
 
 class wiz_holiday(osv.osv_memory):
     _name = 'wiz.holiday'
@@ -20,8 +23,25 @@ class wiz_holiday(osv.osv_memory):
          'h_date': lambda *a: time.strftime('%Y-%m-%d')
     }
     
+    def _get_next_working_day(self, cr, uid, nxt_wrking_date, country, context=None):
+        holiday_obj = self.pool.get('hr.holidays')
+        nxt_wrking_date = datetime.strftime(nxt_wrking_date, '%Y-%m-%d')
+        holiday = holiday_obj.search(cr, uid, [('actual_date','=',nxt_wrking_date),('country_id','=',country)])
+        weekends = []
+        if country:
+            country_id = self.pool.get('res.country').browse(cr, uid, country)
+            for country_weekend in country_id.weekend_ids:
+                weekends.append(country_weekend.code)
+        
+        if holiday or (datetime.strptime(nxt_wrking_date, '%Y-%m-%d').isoweekday() in weekends):
+            date1 = datetime.strptime(nxt_wrking_date, '%Y-%m-%d') + relativedelta(days=1)
+            nxt_wrking_date = self._get_next_working_day(cr, uid, date1, country, context=context)
+          
+        return nxt_wrking_date
+        
+            
     def check_func(self, cr, uid, ids, context=None):
-        holiday_obj = self.pool.get('hr.public.holiday')
+        holiday_obj = self.pool.get('hr.holidays')
         browse_recid = self.browse(cr, uid, ids[0])
         country = browse_recid.country_id and browse_recid.country_id.id or False
         # check if its the working day or not
@@ -29,17 +49,23 @@ class wiz_holiday(osv.osv_memory):
         holidays = holiday_obj.search(cr, uid, [('actual_date','=',browse_recid.h_date),('country_id','=',country)])
         if holidays:
             flag = False
-        # fetch the next working date
-        nxtDays = holiday_obj.search(cr, uid, [('actual_date','>',browse_recid.h_date),('country_id','=',country)], order="actual_date ASC")
-        nextWorkingDay = nxtDays and holiday_obj.browse(cr, uid, nxtDays[0]).actual_date or False
         
         # fetch the next x no. of working days
-        no_of_days = browse_recid.no_of_days
-        desc = 'Next '+ str(no_of_days) + ' working days : \n'
-        for nextday in holiday_obj.browse(cr, uid, nxtDays):
-            if no_of_days != 0:
-                desc += nextday.actual_date + '\n'
-                no_of_days -= 1
-        return self.write(cr, uid, ids, {'isWorkingDay': flag, 'nextWorkingDay': nextWorkingDay, 'desc': desc, 'dummy_check': True})
-    
+        nextWorkingDays = []
+        i=1
+        while(len(nextWorkingDays) < browse_recid.no_of_days):
+            date1 = datetime.strptime(browse_recid.h_date, '%Y-%m-%d') + relativedelta(days=i)
+            nxt_day = self._get_next_working_day(cr, uid, date1, country)
+            if not nextWorkingDays.__contains__(nxt_day):
+                nextWorkingDays.append(nxt_day)
+            i += 1
+
+        desc = 'Next '+ str(browse_recid.no_of_days) + ' working days : \n'
+        for nextday in nextWorkingDays:
+            desc += nextday + '\n'
+            
+        return self.write(cr, uid, ids, {'isWorkingDay': flag, 'nextWorkingDay': nextWorkingDays[0], 'desc': desc, 'dummy_check': True})
+
 wiz_holiday()
+
+# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

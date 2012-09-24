@@ -8,7 +8,7 @@
     'author': 'Credativ',
     'website': 'http://www.credativ.com',
     'images': [],
-    'depends': ['base'],
+    'depends': ['hr_holidays'],
     'init_xml': [],
     'update_xml': ["public_holiday_view.xml", 
                    "holiday_data.xml",
