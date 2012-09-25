@@ -105,6 +105,7 @@ class hr_holiday_rule(osv.osv):
                         'holiday_status_id': self.pool.get('hr.holidays.status').search(cr, uid, [('name','=', 'Legal Leaves')]) and self.pool.get('hr.holidays.status').search(cr, uid, [('name','=', 'Legal Leaves')])[0] or False,
                         'date_from': effective_date,
                         'date_to': effective_date,
+                        'number_of_days_temp':1.00,
                         'actual_date': holiday['value']['actual_date'],
                         'previous_holiday': holiday['value']['previous_holiday'],
                         'next_holiday': holiday['value']['next_holiday'],
