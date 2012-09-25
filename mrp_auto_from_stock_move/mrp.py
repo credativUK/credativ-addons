@@ -25,6 +25,8 @@ class mrp_production(osv.osv):
     }
 
     def _make_production_incoming_shipment(self, cr, uid, production, context=None):
+        """ Create a new picking for the finished goods and update the MO
+        """
         ir_sequence = self.pool.get('ir.sequence')
         stock_picking = self.pool.get('stock.picking')
         routing_loc = None
@@ -53,31 +55,33 @@ class mrp_production(osv.osv):
         return picking_id
 
     def action_confirm(self, cr, uid, ids):
+        """ When a Manufacturing Order is confirmed, if the product is of BoM type automatic
+        create a picking for finished goods and then change state to assigned.
+        """
+        wf_service = netsvc.LocalService("workflow")
         picking_id = super(mrp_production, self).action_confirm(cr, uid, ids)
         for production in self.browse(cr, uid, ids):
-            #Perform only if bom_type is automatic
             if production.bom_id and production.bom_id.type == 'automatic':
                 shipment_id = self._make_production_incoming_shipment(cr, uid, production)
                 for production_line in production.move_created_ids:
-                    # Internal shipment is created for Stockable and Consumer Products
                     if production_line.product_id.type in ('product', 'consu'):
                         production_line.write({'picking_id': shipment_id})
+                        self.pool.get('stock.picking').force_assign(cr, uid, [shipment_id])
+                        wf_service.trg_validate(uid, 'stock.picking', shipment_id, 'button_confirm', cr)
         return picking_id
 
-    def test_subcontractor_product(self, cr, uid, ids):
-        """ Tests whether the product being made is of bom type automatic and consumes the raw materials if so.
-        @return: True or False
+    def test_if_subcontractor_product(self, cr, uid, ids):
+        """ Tests whether the product being made is of bom type automatic.
+        If so transition to workflow activity 'in production'.
+        If not transition to workflow activity 'ready' 
         """
         wf_service = netsvc.LocalService("workflow")
         move_obj = self.pool.get('stock.move')
-        res = False
         prod_items = self.browse(cr, uid, ids)
+        res = False
         for prod in prod_items:
             if prod.bom_id and prod.bom_id.type == 'automatic':
                 res = True
-                for move_id in prod.move_lines:
-                    move_obj.action_consume(cr, uid, [move_id.id],move_id.product_qty, move_id.location_id.id)
-                    wf_service.trg_validate(uid, 'stock.picking', prod.incoming_shipment_id.id, 'button_confirm', cr)
         return res
 
 
@@ -87,14 +91,18 @@ class stock_picking(osv.osv):
     _inherit = 'stock.picking'
 
     def change_mo_state(self, cr, uid, ids, context=None):
+        """ Changes the MO state to done when the incoming shipment for finished product is changed to done!
+
+        """
         wf_service = netsvc.LocalService("workflow")
         prod_obj = self.pool.get('mrp.production')
-        #Change the MO state to done when the incoming shipment for finished product is changed to done!
-        #check if there is any MO related to finished product moves picking
+        move_obj = self.pool.get('stock.move')
         production_ids = prod_obj.search(cr, uid, [('incoming_shipment_id','in',ids),('state','not in',['draft','done','cancel'])])
         if production_ids:
             for prod in prod_obj.browse(cr, uid, production_ids):
                 if prod.bom_id and prod.bom_id.type == 'automatic':
+                    for move_id in prod.move_lines:
+                        move_obj.action_consume(cr, uid, [move_id.id],move_id.product_qty, move_id.location_id.id)
                     wf_service.trg_validate(uid, 'mrp.production', prod.id, 'button_produce_done', cr)
         return True
 
