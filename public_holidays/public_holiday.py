@@ -96,7 +96,7 @@ class hr_holiday_rule(osv.osv):
                     effective_date = datetime.strptime(effective_date, '%Y-%m-%d') + relativedelta(years=1)
                     effective_date = datetime.strftime(effective_date, '%Y-%m-%d')
                 holiday = self.pool.get('hr.holidays').onchange_holidays(cr, uid, ids, effective_date, country.id, rule.id)
-                hol_ids = self.pool.get('hr.holidays').search(cr, uid, [('actual_date','=',holiday['value']['actual_date']),('rule_id','=',rule.id),('country_id','=',country.id)])
+                hol_ids = self.pool.get('hr.holidays').search(cr, uid, [('date_from','=',effective_date),('rule_id','=',rule.id),('country_id','=',country.id)])
                 if not hol_ids:
                     vals = {
                         'name': rule.name,
@@ -160,7 +160,7 @@ class hr_holidays(osv.osv):
             for country_weekend in country_id.weekend_ids:
                 weekends.append(country_weekend.code)
             if country_id.allow_substitute == True:
-                if type(actual_date) == str:
+                if type(actual_date) != datetime:
                     actual_date = datetime.strptime(actual_date, '%Y-%m-%d')
                 if (rule and actual_date.isoweekday() in weekends) or srch_hol:
                     dd = actual_date + relativedelta(days=1)
