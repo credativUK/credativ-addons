@@ -44,10 +44,14 @@ class wiz_holiday(osv.osv_memory):
         holiday_obj = self.pool.get('hr.holidays')
         browse_recid = self.browse(cr, uid, ids[0])
         country = browse_recid.country_id and browse_recid.country_id.id or False
+        weekends = []
+        if country:
+            for country_weekend in browse_recid.country_id.weekend_ids:
+                weekends.append(country_weekend.code)
         # check if its the working day or not
         flag = True
         holidays = holiday_obj.search(cr, uid, [('actual_date','=',browse_recid.h_date),('country_id','=',country)])
-        if holidays:
+        if holidays or (datetime.strptime(browse_recid.h_date, '%Y-%m-%d').isoweekday() in weekends):
             flag = False
         
         # fetch the next x no. of working days

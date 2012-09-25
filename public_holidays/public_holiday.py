@@ -92,6 +92,9 @@ class hr_holiday_rule(osv.osv):
                     raise osv.except_osv(
                     _('Error !'),
                     _('Either select a week and day of week for a particular month or select day of month.'))
+                if not (effective_date >= start_dt and effective_date <= end_dt):
+                    effective_date = datetime.strptime(effective_date, '%Y-%m-%d') + relativedelta(years=1)
+                    effective_date = datetime.strftime(effective_date, '%Y-%m-%d')
                 holiday = self.pool.get('hr.holidays').onchange_holidays(cr, uid, ids, effective_date, country.id, rule.id)
                 hol_ids = self.pool.get('hr.holidays').search(cr, uid, [('actual_date','=',holiday['value']['actual_date']),('rule_id','=',rule.id),('country_id','=',country.id)])
                 if not hol_ids:
@@ -155,11 +158,13 @@ class hr_holidays(osv.osv):
         if country:
             country_id = self.pool.get('res.country').browse(cr, uid, country)
             for country_weekend in country_id.weekend_ids:
-                weekends.append(country_weekend.id)
+                weekends.append(country_weekend.code)
             if country_id.allow_substitute == True:
-                if srch_hol or (rule and self.pool.get('hr.holiday.rule').browse(cr, uid, rule).day.id in weekends):
-                     dd = datetime.strptime(actual_date, '%Y-%m-%d') + timedelta(days=1)
-                     actual_date = self.get_actual_holiday(cr, uid, dd, country=country, rule=rule, context=context)
+                if type(actual_date) == str:
+                    actual_date = datetime.strptime(actual_date, '%Y-%m-%d')
+                if (rule and actual_date.isoweekday() in weekends) or srch_hol:
+                    dd = actual_date + relativedelta(days=1)
+                    actual_date = self.get_actual_holiday(cr, uid, dd, country=country, rule=rule, context=context)
         return actual_date
     
     def _get_prev_date(self, cr, uid, actual_date, country, context=None):
