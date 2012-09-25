@@ -32,7 +32,7 @@
         'sale',
         'purchase',
         'mail',
-        'base_sale_multichannels'
+        'base_sale_multichannels' # for sale_order.generate_payment_with_pay_code
         ],
     'init_xml': [
         ],
