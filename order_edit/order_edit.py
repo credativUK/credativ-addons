@@ -135,14 +135,14 @@ class order_edit(object):
                                                           order, context)
         return line_moves
 
-    def copy_for_edit(self, cr, uid, id, context=None):
+    def copy_for_edit(self, cr, uid, id_, context=None):
         if context is None:
             context = {}
         context = context.copy()
         context['order_edit'] = True
         try:
-            if len(id) == 1:
-                id = id[0]
+            if len(id_) == 1:
+                id_ = id[0]
         except TypeError:
             pass
         order = self.browse(cr, uid, id, context)
@@ -316,7 +316,7 @@ class sale_order(osv.osv, order_edit):
                 unlink_ids += rec_ids
                 unlink_ids += part_rec_ids
                 if len(unlink_ids):
-                   self.pool.get('account.move.reconcile').unlink(cr, uid, unlink_ids)
+                    self.pool.get('account.move.reconcile').unlink(cr, uid, unlink_ids)
         
         # 3. Refund with credit note and reconcile with origional invoice
         self.refund(cr, uid, [original.id], 'Edit Refund:%s' % original.name, context=context, accept_done=True, cancel_assigned=True)
@@ -334,10 +334,10 @@ class sale_order(osv.osv, order_edit):
             
             # 5. If difference then generate a payment for the difference
             if payment_diff:
-               voucher_id = self.generate_payment_with_pay_code(cr, uid, 'paypal_standard', order.partner_id.id, payment_diff, order.name, order.name, order.date_order, True, context)
-               voucher = self.pool.get('account.voucher').browse(cr, uid, voucher_id)
-               if payment_ids:
-                   payment_ids.extend([pmnt.id for pmnt in voucher.move_id.line_id if pmnt.account_id.id == p_acc_id])
+                voucher_id = self.generate_payment_with_pay_code(cr, uid, 'paypal_standard', order.partner_id.id, payment_diff, order.name, order.name, order.date_order, True, context)
+                voucher = self.pool.get('account.voucher').browse(cr, uid, voucher_id)
+                if payment_ids:
+                    payment_ids.extend([pmnt.id for pmnt in voucher.move_id.line_id if pmnt.account_id.id == p_acc_id])
             
             # 6. Reconcile all payments with current invoice
             if payment_ids:
