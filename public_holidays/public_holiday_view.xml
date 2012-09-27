@@ -107,15 +107,17 @@
             <field name="type">form</field>
             <field name="inherit_id" ref="hr_holidays.edit_holiday_new"/>
             <field name="arch" type="xml">
-            	<field name="number_of_days_temp" position="after">
+            	<xpath expr="//notebook/page/field[@name='date_from']" position="replace">
+            		<field name="date_from" on_change="onchange_holidays(date_from,country_id,rule_id)" required="1"/>
+            	</xpath>
+            	<xpath expr="//notebook/page/field[@name='number_of_days_temp']" position="after">
             		<field name="actual_date" required="1"/>
             		<field name="country_id" on_change="onchange_holidays(date_from,country_id,rule_id)"/>
 					<field name="rule_id" invisible="1"/>
 					<field name="is_recurring"/>
 					<field name="previous_holiday" readonly="1"/>
 					<field name="next_holiday" readonly="1"/>
-					
-            	</field>
+            	</xpath>
             </field>
         </record>
         
@@ -130,6 +132,8 @@
 					<field name="previous_holiday"/>
 					<field name="next_holiday"/>
 					<field name="country_id"/>
+					<field name="rule_id"/>
+					<field name="state" invisible="1"/>
             	</tree>
             </field>
         </record>
