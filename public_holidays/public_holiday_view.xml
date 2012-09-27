@@ -118,6 +118,16 @@
 					<field name="previous_holiday" readonly="1"/>
 					<field name="next_holiday" readonly="1"/>
             	</xpath>
+            	<xpath expr="//notebook" position="inside">
+            		<page string="Extra Info">
+            			<field name="no_of_days"/>
+            			<button icon="terp-gtk-go-back-rtl" string="Update" name="check_func" type="object"/>
+            			<separator string="The below details will be updated on click of 'Update' button !" colspan="4"/>
+						<field name="nextWorkingDay" readonly="1"/>
+						<label string="Details of Next Working Day(s)" colspan="4"/>
+						<field name="desc" colspan="4" nolabel="1" readonly="1"/>
+            		</page>
+            	</xpath>
             </field>
         </record>
         

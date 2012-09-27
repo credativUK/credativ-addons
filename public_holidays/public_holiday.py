@@ -149,6 +149,9 @@ class hr_holidays(osv.osv):
         'rule_id': fields.many2one('hr.holiday.rule', 'Holiday Rule', help="To know it was auto-generated or manually entered holiday"),
         'country_id': fields.many2one('res.country', 'Country'),
         'is_recurring': fields.boolean('Recurring Holiday'),
+        'no_of_days': fields.integer('No. of Working Days'),
+        'nextWorkingDay': fields.date('Next Working Date'),
+        'desc': fields.text('Description'),
     }
     
     _defaults = {
@@ -232,6 +235,56 @@ class hr_holidays(osv.osv):
         holidays = self.search(cr, uid, [('id','not in',ids),('is_recurring','=',True)], context=context)
         self.update_prev_nxt_holiday(cr, uid, holidays, context=context)
         return res
+    
+    def _get_next_working_day(self, cr, uid, nxt_wrking_date, country, context=None):
+        holiday_obj = self.pool.get('hr.holidays')
+        nxt_wrking_date = datetime.strftime(nxt_wrking_date, '%Y-%m-%d')
+        holiday = holiday_obj.search(cr, uid, [('actual_date','=',nxt_wrking_date),('country_id','=',country)])
+        weekends = []
+        if country:
+            country_id = self.pool.get('res.country').browse(cr, uid, country)
+            for country_weekend in country_id.weekend_ids:
+                weekends.append(country_weekend.code)
+        
+        if holiday or (datetime.strptime(nxt_wrking_date, '%Y-%m-%d').isoweekday() in weekends):
+            date1 = datetime.strptime(nxt_wrking_date, '%Y-%m-%d') + relativedelta(days=1)
+            nxt_wrking_date = self._get_next_working_day(cr, uid, date1, country, context=context)
+          
+        return nxt_wrking_date
+    
+    def getWorkingDays(self, cr, uid, holiday_date, country=False, no_of_days=0, context=None):
+        weekends = []
+        if country:
+            for country_weekend in self.pool.get('res.country').browse(cr, uid, country, context).weekend_ids:
+                weekends.append(country_weekend.code)
+        # check if its the working day or not
+        flag = True
+        holidays = self.search(cr, uid, [('actual_date','=',holiday_date),('country_id','=',country)])
+        if holidays or (datetime.strptime(holiday_date, '%Y-%m-%d').isoweekday() in weekends):
+            flag = False
+        
+        # fetch the next x no. of working days
+        nextWorkingDays = []
+        i=1
+        while(len(nextWorkingDays) < no_of_days):
+            date1 = datetime.strptime(holiday_date, '%Y-%m-%d') + relativedelta(days=i)
+            nxt_day = self._get_next_working_day(cr, uid, date1, country)
+            if not nextWorkingDays.__contains__(nxt_day):
+                nextWorkingDays.append(nxt_day)
+            i += 1
+
+        desc = 'Next '+ str(no_of_days) + ' working day(s) : \n'
+        for nextday in nextWorkingDays:
+            desc += nextday + '\n'
+            
+        result = {'isWorkingDay': flag, 'nextWorkingDay': nextWorkingDays[0], 'desc': desc}
+        return result
+    
+    def check_func(self, cr, uid, ids, context=None):
+        browse_recid = self.browse(cr, uid, ids[0])
+        country = browse_recid.country_id and browse_recid.country_id.id or False
+        result = self.getWorkingDays(cr, uid, browse_recid.actual_date, country, browse_recid.no_of_days, context=context)
+        return self.write(cr, uid, ids, {'nextWorkingDay': result['nextWorkingDay'], 'desc': result['desc']})
     
 hr_holidays()
 
