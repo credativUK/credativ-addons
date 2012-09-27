@@ -10,23 +10,25 @@
                     <field name="h_date"/>
                     <field name="no_of_days"/>
                     <field name="country_id"/>
-                    <field name="dummy_check" invisible="1"/>
-                    <separator string="" colspan="4"/>
-                    <group colspan="4" col="6" attrs="{'invisible':[('dummy_check','=',True)]}">
-                        <button icon="gtk-cancel" special="cancel" string="Cancel"/>
-                        <button icon="terp-gtk-go-back-rtl" string="Check" name="check_func" type="object"/>
-                    </group>
-                    <group colspan="4" attrs="{'invisible':[('dummy_check','=',False)]}">
-						<field name="isWorkingDay"/>
-						<field name="nextWorkingDay"/>
-						<field name="desc" colspan="4" nolabel="1"/>
+                    <separator string="The below details will be updated on click of 'Update' button !" colspan="4"/>
+                    <group colspan="4">
+						<field name="isWorkingDay" readonly="1"/>
+						<field name="nextWorkingDay" readonly="1"/>
+						<label string="Details of Next Working Day(s)" colspan="4"/>
+						<field name="desc" colspan="4" nolabel="1" readonly="1"/>
 					</group>
+                    <separator string="" colspan="4"/>
+                    <group colspan="4" col="6">
+                        <button icon="gtk-cancel" special="cancel" string="Cancel"/>
+                        <button icon="terp-gtk-go-back-rtl" string="Update" name="check_func" type="object"/>
+                    </group>
+                    <separator string="" colspan="4"/>
                 </form>
             </field>
         </record>
 
         <record id="action_view_wiz_holiday" model="ir.actions.act_window">
-            <field name="name">Testing Functions</field>
+            <field name="name">Weekend/Holiday Date Testing</field>
             <field name="res_model">wiz.holiday</field>
             <field name="view_type">form</field>
             <field name="view_mode">form</field>
