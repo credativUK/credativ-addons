@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
-    <data>
+    <data noupdate="1">
     
     	<!-- Days of Week -->
     	<record id="monday" model="res.weekdays">
@@ -98,5 +98,10 @@
             <field name="args">()</field>
         </record>
         
+        <!-- Employee Category -->
+		<record id="category_all" model="hr.employee.category">
+        	<field name="name">All Employees</field>
+			<field name="employee_ids" eval="[(6, 0, [])]"/>
+		</record>
     </data>
 </openerp>

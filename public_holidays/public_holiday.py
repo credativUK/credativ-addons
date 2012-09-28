@@ -2,6 +2,7 @@ import time
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import calendar
+import logging
 
 from osv import fields, osv
 from tools.translate import _
@@ -34,8 +35,8 @@ class hr_holiday_rule(osv.osv):
         'week': fields.selection([('0','First'),('1','Second'),('2','Third'),('3','Fourth'),('-1','Last')], 'Week'),
         'day': fields.many2one('res.weekdays', 'Day of Week'),
         'month': fields.selection([('01','January'),('02','February'),('03','March'),('04','April'),('05','May'),('06','June'),('07','July'),('08','August'),('09','September'),('10','October'),('11','November'),('12','December')], 'Month'),
-        'day1': fields.selection([('01','1st of the month'),('02','2nd of the month'),('03','3rd of the month'),('04','4th of the month'),('05','5th of the month'),('06','6th of the month'),('07','7th of the month'),('08','8th of the month'),('09','9th of the month'),('10','10th of the month'),('11','11th of the month'),('12','12th of the month'),('13','13th of the month'),('14','14th of the month'),('15','15th of the month'),
-                                  ('16','16th of the month'),('17','17th of the month'),('18','18th of the month'),('19','19th of the month'),('20','20th of the month'),('21','21st of the month'),('22','22nd of the month'),('23','23th of the month'),('24','24th of the month'),('25','25th of the month'),('26','26th of the month'),('27','27th of the month'),('28','28th of the month'),('29','29th of the month'),('30','30th of the month'),('31','31st of the month')], 'Day of Month'),
+        'day1': fields.selection([('01','1st'),('02','2nd'),('03','3rd'),('04','4th'),('05','5th'),('06','6th'),('07','7th'),('08','8th'),('09','9th'),('10','10th'),('11','11th'),('12','12th'),('13','13th'),('14','14th'),('15','15th'),
+                                  ('16','16th'),('17','17th'),('18','18th'),('19','19th'),('20','20th'),('21','21st'),('22','22nd'),('23','23rd'),('24','24th'),('25','25th'),('26','26th'),('27','27th'),('28','28th'),('29','29th'),('30','30th'),('31','31st')], 'Day of Month'),
         'active': fields.boolean('Active'),
         'country_ids': fields.many2many('res.country', 'country_holiday_rel', 'holiday_id', 'country_id', 'Countries'),
     }
@@ -45,7 +46,8 @@ class hr_holiday_rule(osv.osv):
     }
 
     def _fetch_holidays(self, cr, uid, ids=False, context=None):
-        print "ir cron job called"
+        logger = logging.getLogger('public holidays')
+        logger.info('Cron job called...')
         if not ids:
             ids = self.search(cr, uid, [])
         if context is None:
@@ -106,8 +108,8 @@ class hr_holiday_rule(osv.osv):
                 if not hol_ids:
                     vals = {
                         'name': rule.name,
-                        'holiday_type': 'employee',
-#                        'category_id': self.pool.get('hr.employee.category').search(cr, uid, [('name','=','Ranking')]) and self.pool.get('hr.employee.category').search(cr, uid, [('name','=','Ranking')])[0] or False, 
+                        'holiday_type': 'category',
+                        'category_id': self.pool.get('hr.employee.category').search(cr, uid, [('name','=','All Employees')]) and self.pool.get('hr.employee.category').search(cr, uid, [('name','=','All Employees')])[0] or False, 
                         'holiday_status_id': self.pool.get('hr.holidays.status').search(cr, uid, [('name','=', 'Legal Leaves')]) and self.pool.get('hr.holidays.status').search(cr, uid, [('name','=', 'Legal Leaves')])[0] or False,
                         'date_from': effective_date,
                         'date_to': holiday['value']['date_to'],
@@ -124,16 +126,12 @@ class hr_holiday_rule(osv.osv):
         return True
     
     def create(self, cr, uid, vals, context=None):
+        cron_obj = self.pool.get('ir.cron')
         res = super(hr_holiday_rule, self).create(cr, uid, vals, context=context)
-        cron_id = self.pool.get('ir.cron').search(cr, uid, [('function', 'ilike', '_fetch_holidays'),('model', '=', 'hr.holiday.rule')])
+        cron_id = cron_obj.search(cr, uid, [('function', 'ilike', '_fetch_holidays'),('model', '=', 'hr.holiday.rule')], context=context)
         if cron_id:
-            try:
-                next = (datetime.now() + relativedelta(minutes=1)).strftime('%Y-%m-%d %H:%M:%S')
-                cr.execute('UPDATE ir_cron set nextcall = \'%s\' where numbercall <> 0 and active and id= %s '  % (next, int(cron_id[0])))
-            finally:
-                cr.commit()
-        
-        print "---create called---"
+            next = (datetime.now() + relativedelta(minutes=1)).strftime('%Y-%m-%d %H:%M:%S')
+            cron_obj.write(cr, uid, cron_id, {'nextcall':next}, context=context)
         return res
             
 hr_holiday_rule()
@@ -156,7 +154,12 @@ class hr_holidays(osv.osv):
     
     _defaults = {
         'is_recurring': False,
+        'no_of_days': lambda *a : 0
     }
+    
+    _sql_constraints = [
+        ('actual_date_uniq', 'unique(actual_date, country_id)', 'Actual Date must be unique per Country!'),
+    ]
 
     def onchange_holidays(self, cr, uid, ids, effective_date, country=False, rule=False, context=None):
         if context is None:
@@ -202,11 +205,11 @@ class hr_holidays(osv.osv):
         return actual_date
     
     def _get_prev_date(self, cr, uid, actual_date, country, context=None):
-        prev_date = self.search(cr, uid, [('actual_date','<',actual_date),('country_id','=',country)], order="actual_date DESC")
+        prev_date = self.search(cr, uid, [('actual_date','<',actual_date),('country_id','=',country),('state','=','validate')], order="actual_date DESC")
         return prev_date and self.read(cr, uid, prev_date[0])['actual_date'] or False
 
     def _get_next_date(self, cr, uid, actual_date, country, context=None):
-        next_date = self.search(cr, uid, [('actual_date','>',actual_date),('country_id','=',country)], order="actual_date ASC")
+        next_date = self.search(cr, uid, [('actual_date','>',actual_date),('country_id','=',country),('state','=','validate')], order="actual_date ASC")
         return next_date and self.read(cr, uid, next_date[0])['actual_date'] or False
     
     def update_prev_nxt_holiday(self, cr, uid, holidays, context=None):
@@ -239,7 +242,7 @@ class hr_holidays(osv.osv):
     def _get_next_working_day(self, cr, uid, nxt_wrking_date, country, context=None):
         holiday_obj = self.pool.get('hr.holidays')
         nxt_wrking_date = datetime.strftime(nxt_wrking_date, '%Y-%m-%d')
-        holiday = holiday_obj.search(cr, uid, [('actual_date','=',nxt_wrking_date),('country_id','=',country)])
+        holiday = holiday_obj.search(cr, uid, [('actual_date','=',nxt_wrking_date),('country_id','=',country),('state','=','validate')])
         weekends = []
         if country:
             country_id = self.pool.get('res.country').browse(cr, uid, country)
@@ -259,7 +262,7 @@ class hr_holidays(osv.osv):
                 weekends.append(country_weekend.code)
         # check if its the working day or not
         flag = True
-        holidays = self.search(cr, uid, [('actual_date','=',holiday_date),('country_id','=',country)])
+        holidays = self.search(cr, uid, [('actual_date','=',holiday_date),('country_id','=',country),('state','=','validate')])
         if holidays or (datetime.strptime(holiday_date, '%Y-%m-%d').isoweekday() in weekends):
             flag = False
         
@@ -277,7 +280,7 @@ class hr_holidays(osv.osv):
         for nextday in nextWorkingDays:
             desc += nextday + '\n'
             
-        result = {'isWorkingDay': flag, 'nextWorkingDay': nextWorkingDays[0], 'desc': desc}
+        result = {'isWorkingDay': flag, 'nextWorkingDay': nextWorkingDays and nextWorkingDays[0] or False, 'desc': desc}
         return result
     
     def check_func(self, cr, uid, ids, context=None):
