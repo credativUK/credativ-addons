@@ -49,3 +49,12 @@ class purchase_order(osv.osv):
         
 
 purchase_order()
+
+class purchase_order_line(osv.osv):
+    _inherit = 'purchase.order.line'
+    
+    _columns = {
+        'list_all_products': fields.boolean('List all Products', help='By default the products available will only be ones available from the selected supplier. This option will show all products available instead.'),
+    }
+
+purchase_order_line()
