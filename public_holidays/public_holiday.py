@@ -2,14 +2,17 @@ import time
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import calendar
-
+import logging
+import netsvc
 from osv import fields, osv
 from tools.translate import _
 
 class res_weekdays(osv.osv):
     _name = 'res.weekdays'
     _columns = {
+        'code': fields.integer('Code'),
         'name': fields.selection([('Monday','Monday'),('Tuesday','Tuesday'),('Wednesday','Wednesday'),('Thursday','Thursday'),('Friday','Friday'),('Saturday','Saturday'),('Sunday','Sunday')], 'Day'),
+        'country_ids': fields.many2many('res.country', 'rel_weekdays_country', 'week_id', 'country_id', 'Countries'),
     }
     
 res_weekdays()
@@ -17,107 +20,154 @@ res_weekdays()
 class res_country(osv.osv):
     _inherit = 'res.country'
     _columns = {
+        'allow_substitute': fields.boolean('Allow Substitute Holidays'),
         'weekend_ids': fields.many2many('res.weekdays', 'rel_weekdays_country', 'country_id', 'week_id', 'Weekends'),
     }
-    
+    _defaults = {
+         'allow_substitute': True
+    }
 res_country()
 
-class hr_public_holiday_rule(osv.osv):
-    _name = 'hr.public.holiday.rule'
+class hr_holiday_rule(osv.osv):
+    _name = 'hr.holiday.rule'
     _description = 'Define Rules for recurring public holidays'
     _columns = {
         'name': fields.char('Name', size=128),
-        'recurring_week': fields.selection([('0','First'),('1','Second'),('2','Third'),('3','Fourth'),('-1','Last')], 'Week'),
-        'recurring_day': fields.many2one('res.weekdays', 'Day'),
-        'recurring_month': fields.selection([('01','January'),('02','February'),('03','March'),('04','April'),('05','May'),('06','June'),('07','July'),('08','August'),('09','September'),('10','October'),('11','November'),('12','December')], 'Month'),
+        'week': fields.selection([('0','First'),('1','Second'),('2','Third'),('3','Fourth'),('-1','Last')], 'Week'),
+        'day': fields.many2one('res.weekdays', 'Day of Week'),
+        'month': fields.selection([('01','January'),('02','February'),('03','March'),('04','April'),('05','May'),('06','June'),('07','July'),('08','August'),('09','September'),('10','October'),('11','November'),('12','December')], 'Month'),
+        'day1': fields.selection([('01','1st'),('02','2nd'),('03','3rd'),('04','4th'),('05','5th'),('06','6th'),('07','7th'),('08','8th'),('09','9th'),('10','10th'),('11','11th'),('12','12th'),('13','13th'),('14','14th'),('15','15th'),
+                                  ('16','16th'),('17','17th'),('18','18th'),('19','19th'),('20','20th'),('21','21st'),('22','22nd'),('23','23rd'),('24','24th'),('25','25th'),('26','26th'),('27','27th'),('28','28th'),('29','29th'),('30','30th'),('31','31st')], 'Day of Month'),
         'active': fields.boolean('Active'),
         'country_ids': fields.many2many('res.country', 'country_holiday_rel', 'holiday_id', 'country_id', 'Countries'),
+        'category_id': fields.many2one('hr.employee.category', "Category", help='Category of Employee', required=True),
+        'holiday_status_id': fields.many2one("hr.holidays.status", "Leave Type", required=True),
     }
 
     _defaults = {
-         'active': lambda *a : 1
+         'active': lambda *a : True
     }
 
-    def _fetch_holidays(self, cr, uid, ids=False, context=None):
-        print "ir cron job called"
+    def _fetch_holidays(self, cr, uid, ids=False, years=1, context=None):
         if not ids:
             ids = self.search(cr, uid, [])
         if context is None:
             context = {}
         for rule in self.browse(cr, uid, ids, context=context):
-            #get all the holidays between now and now +1 year
+            #get all the holidays between now and now +years
             start_dt = time.strftime('%Y-%m-%d')
-            date2 = datetime.strptime(start_dt, '%Y-%m-%d') + relativedelta(years=1)
+            date2 = datetime.strptime(start_dt, '%Y-%m-%d') + relativedelta(years=years)
             end_dt = datetime.strftime(date2, '%Y-%m-%d')
             dt_time_date = datetime.strptime(start_dt, '%Y-%m-%d')
-            rec_holidays = self.pool.get('hr.public.holiday').search(cr, uid, [('actual_date','>=',start_dt),('actual_date','<=',end_dt),('rule_id','=',rule.id)])
-            if not rec_holidays:
-                for country in rule.country_ids:
-                    year = dt_time_date.year
-                    if not int(rule.recurring_month) >= dt_time_date.month:
-                        year += 1
-                    c = calendar.monthcalendar(int(year), int(rule.recurring_month))
-                    if rule.recurring_day.name == 'Monday':
-                        cc = calendar.MONDAY
-                    elif rule.recurring_day.name == 'Tuesday':
-                        cc = calendar.TUESDAY
-                    elif rule.recurring_day.name == 'Wednesday':
-                        cc = calendar.WEDNESDAY
-                    elif rule.recurring_day.name == 'Thursday':
-                        cc = calendar.THURSDAY
-                    elif rule.recurring_day.name == 'Friday':
-                        cc = calendar.FRIDAY
-                    elif rule.recurring_day.name == 'Saturday':
-                        cc = calendar.SATURDAY
-                    elif rule.recurring_day.name == 'Sunday':
-                        cc = calendar.SUNDAY
-                    d1 = c[int(rule.recurring_week)][cc]
-                    #to skip the weeks with 0 dates
-                    if d1 == 0:
-                        if rule.recurring_week == -1:
-                            d1 = c[int(rule.recurring_week)-1][cc]
-                        else:
-                            d1 = c[int(rule.recurring_week)+1][cc]
-                    if d1 < 10:
-                        d1 = '0'+str(d1)
-                    effective_date = str(year)+'-'+str(rule.recurring_month)+'-'+str(d1)
-                    holiday = self.pool.get('hr.public.holiday').onchange_holidays(cr, uid, ids, effective_date, country.id, rule.id)
-#                        actual_date = self.pool.get('hr.public.holiday').get_actual_holiday(cr, uid, effective_date, country.id, rule.id)
-                    vals = {
-                        'name': rule.name,
-                        'effective_date': effective_date,
-                        'actual_date': holiday['value']['actual_date'],
-                        'previous_holiday': holiday['value']['previous_holiday'],
-                        'next_holiday': holiday['value']['next_holiday'],
-                        'rule_id': rule.id,
-                        'country_id': country.id
-                    }
-                    self.pool.get('hr.public.holiday').create(cr, uid, vals)
-                    if holiday['value']['previous_holiday']:
-                        prev_id = self.pool.get('hr.public.holiday').search(cr, uid, [('actual_date','=',holiday['value']['previous_holiday']),('country_id','=',country.id)])
-                        if prev_id:
-                            self.pool.get('hr.public.holiday').write(cr, uid, prev_id, {'next_holiday':holiday['value']['actual_date']})
+            for country in rule.country_ids:
+                year = dt_time_date.year
+                while True:
+                    if rule.month and rule.day:
+                        if not int(rule.month) >= dt_time_date.month:
+                            year += 1
+                        c = calendar.monthcalendar(int(year), int(rule.month))
+                        if rule.day.name == 'Monday':
+                            cc = calendar.MONDAY
+                        elif rule.day.name == 'Tuesday':
+                            cc = calendar.TUESDAY
+                        elif rule.day.name == 'Wednesday':
+                            cc = calendar.WEDNESDAY
+                        elif rule.day.name == 'Thursday':
+                            cc = calendar.THURSDAY
+                        elif rule.day.name == 'Friday':
+                            cc = calendar.FRIDAY
+                        elif rule.day.name == 'Saturday':
+                            cc = calendar.SATURDAY
+                        elif rule.day.name == 'Sunday':
+                            cc = calendar.SUNDAY
+                        d1 = c[int(rule.week)][cc]
+                        #to skip the weeks with 0 dates
+                        if d1 == 0:
+                            if rule.week == -1:
+                                d1 = c[int(rule.week)-1][cc]
+                            else:
+                                d1 = c[int(rule.week)+1][cc]
+                        if d1 < 10:
+                            d1 = '0'+str(d1)
+                        effective_date = str(year)+'-'+str(rule.month)+'-'+str(d1)
+                    elif rule.day1:
+                        effective_date = str(year)+'-'+str(rule.month)+'-'+str(rule.day1)
+                    else:
+                        raise osv.except_osv(
+                        _('Error !'),
+                        _('Either select a week and day of week for a particular month or select day of month.'))
                     
-                    if holiday['value']['next_holiday']:
-                        next_id = self.pool.get('hr.public.holiday').search(cr, uid, [('actual_date','=',holiday['value']['previous_holiday']),('country_id','=',country.id)])
-                        if next_id:
-                            self.pool.get('hr.public.holiday').write(cr, uid, next_id, {'previous_holiday':holiday['value']['actual_date']})
-                        
+                    try:
+                        date1 = time.strptime(effective_date, '%Y-%m-%d')
+                    except ValueError:
+                        break
+                    if effective_date < start_dt:
+                        year += 1
+                        continue
+                    if effective_date > end_dt:
+                        break
+                    effective_date = datetime.strftime(datetime.strptime(effective_date, '%Y-%m-%d'),  '%Y-%m-%d %H:%M:%S')
+                    holiday = self.pool.get('hr.holidays').onchange_holidays(cr, uid, ids, effective_date, country.id, rule.id)
+                    hol_ids = self.pool.get('hr.holidays').search(cr, uid, [('date_from','=',effective_date),('country_id','=',country.id),('name','=',rule.name)])
+                    if not hol_ids:
+                        vals = {
+                            'name': rule.name,
+                            'holiday_type': 'category',
+                            'category_id': rule.category_id.id,
+                            'holiday_status_id': rule.holiday_status_id.id,
+                            'date_from': effective_date,
+                            'date_to': holiday['value']['date_to'],
+                            'number_of_days_temp':holiday['value']['number_of_days_temp'],
+                            'actual_date': holiday['value']['actual_date'],
+                            'previous_holiday': holiday['value']['previous_holiday'],
+                            'next_holiday': holiday['value']['next_holiday'],
+                            'rule_id': rule.id,
+                            'country_id': country.id,
+                            'is_recurring': True
+                        }
+                        hol_id = self.pool.get('hr.holidays').create(cr, uid, vals)
+                        wf_service = netsvc.LocalService('workflow')
+                        wf_service.trg_validate(uid, 'hr.holidays', hol_id, 'confirm', cr)
+                        wf_service.trg_validate(uid, 'hr.holidays', hol_id, 'validate', cr)
+                    year += 1
+                # END WHILE
         return True
+    
+    def create(self, cr, uid, vals, context=None):
+        cron_obj = self.pool.get('ir.cron')
+        res = super(hr_holiday_rule, self).create(cr, uid, vals, context=context)
+        cron_id = cron_obj.search(cr, uid, [('function', 'ilike', '_fetch_holidays'),('model', '=', 'hr.holiday.rule')], context=context)
+        if cron_id:
+            next = (datetime.now() + relativedelta(minutes=1)).strftime('%Y-%m-%d %H:%M:%S')
+            cron_obj.write(cr, uid, cron_id, {'nextcall':next}, context=context)
+        return res
             
-hr_public_holiday_rule()
+hr_holiday_rule()
 
-class hr_public_holiday(osv.osv):
-    _name = 'hr.public.holiday'
+class hr_holidays(osv.osv):
+    _inherit = 'hr.holidays'
+    _order = 'actual_date asc'
+    
     _columns = {
-        'name': fields.char('Name', size=64),
-        'effective_date': fields.date('Effective Date'),
-        'actual_date': fields.date('Actual Date'),
+        'actual_date': fields.date('Actual Date', help="Actual Date on which the holiday falls"),
         'previous_holiday': fields.date('Previous Holiday'),
         'next_holiday': fields.date('Next Holiday'),
-        'rule_id': fields.many2one('hr.public.holiday.rule', 'Holiday Rule', help="To know it was auto-generated or manually entered holiday"),
-        'country_id': fields.many2one('res.country', 'Country')
+        'rule_id': fields.many2one('hr.holiday.rule', 'Holiday Rule', help="To know it was auto-generated or manually entered holiday"),
+        'country_id': fields.many2one('res.country', 'Country'),
+        'is_recurring': fields.boolean('Recurring Holiday'),
+        'no_of_days': fields.integer('No. of Working Days'),
+        'nextWorkingDay': fields.date('Next Working Date'),
+        'desc': fields.text('Description'),
     }
+    
+    _defaults = {
+        'is_recurring': False,
+        'no_of_days': lambda *a : 0
+    }
+    
+    _sql_constraints = [
+        ('actual_date_uniq', 'unique(actual_date, country_id)', 'Actual Date must be unique per Country!'),
+    ]
 
     def onchange_holidays(self, cr, uid, ids, effective_date, country=False, rule=False, context=None):
         if context is None:
@@ -126,15 +176,15 @@ class hr_public_holiday(osv.osv):
         result={}
         if effective_date:
             actual_date = self.get_actual_holiday(cr, uid,  effective_date, country, rule)
-            #next holiday date
-            prev_date = self.search(cr, uid, [('actual_date','<',actual_date),('country_id','=',country)], order="actual_date DESC")
-            next_date = self.search(cr, uid, [('actual_date','>',actual_date),('country_id','=',country)], order="actual_date ASC")
+            if type(actual_date) == datetime:
+                actual_date = datetime.strftime(actual_date, '%Y-%m-%d')
             result['value'] = {
+                'date_to': effective_date,
+                'number_of_days_temp': self.onchange_date_from(cr, uid, ids, effective_date, effective_date)['value']['number_of_days_temp'],
                 'actual_date': actual_date,
-                'previous_holiday': prev_date and self.browse(cr, uid, prev_date[0]).actual_date or False,
-                'next_holiday': next_date and self.browse(cr, uid, next_date[0]).actual_date or False,
+                'previous_holiday': self._get_prev_date(cr, uid, actual_date, country),
+                'next_holiday': self._get_next_date(cr, uid, actual_date, country),
                 }
-        
         return result
     
     def get_actual_holiday(self, cr, uid, actual_date, country=False, rule=False, context=None):
@@ -143,11 +193,107 @@ class hr_public_holiday(osv.osv):
         srch_hol = self.search(cr, uid, [('actual_date', '=', actual_date),('country_id','=',country)])
         weekends = []
         if country:
-            for country_weekend in self.pool.get('res.country').browse(cr, uid, country).weekend_ids:
-                weekends.append(country_weekend.id)
-        if srch_hol or (rule and self.pool.get('hr.public.holiday.rule').browse(cr, uid, rule).recurring_day.id in weekends):
-             dd = datetime.strptime(actual_date, '%Y-%m-%d') + timedelta(days=1)
-             actual_date = self.get_actual_holiday(cr, uid, dd, country=country, rule=rule, context=context)
+            country_id = self.pool.get('res.country').browse(cr, uid, country)
+            for country_weekend in country_id.weekend_ids:
+                weekends.append(country_weekend.code)
+            if country_id.allow_substitute == True:
+                if type(actual_date) != datetime:
+                    try:
+                        actual_date = datetime.strptime(actual_date, '%Y-%m-%d')
+                    except ValueError, v:
+                        if len(v.args) > 0 and v.args[0][:26] == 'unconverted data remains: ':
+                            actual_date = actual_date.split(" ")[0]
+                            actual_date = datetime.strptime(actual_date, '%Y-%m-%d')
+                        else:
+                            raise v
+                if (rule and actual_date.isoweekday() in weekends) or srch_hol:
+                    actual_date += relativedelta(days=1)
+                    dd = datetime.strftime(actual_date, '%Y-%m-%d %H:%M:%S')
+                    actual_date = self.get_actual_holiday(cr, uid, dd, country=country, rule=rule, context=context)
         return actual_date
     
-hr_public_holiday()
+    def _get_prev_date(self, cr, uid, actual_date, country, context=None):
+        prev_date = self.search(cr, uid, [('actual_date','<',actual_date),('country_id','=',country),('state','=','validate')], order="actual_date DESC")
+        return prev_date and self.read(cr, uid, prev_date[0])['actual_date'] or False
+
+    def _get_next_date(self, cr, uid, actual_date, country, context=None):
+        next_date = self.search(cr, uid, [('actual_date','>',actual_date),('country_id','=',country),('state','=','validate')], order="actual_date ASC")
+        return next_date and self.read(cr, uid, next_date[0])['actual_date'] or False
+    
+    def update_prev_nxt_holiday(self, cr, uid, holidays, context=None):
+        for t in self.browse(cr, uid, holidays, context=context):
+            prev_holiday = self._get_prev_date(cr, uid, t.actual_date, t.country_id and t.country_id.id or False)
+            next_holiday = self._get_next_date(cr, uid, t.actual_date, t.country_id and t.country_id.id or False)
+            osv.osv.write(self, cr, uid, [t.id], {'previous_holiday':prev_holiday, 'next_holiday':next_holiday})
+        return True
+            
+    def create(self, cr, uid, vals, context=None):
+        res = super(hr_holidays, self).create(cr, uid, vals, context=context)
+        holidays = self.search(cr, uid, [('is_recurring','=',True)], context=context)
+        self.update_prev_nxt_holiday(cr, uid, holidays, context=context)
+        return res
+    
+    def write(self, cr, uid, ids, vals, context=None):
+        res = super(hr_holidays, self).write(cr, uid, ids, vals, context=context)
+        holidays = self.search(cr, uid, [('is_recurring','=',True)], context=context)
+        self.update_prev_nxt_holiday(cr, uid, holidays, context=context)
+        return res
+    
+    def unlink(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+        res = super(hr_holidays, self).unlink(cr, uid, ids, context=context)
+        holidays = self.search(cr, uid, [('id','not in',ids),('is_recurring','=',True)], context=context)
+        self.update_prev_nxt_holiday(cr, uid, holidays, context=context)
+        return res
+    
+    def _get_next_working_day(self, cr, uid, nxt_wrking_date, country, context=None):
+        holiday_obj = self.pool.get('hr.holidays')
+        nxt_wrking_date = datetime.strftime(nxt_wrking_date, '%Y-%m-%d')
+        holiday = holiday_obj.search(cr, uid, [('actual_date','=',nxt_wrking_date),('country_id','=',country),('state','=','validate')])
+        weekends = []
+        if country:
+            country_id = self.pool.get('res.country').browse(cr, uid, country)
+            for country_weekend in country_id.weekend_ids:
+                weekends.append(country_weekend.code)
+        
+        if holiday or (datetime.strptime(nxt_wrking_date, '%Y-%m-%d').isoweekday() in weekends):
+            date1 = datetime.strptime(nxt_wrking_date, '%Y-%m-%d') + relativedelta(days=1)
+            nxt_wrking_date = self._get_next_working_day(cr, uid, date1, country, context=context)
+          
+        return nxt_wrking_date
+
+    def isWorkingDay(self, cr, uid, holiday_date, country=False, context=None):
+        weekends = []
+        if country:
+            for country_weekend in self.pool.get('res.country').browse(cr, uid, country, context).weekend_ids:
+                weekends.append(country_weekend.code)
+        holidays = self.search(cr, uid, [('actual_date','=',holiday_date),('country_id','=',country),('state','=','validate')])
+        if holidays or (datetime.strptime(holiday_date, '%Y-%m-%d').isoweekday() in weekends):
+            return False
+        return True
+
+    def nextWorkingDays(self, cr, uid, holiday_date, country=False, no_of_days=0, context=None):
+        weekends = []
+        if country:
+            for country_weekend in self.pool.get('res.country').browse(cr, uid, country, context).weekend_ids:
+                weekends.append(country_weekend.code)
+        nextWorkingDays = []
+        i=1
+        while(len(nextWorkingDays) < no_of_days):
+            date1 = datetime.strptime(holiday_date, '%Y-%m-%d') + relativedelta(days=i)
+            nxt_day = self._get_next_working_day(cr, uid, date1, country)
+            if not nextWorkingDays.__contains__(nxt_day):
+                nextWorkingDays.append(nxt_day)
+            i += 1
+        return nextWorkingDays
+    
+    def check_func(self, cr, uid, ids, context=None):
+        browse_recid = self.browse(cr, uid, ids[0])
+        country = browse_recid.country_id and browse_recid.country_id.id or False
+        result = self.getWorkingDays(cr, uid, browse_recid.actual_date, country, browse_recid.no_of_days, context=context)
+        return self.write(cr, uid, ids, {'nextWorkingDay': result['nextWorkingDay'], 'desc': result['desc']})
+    
+hr_holidays()
+
+# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
