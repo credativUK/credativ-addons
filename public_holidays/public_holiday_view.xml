@@ -56,24 +56,29 @@
             <field name="model">hr.holiday.rule</field>
             <field name="type">form</field>
             <field name="arch" type="xml">
-            	<form string="Public Holiday Rule">
-            		<group col="6" colspan="4">
-						<field name="name" required="1"/>
-						<field name="active"/>
-						<field name="month" required="1"/>
-					</group>
-					<separator colspan="4" string="Either select a week and day of week for a particular month or select day of month"/>
-					<newline/>
-					<group col="6" colspan="4">
-						<field name="week"/>
-						<field name="day" widget="selection"/>
-                    	<newline/>
-						<field name="day1"/>
-					</group>
-					<newline/>
-					<separator string="Countries" colspan="4"/>
-					<field name="country_ids" nolabel="1" colspan="4"/>
-            	</form>
+                <form string="Public Holiday Rule">
+                    <group col="6" colspan="4">
+                        <field name="name" required="1"/>
+                        <field name="active"/>
+                        <field name="month" required="1"/>
+                    </group>
+                    <separator colspan="4" string="Either select a week and day of week for a particular month or select day of month"/>
+                    <newline/>
+                    <group col="6" colspan="4">
+                        <field name="week"/>
+                        <field name="day" widget="selection"/>
+                        <newline/>
+                        <field name="day1"/>
+                    </group>
+                    <newline/>
+                    <group col="4" colspan="4">
+                        <field name="category_id"/>
+                        <field name="holiday_status_id"/>
+                    </group>
+                    <newline/>
+                    <separator string="Countries" colspan="4"/>
+                    <field name="country_ids" nolabel="1" colspan="4"/>
+                </form>
             </field>
         </record>
         
@@ -91,7 +96,7 @@
         </record>
 
 		<record id="action_hr_public_holiday_rule" model="ir.actions.act_window">
-            <field name="name">Define Recurring Public Holidays</field>
+            <field name="name">Recurring Holidays</field>
             <field name="res_model">hr.holiday.rule</field>
             <field name="view_type">form</field>
             <field name="view_mode">tree,form</field>
@@ -136,7 +141,7 @@
             <field name="model">hr.holidays</field>
             <field name="type">tree</field>
             <field name="arch" type="xml">
-            	<tree colors="red:state == 'refuse';blue:state == ' draft';black:state in ('confirm','validate','validate1')" string="Holidays Summary">
+            	<tree colors="red:state == 'refuse';blue:state == 'draft';black:state in ('confirm','validate','validate1')" string="Holidays Summary">
             		<field name="name"/>
 					<field name="actual_date"/>
 					<field name="previous_holiday"/>

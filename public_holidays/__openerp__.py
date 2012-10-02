@@ -5,14 +5,15 @@
     'description': """
 
     """,
-    'author': 'Credativ',
-    'website': 'http://www.credativ.com',
+    'author': 'credativ',
+    'website': 'http://www.credativ.co.uk',
     'images': [],
     'depends': ['hr_holidays'],
     'init_xml': [],
-    'update_xml': ["public_holiday_view.xml", 
+    'update_xml': [
+                   "security/ir.model.access.csv",
+                   "public_holiday_view.xml", 
                    "holiday_data.xml",
-                   "wizard/wiz_holiday_view.xml"
                    ],
     'demo_xml': [],
     'test': [],
