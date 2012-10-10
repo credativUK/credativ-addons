@@ -145,7 +145,7 @@ class order_edit(object):
                 id_ = id[0]
         except TypeError:
             pass
-        order = self.browse(cr, uid, id, context)
+        order = self.browse(cr, uid, id_, context)
 
         order_states = {
             'sale.order':     ('progress','manual'),
@@ -153,7 +153,7 @@ class order_edit(object):
             }
 
         if order.state in order_states[self._name]:
-            new_id = self.copy(cr, uid, id, context=context)
+            new_id = self.copy(cr, uid, id_, context=context)
             original_order_name = re.sub('-edit[0-9]+$', '', order.name)
             similar_name_ids = self.search(cr, uid, [('name', 'like', original_order_name + '%')])
             similar_names = set(similar_order['name'] for similar_order in self.read(cr, uid, similar_name_ids, ['name']))
