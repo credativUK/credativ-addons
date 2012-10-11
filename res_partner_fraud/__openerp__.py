@@ -22,7 +22,7 @@
 {
     'name' : 'Partner Fraud Flag',
     'version' : '1.0.0.0',
-    'author' : 'credativ',
+    'author' : 'credativ Ltd',
     'website' : 'http://credativ.co.uk',
     'depends' : [
         'base',
