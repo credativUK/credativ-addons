@@ -24,10 +24,12 @@
     'name': 'MRP Automation',
     'version': '0.1',
     'category': 'Localisation',
-    'description': """
-    Automate the manufacturing order process
-    """,
-    'author': 'credativ',
+    'description':
+        """
+        Automate the manufacturing order process
+        """,
+    'author': 'credativ Ltd',
+    'website' : 'http://credativ.co.uk',
     'depends': [
         'mrp',
         'stock',
