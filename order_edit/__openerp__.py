@@ -2,7 +2,8 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution    
-#    Copyright (C) 2011 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
+#    Copyright (C) 2012 credativ Ltd (<http://credativ.co.uk>).
+#    All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -24,10 +25,12 @@
     'name': 'Sale Order Edit',
     'version': '0.1',
     'category': 'Sales & Purchases',
-    'description': """
-    Sale Order Edit
-    """,
-    'author': 'credativ',
+    'description':
+        """
+        Sale Order Edit
+        """,
+    'author': 'credativ Ltd',
+    'website' : 'http://credativ.co.uk',
     'depends': [
         'sale',
         'purchase',
