@@ -22,8 +22,12 @@
     'name': 'Sale Single Pickings',
     'version': '1.0',
     'category': 'Generic Modules/Sales & Purchases',
-    'description': """This Module backports Sale Order action_ship_create from v6.1 and creates single pickings and stock moves per single item.""",
-    'author': 'Credativ',
+    'description':
+        """
+        This Module backports Sale Order action_ship_create from v6.1 and creates single pickings and stock moves per single item.
+        """,
+    'author': 'credativ Ltd',
+    'website' : 'http://credativ.co.uk',
     'depends': ['sale'],
     'init_xml': [],
     'update_xml': [],
