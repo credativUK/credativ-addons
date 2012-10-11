@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2011 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
+#    Copyright (C) 2012 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -24,10 +24,12 @@
     'name': 'Sale Order Run Procurement Scheduler',
     'version': '0.1',
     'category': 'Localisation',
-    'description': """
-    Run procurement scheduler on sale order confirm
-    """,
+    'description':
+        """
+        Run procurement scheduler on sale order confirm
+        """,
     'author': 'credativ',
+    'website' : 'http://credativ.co.uk',
     'depends': [
         'sale',
         'procurement',
