@@ -22,7 +22,7 @@
     "name": "Remove 'Create' and 'Create and Edit' Links",
     "description":
         """
-        OpenERP Web module which removes 'Create' and 'Create and Edit' links from dropdown list fields
+        OpenERP Web module which removes options 'Create' and 'Create and Edit' from suggested results dropdown list on many2one fields.
         """,
     "version": "1.0",
     "author" : "credativ Ltd",
