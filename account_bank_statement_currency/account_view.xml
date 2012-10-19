@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2012 credativ (http://www.credativ.co.uk). All Rights Reserved
+    The licence is in the file __openerp__.py
+-->
+
+<openerp>
+<data>
+    <record id="view_bank_statement_periodic_form" model="ir.ui.view">
+        <field name="name">account.bank.statement.reconcile.form</field>
+        <field name="model">account.bank.statement</field>
+        <field name="inherit_id" ref="account.view_bank_statement_periodic_form" />
+        <field name="arch"  type="xml">
+            <data>
+                <field name="credit" position="after">
+                    <field name="currency_id"/>
+                    <field name="amount_currency"/>
+                </field>
+            </data>
+        </field>
+    </record>
+
+    <record id="view_bank_statement_form" model="ir.ui.view">
+        <field name="name">account.bank.statement.form</field>
+        <field name="model">account.bank.statement</field>
+        <field name="inherit_id" ref="account.view_bank_statement_form" />
+        <field name="arch"  type="xml">
+            <data>
+                <field name="credit" position="after">
+                    <field name="currency_id"/>
+                    <field name="amount_currency"/>
+                </field>
+            </data>
+        </field>
+    </record>
+</data>
+</openerp>
