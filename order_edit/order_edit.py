@@ -383,6 +383,15 @@ class sale_order(osv.osv, order_edit):
                 self._unreconcile_refund_and_cancel(cr, uid, original_id, order, context)
             
         return res
+    
+    def onchange_edit_warn(self, cr, uid, ids, lines, context=None):
+        if lines:
+            for line in lines:
+                if line[0] == 2:
+                    sol = self.pool.get('sale.order.line').browse(cr, uid, line[1], context)
+                    if sol.order_edit_original_line_id:
+                        raise osv.except_osv("Can't delete line", 'Deleting existing lines disabled')
+        return {}
 
 sale_order()
 

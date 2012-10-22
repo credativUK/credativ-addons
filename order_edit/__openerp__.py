@@ -40,6 +40,7 @@
     'init_xml': [
         ],
     'update_xml': [
+        'order_edit_view.xml',
         'wizard/order_edit_wizard_view.xml',
     ],
     'demo_xml': [
