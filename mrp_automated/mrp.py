@@ -25,16 +25,17 @@ class mrp_production(osv.osv):
 
     _inherit = "mrp.production"
 
-    def action_confirm(self, cr, uid, ids):
-        res = super(mrp_production, self).action_confirm(cr, uid, ids)
+    def action_in_production(self, cr, uid, ids):
+        res = super(mrp_production, self).action_in_production(cr, uid, ids)
         #assigns a unique production lot id to finished products suffixed by sub contractor code
         move_obj = self.pool.get('stock.move')
         seq_obj = self.pool.get('ir.sequence')
         prodlot_obj = self.pool.get('stock.production.lot')
         for production in self.browse(cr, uid, ids):
             prodlot_name = seq_obj.get(cr,uid, 'stock.lot.serial')
-            if production.bom_id.routing_id.code:
-                prodlot_name += '_' +  production.bom_id.routing_id.code
+            for move in production.move_lines:
+                if move.prodlot_id:
+                    prodlot_name += '-' + move.prodlot_id.name
             finished_prodlot_id = prodlot_obj.create(cr, uid, {
                 'product_id': production.product_id.id,
                 'name': prodlot_name
