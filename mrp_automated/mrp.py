@@ -34,8 +34,9 @@ class mrp_production(osv.osv):
         for production in self.browse(cr, uid, ids):
             prodlot_name = seq_obj.get(cr,uid, 'stock.lot.serial')
             for move in production.move_lines:
-                # The supplier of raw material should be from Germany and prodlot_id of stock move should end at FA
-                if move.product_id.seller_ids and move.product_id.seller_ids[0].name.address and move.product_id.seller_ids[0].name.address[0].country_id and move.product_id.seller_ids[0].name.address[0].country_id.code == 'DE':
+                # TODO (derek.sheridan@credativ.co.uk): remove hard coding
+                # The supplier of raw material should be from Bremskerl Germany and prodlot_id of stock move should end at FA
+                if move.product_id.seller_ids and move.product_id.seller_ids[0].name.name == 'Bremskerl Reibelagwerke GmbH & CO.KG':
                     if move.prodlot_id and move.prodlot_id.name.endswith('FA'):
                         prodlot_name += '-' + move.prodlot_id.name
             finished_prodlot_id = prodlot_obj.create(cr, uid, {
