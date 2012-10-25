@@ -288,6 +288,17 @@ class hr_holidays(osv.osv):
             i += 1
         return nextWorkingDays
     
+    def getWorkingDaysBetween(self, cr, uid, begin_date, end_date, country=False, context=None):
+        '''Get the number of working days betwen begin_date and end_date inclusive'''
+        begin_dt = datetime.strptime(begin_date[:10], '%Y-%m-%d')
+        end_dt = datetime.strptime(end_date[:10], '%Y-%m-%d')
+        working_days = 0
+        while begin_dt <= end_dt:
+            if self.isWorkingDay(cr, uid, begin_dt.strftime('%Y-%m-%d'), country=country, context=context):
+                working_days += 1
+            begin_dt += timedelta(days=1)
+        return working_days
+    
     def check_func(self, cr, uid, ids, context=None):
         browse_recid = self.browse(cr, uid, ids[0])
         country = browse_recid.country_id and browse_recid.country_id.id or False
