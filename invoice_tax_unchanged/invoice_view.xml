@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+		<record id="view_invoice_supplier_tax" model="ir.ui.view">
+			<field name="name">account.invoice.supplier.tax</field>
+		    <field name="model">account.invoice</field>
+		    <field name="type">form</field>
+		    <field name="inherit_id" ref="account.invoice_supplier_form"/>
+		    <field name="arch" type="xml">
+				<xpath expr="/form/notebook/page[@string='Invoice']/field[@name='invoice_line']/tree/field[@name='account_id']" position="replace">
+					<field domain="[('company_id', '=', parent.company_id), ('journal_id', '=', parent.journal_id), ('type', '&lt;&gt;', 'view')]" name="account_id" on_change="onchange_account_id(parent.fiscal_position,account_id, invoice_line_tax_id)"/>
+				</xpath>
+ 		    </field>
+		</record>
+	
+	    <record id="view_invoice_line_tax_form" model="ir.ui.view">
+	    	<field name="name">account.invoice.line.tax</field>
+	        <field name="model">account.invoice.line</field>
+	        <field name="type">form</field>
+	        <field name="inherit_id" ref="account.view_invoice_line_form"/>
+	        <field name="arch" type="xml">
+	            <field name="account_id" position="replace">
+	            	<field domain="[('company_id', '=', parent.company_id), ('journal_id', '=', parent.journal_id), ('type', '&lt;&gt;', 'view')]" name="account_id" on_change="onchange_account_id(parent.fiscal_position,account_id, invoice_line_tax_id)"/>
+	            </field>
+	        </field>
+	    </record>
+    </data>
+</openerp>
