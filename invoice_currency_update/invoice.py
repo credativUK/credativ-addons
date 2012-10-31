@@ -45,7 +45,7 @@ class account_change_currency(osv.osv_memory):
         #Calculation of unit price in change_currency() was incorrect. To rectify it, the following change was inevitable.
         invoice = obj_inv.browse(cr, uid, context['active_id'], context=context)
         for inv_line in invoice.invoice_line:
-            res = obj_inv_line.product_id_change(cr, uid, [], inv_line.product_id.id, inv_line.product_id.uos_id.id, inv_line.quantity, inv_line.name, invoice.type, invoice.partner_id.id, invoice.fiscal_position and invoice.fiscal_position.id or False, inv_line.price_unit, invoice.address_invoice_id.id, invoice.currency_id.id, context=context.update({'company_id':invoice.company_id.id}))
+            res = obj_inv_line.product_id_change(cr, uid, [], inv_line.product_id.id, inv_line.product_id.uos_id.id, inv_line.quantity, inv_line.name, invoice.type, invoice.partner_id.id, invoice.fiscal_position and invoice.fiscal_position.id or False, False, invoice.address_invoice_id.id, invoice.currency_id.id, context=context.update({'company_id':invoice.company_id.id}))
             new_price = res['value']['price_unit'] * invoice.currency_id.rate
             obj_inv_line.write(cr, uid, [inv_line.id], {'price_unit': new_price}, context=context)
         
