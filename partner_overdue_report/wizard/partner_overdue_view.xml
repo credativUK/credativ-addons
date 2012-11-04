@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+     <data>
+
+        <record id="overdue_report_view1" model="ir.ui.view">
+             <field name="name">Overdue Payments</field>
+             <field name="model">overdue.report</field>
+             <field name="type">form</field>
+             <field name="arch" type="xml">
+                <form string="Overdue Payments">
+	                <field name="date_from" required="1"/>
+                    <field name="date_to" required="1"/>
+                    <separator colspan="4"/>
+                    <field name="partner_ids" colspan="4" nolabel="1"/>
+                    <group colspan="4" col="6">
+                        <separator colspan="4"/>
+                        <newline/>
+                        <button special="cancel" string="Cancel" icon="gtk-cancel"/>
+                        <button name="print_report" string="Print" type="object" icon="gtk-print"/>
+                    </group>
+                </form>
+             </field>
+        </record>
+
+        <record id="overdue_report_act" model="ir.actions.act_window">
+             <field name="name">Overdue Payments</field>
+             <field name="res_model">overdue.report</field>
+             <field name="type">ir.actions.act_window</field>
+             <field name="view_type">form</field>
+             <field name="view_mode">form</field>
+             <field name="view_id" ref="overdue_report_view1"/>
+             <field name="context">{'record_id':active_id}</field>
+             <field name="target">new</field>
+        </record>
+	
+		<menuitem icon="STOCK_PRINT"
+            name="Partner Overdue Payments"
+            action="overdue_report_act"
+            id="menu_overdue_report_act"
+            parent="account.next_id_22"/>
+	
+        <record id="overdue_report_view" model="ir.ui.view">
+             <field name="name">Overdue Payments</field>
+             <field name="model">overdue.report</field>
+             <field name="type">form</field>
+             <field name="arch" type="xml">
+                <form string="Overdue Payments">
+	                <field name="date_from" required="1"/>
+                    <field name="date_to" required="1"/>
+                    <group colspan="4" col="6">
+                        <separator colspan="4"/>
+                        <newline/>
+                        <button special="cancel" string="Cancel" icon="gtk-cancel"/>
+                        <button name="print_report" string="Print" type="object" icon="gtk-print"/>
+                    </group>
+                </form>
+             </field>
+        </record>
+        
+		<act_window name="Overdue Payments"		    
+		    res_model="overdue.report"
+		    src_model="res.partner"
+		    view_mode="form"
+		    view_id="overdue_report_view"
+		    target="new"        
+            key2="client_action_multi"    
+		    id="action_overdue_report_act"/>  
+		
+    </data>
+</openerp>
