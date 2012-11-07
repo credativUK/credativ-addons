@@ -9,8 +9,12 @@
                 <form string="Retrospective Overdue Payments">
                     <field name="date_from" required="1"/>
                     <field name="date_to" required="1"/>
-                    <separator colspan="4"/>
-                    <field name="partner_ids" colspan="4" nolabel="1"/>
+                    <field name="partner_selection" required="1"/>
+                    <newline/>
+                    <group colspan="4" attrs="{'invisible':[('partner_selection','!=','selected')]}">
+                    	<separator colspan="4"/>
+                    	<field name="partner_ids" colspan="4" nolabel="1"/>
+                    </group>
                     <group colspan="4" col="6">
                         <separator colspan="4"/>
                         <newline/>

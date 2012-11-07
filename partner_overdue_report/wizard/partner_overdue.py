@@ -31,6 +31,7 @@ class overdue_report(osv.osv_memory):
     _columns = {
         'date_from': fields.date('Start date'),
         'date_to': fields.date('End date'),
+        'partner_selection': fields.selection([('all', 'All Partners'),('selected', 'Selected Partners')], 'Display Accounts'),
         'partner_ids' : fields.many2many('res.partner', 'res_partner_overdue_rel', 'partner_id', 'overdue_id', 'Partners'),
         }
 
@@ -39,11 +40,14 @@ class overdue_report(osv.osv_memory):
             context = {}
         data={}
         data['ids'] = context['active_ids']
-        data['form'] = self.read(cr, uid, ids, ['date_from', 'date_to', 'partner_ids'])[0]
+        data['form'] = self.read(cr, uid, ids, ['date_from', 'date_to', 'partner_ids', 'partner_selection'])[0]
         data['form']['context'] = context
         if context.get('active_model', False) == 'res.partner':
             data['form'].update({'partner_ids':context['active_ids']})
-
+        
+        if data['form']['partner_selection'] == 'all':
+            data['form'].update({'partner_ids': self.pool.get('res.partner').search(cr, uid, [], context=context)})
+            
         if data['form']['date_from'] > data['form']['date_to']:
             raise osv.except_osv(_('Warning'),_('Start Date should be smaller than End Date'))
 

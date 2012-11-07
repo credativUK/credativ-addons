@@ -31,7 +31,6 @@ class overdue_payment(report_sxw.rml_parse):
             'time': time,
             'adr_get': self._adr_get,
             'getLines': self._lines_get,
-            'message': self._message,
         })
         self.context = context
     def _adr_get(self, partner, type):
@@ -71,10 +70,6 @@ class overdue_payment(report_sxw.rml_parse):
         if movelines:
             movelines = moveline_obj.browse(self.cr, self.uid, movelines)
         return movelines
-
-    def _message(self, partner):
-        company = self.pool.get('res.partner').browse(self.cr, self.uid, partner).company_id
-        return company and company.overdue_msg or ''
 
 report_sxw.report_sxw('report.overdue.payment', 'res.partner',
         'addons/partner_overdue_report/report/overdue_payment.rml', parser=overdue_payment)
