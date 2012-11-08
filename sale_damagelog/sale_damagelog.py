@@ -57,7 +57,7 @@ class sale_damagelog(osv.osv):
                 'product_supplier':fields.many2one('res.partner','Product Supplier'),
                 'product_qty':fields.float('Qty'),
                 'product_uom':fields.many2one('product.uom','UoM', required=True),
-                'comprequest_ids': fields.one2many('sale.comprequest', 'damagelog_id', 'Compensation Requests'),
+                'comprequest_ids': fields.one2many('sale.comprequest', 'damagelog_id', 'Compensation Requests'), # is this really right?
                 }
     
     _defaults = {
