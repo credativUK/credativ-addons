@@ -45,6 +45,31 @@ openerp.web_listview_editable = function (openerp) {
             this.edit_record($(event.currentTarget).data('id'),
 			    (($(event.target).prop('tagName').toLowerCase() === 'td') ? $(event.target).prevAll('td').length : null));
         },
+        cancel_pending_edition: function () {
+            var self = this, cancelled;
+            if (!this.edition) {
+                return $.when();
+            }
+
+            if (this.edition_id) {
+                cancelled = this.reload_record(this.records.get(this.edition_id));
+            } else {
+                cancelled = $.when();
+            }
+            cancelled.then(function () {
+                self.view.unpad_columns();
+		if (self.edition_form) {
+                    self.edition_form.stop();
+                    self.edition_form.$element.remove();
+                    delete self.edition_form;
+		}
+                self.dataset.index = null;
+                delete self.edition_id;
+                delete self.edition;
+            });
+            this.pad_table_to(5);
+            return cancelled;
+        },
         on_row_keyup: function (e) {
             var self = this;
             switch (e.which) {
