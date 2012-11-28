@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+    
+    	<!-- Power Email Template Fragments -->
+    	<record model="ir.ui.view" id="poweremail_template_fragments_form">
+            <field name="name">poweremail.template_fragments.form</field>
+            <field name="model">poweremail.template_fragments</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Power Email Template Fragments">
+                    <field name="name"/>
+					<field name="for_template"/>
+					<field name="model_id"/>
+					<field name="template_language"/>
+					<newline/>
+					<separator colspan="4"/>
+					<field name="fragments_lines_ids" colspan="4" nolabel="1" mode="tree,form">
+						<tree string="Power Email Template Fragments Lines">
+		                	<field name="res_id"/>
+		                	<field name="name"/>
+							<field name="lang"/>
+						</tree>
+						<form string="Power Email Template Fragments Lines">
+							<field name="name"/>
+							<field name="res_id"/>
+							<field name="lang" widget="selection"/>
+							<newline/>
+							<separator colspan="4" string="Fragment Content"/>
+							<field name="body" colspan="4" nolabel="1"/>
+						</form>
+					</field>
+				</form>
+			</field>
+		</record>
+		
+		<record model="ir.ui.view" id="poweremail_template_fragments_tree">
+            <field name="name">poweremail.template_fragments.tree</field>
+            <field name="model">poweremail.template_fragments</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Power Email Template Fragments">
+                    <field name="name" select="1"/>
+					<field name="for_template" select="2"/>
+					<field name="model_id" select="1"/>
+					<field name="template_language" select="1"/>
+				</tree>
+			</field>
+		</record>
+		
+		<record model="ir.actions.act_window" id="poweremail_template_fragments_view">
+            <field name="name">Template Fragments</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">poweremail.template_fragments</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="poweremail_template_fragments_tree"/>
+        </record>
+        
+        <menuitem name="Template Fragments" id="menu_poweremail_template_fragments_view"
+            parent="poweremail.menu_poweremail_templates" action="poweremail_template_fragments_view"/>
+            
+        <!-- Power Email Template Fragments Lines -->
+    	<record model="ir.ui.view" id="poweremail_template_fragments_lines_tree">
+            <field name="name">poweremail.template_fragments_lines.tree</field>
+            <field name="model">poweremail.template_fragments_lines</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+            	<tree string="Power Email Template Fragments Lines">
+                	<field name="template_fragment"/>
+                	<field name="res_id"/>
+					<field name="lang"/>
+				</tree>
+			</field>
+		</record>
+		
+    	<record model="ir.ui.view" id="poweremail_template_fragments_lines_form">
+            <field name="name">poweremail.template_fragments_lines.form</field>
+            <field name="model">poweremail.template_fragments_lines</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+				<form string="Power Email Template Fragments Lines">
+					<field name="template_fragment" required="1"/>
+					<field name="res_id"/>
+					<field name="lang" widget="selection"/>
+					<newline/>
+					<separator colspan="4" string="Fragment Content"/>
+					<field name="body" colspan="4" nolabel="1"/>
+				</form>
+			</field>
+		</record>
+		
+    </data>
+</openerp>
