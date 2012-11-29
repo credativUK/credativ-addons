@@ -1,21 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <openerp>
     <data>
-    
-    	<!-- Partner Inheritance View -->
-    	<record model="ir.ui.view" id="res_partner_fragments_form">
+        <!-- Partner Inheritance View -->
+        <record model="ir.ui.view" id="res_partner_fragments_form">
             <field name="name">res.partner.fragments.form</field>
             <field name="model">res.partner</field>
             <field name="inherit_id" ref="base.view_partner_form" />
             <field name="type">form</field>
             <field name="arch" type="xml">
                 <notebook position="inside">
-					<page string="Email Fragments">
-						<field name="fragment_lines" colspan="4" nolabel="1" context="{'default_record_id':active_id}"/>
-					</page>
+                    <page string="Email Fragments">
+                        <field name="fragment_lines" colspan="4" nolabel="1" context="{'default_record_id':active_id}"/>
+                    </page>
                 </notebook>
             </field>
         </record>
-        
     </data>
 </openerp>

@@ -22,7 +22,7 @@
 ##############################################################################
 {
     "name" : "Poweremail Template Fragments",
-    "version" : "1.9.0",
+    "version" : "1.0.0",
     "author" : "credativ",
     "website" : "http://credativ.co.uk",
     "category" : "Added functionality",
