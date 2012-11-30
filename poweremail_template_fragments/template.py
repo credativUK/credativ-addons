@@ -130,26 +130,28 @@ class poweremail_template_fragments_lines(osv.osv):
     
     _order = 'lang_id asc, res_id asc'
     
-    def render_message(self, cr, uid, ids, template_name, res_id, lang_id, object, env, context=None):
+    def render_message(self, cr, uid, ids, template_name, res_id, object, env, lang=None, context=None):
         if ids:
             raise NotImplementedError("Ids is just there by convention! Don't use it yet, please.")
-        fragment_id = self.search(cr, uid, [('template_fragment_id.name','=',template_name),('res_id','=',res_id),('lang_id','=',lang_id)], context=context)
+        fragment_id = self.search(cr, uid, [('template_fragment_id.name','=',template_name),('res_id','=',res_id),('lang_id.code','=',lang)], context=context)
         if not fragment_id:
-            fragment_id = self.search(cr, uid, [('template_fragment_id.name','=',template_name),('res_id','=',0),('lang_id','=',lang_id)], context=context)
+            fragment_id = self.search(cr, uid, [('template_fragment_id.name','=',template_name),('res_id','=',0),('lang_id.code','=',lang)], context=context)
         if not fragment_id:
-            raise osv.except_osv('Unable to render the template', 'A template fragment line cannot be found for %s, with language %s, for res ID %d or default.' % (template_name, lang_id, res_id))
+            raise osv.except_osv('Unable to render the template', "A template fragment line cannot be found for '%s', with language '%s', for resouce %d or default." % (template_name, lang, res_id))
         assert(len(fragment_id) == 1)
-        template = self.browse(cr, uid, fragment_id[0], context=context)['body']
+        template = self.browse(cr, uid, fragment_id[0], context=context)
         if template.template_fragment_id.template_language == 'mako':
             return MakoTemplate(tools.ustr(template.body)).render_unicode(object=object, peobject=object, env=env, format_exceptions=True)
         else:
             raise NotImplementedError("Template lanugage '%s' not currently supported by poweremail_template_fragments." % (template.template_fragment_id.template_language))
  
-    def render_message_wrapper(self, template_name, res_id, lang_id, object, env):
+    def render_message_wrapper(self, template_name, res_id, object, env, lang=None):
         context = env.get('ctx', {})
         cr = object._cr
         uid = object._uid
-        return self.render_message(cr, uid, [], res_id, lang_id, object, env, context=context)
+        if not lang:
+            lang = context.get('lang')
+        return self.render_message(cr, uid, [], template_name, res_id, object, env, lang=lang, context=context)
  
 poweremail_template_fragments_lines()
 
