@@ -128,7 +128,7 @@ class poweremail_template_fragments_lines(osv.osv):
         'res_id': 0
     }
     
-    _order = 'lang_id asc, res_id asc'
+    _order = 'template_fragment_id asc, lang_id asc, res_id asc'
     
     def render_message(self, cr, uid, ids, template_name, res_id, object, env, lang=None, context=None):
         if ids:
