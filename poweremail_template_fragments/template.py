@@ -60,7 +60,12 @@ class poweremail_template_fragments_lines(osv.osv):
             context = {}
         for line in self.browse(cr, uid, ids, context=context):
             if line.res_id != 0:
-                record = self.pool.get(line.template_fragment_id.model_name).read(cr, uid, line.res_id, ['name'], context=context)
+                record = False
+                model_pool = False
+                if line.template_fragment_id.model_name:
+                    model_pool = self.pool.get(line.template_fragment_id.model_name)
+                if model_pool:
+                    record = model_pool.read(cr, uid, line.res_id, ['name'], context=context)
                 if record:
                     res[line.id] = record['name']
                 else:
