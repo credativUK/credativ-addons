@@ -9,8 +9,21 @@
             <field name="type">form</field>
             <field name="arch" type="xml">
                 <notebook position="inside">
-                    <page string="Email Fragments">
-                        <field name="fragment_lines" colspan="4" nolabel="1" context="{'default_record_id':active_id}"/>
+                    <page string="Email Template Fragments">
+                        <field name="fragment_lines" colspan="4" nolabel="1" context="{'default_model_name': 'res.partner', 'default_res_id': active_id}">
+                            <tree string="Template Fragments Lines">
+                                <field name="template_fragment_id"/>
+                                <field name="lang_id"/>
+                                <field name="body"/>
+                            </tree>
+                            <form string="Template Fragments Lines">
+                                <field name="template_fragment_id"/>
+                                <field name="lang_id" widget="selection"/>
+                                <newline/>
+                                <separator colspan="4" string="Fragment Content"/>
+                                <field name="body" colspan="4" nolabel="1"/>
+                            </form>
+                        </field>
                     </page>
                 </notebook>
             </field>

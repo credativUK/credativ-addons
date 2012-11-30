@@ -1,0 +1,7 @@
+"id","name","model_id:id","group_id:id","perm_read","perm_write","perm_create","perm_unlink"
+"poweremail_template_fragments_manager","poweremail.template_fragments","model_poweremail_template_fragments","poweremail.res_groups_pemanager",1,1,1,1
+"poweremail_template_fragments_lines_manager","poweremail.template_fragments_lines","model_poweremail_template_fragments_lines","poweremail.res_groups_pemanager",1,1,1,1
+"poweremail_template_fragments_euser","poweremail.template_fragments","model_poweremail_template_fragments","poweremail.res_groups_peuserse",1,0,0,0
+"poweremail_template_fragments_lines_euser","poweremail.template_fragments_lines","model_poweremail_template_fragments_lines","poweremail.res_groups_peuserse",1,0,0,0
+"poweremail_template_fragments_iuser","poweremail.template_fragments","model_poweremail_template_fragments","poweremail.res_groups_peusersi",1,0,0,0
+"poweremail_template_fragments_lines_iuser","poweremail.template_fragments_lines","model_poweremail_template_fragments_lines","poweremail.res_groups_peusersi",1,0,0,0

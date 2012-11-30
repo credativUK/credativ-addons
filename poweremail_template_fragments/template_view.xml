@@ -7,28 +7,14 @@
             <field name="model">poweremail.template_fragments</field>
             <field name="type">form</field>
             <field name="arch" type="xml">
-                <form string="Power Email Template Fragments">
+                <form string="Template Fragments">
                     <field name="name"/>
-                        <field name="for_template"/>
-                        <field name="model_id"/>
-                        <field name="template_language"/>
-                        <newline/>
-                        <separator colspan="4"/>
-                        <field name="fragments_lines_ids" colspan="4" nolabel="1" mode="tree,form">
-                        <tree string="Power Email Template Fragments Lines">
-                            <field name="res_id"/>
-                            <field name="name"/>
-                            <field name="lang"/>
-                        </tree>
-                        <form string="Power Email Template Fragments Lines">
-                            <field name="name"/>
-                            <field name="res_id"/>
-                            <field name="lang" widget="selection"/>
-                            <newline/>
-                            <separator colspan="4" string="Fragment Content"/>
-                            <field name="body" colspan="4" nolabel="1"/>
-                        </form>
-                    </field>
+                    <field name="template_language"/>
+                    <field name="model_name"/>
+                    <field name="model_id" on_change="onchange_model(model_id)"/>
+                    <newline/>
+                    <separator colspan="4"/>
+                    <field name="fragments_lines_ids" colspan="4" nolabel="1"/>
                 </form>
             </field>
         </record>
@@ -38,10 +24,9 @@
             <field name="model">poweremail.template_fragments</field>
             <field name="type">tree</field>
             <field name="arch" type="xml">
-                <tree string="Power Email Template Fragments">
+                <tree string="Template Fragments">
                     <field name="name" select="1"/>
-                    <field name="for_template" select="2"/>
-                    <field name="model_id" select="1"/>
+                    <field name="model_name" select="1"/>
                     <field name="template_language" select="1"/>
                 </tree>
             </field>
@@ -64,10 +49,11 @@
             <field name="model">poweremail.template_fragments_lines</field>
             <field name="type">tree</field>
             <field name="arch" type="xml">
-                <tree string="Power Email Template Fragments Lines">
-                    <field name="template_fragment"/>
+                <tree string="Template Fragments Lines">
                     <field name="res_id"/>
-                    <field name="lang"/>
+                    <field name="name"/>
+                    <field name="lang_id"/>
+                    <field name="body"/>
                 </tree>
             </field>
         </record>
@@ -77,10 +63,10 @@
             <field name="model">poweremail.template_fragments_lines</field>
             <field name="type">form</field>
             <field name="arch" type="xml">
-                <form string="Power Email Template Fragments Lines">
-                    <field name="template_fragment" required="1"/>
-                    <field name="res_id"/>
-                    <field name="lang" widget="selection"/>
+                <form string="Template Fragments Lines">
+                    <field name="res_id" on_change="onchange_res_id(res_id, parent.model_name)"/>
+                    <field name="name"/>
+                    <field name="lang_id" widget="selection"/>
                     <newline/>
                     <separator colspan="4" string="Fragment Content"/>
                     <field name="body" colspan="4" nolabel="1"/>

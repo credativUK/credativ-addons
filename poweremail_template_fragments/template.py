@@ -29,13 +29,23 @@ import tools
 class poweremail_template_fragments(osv.osv):
     _name = 'poweremail.template_fragments'
 
+    def onchange_model(self, cr, uid, ids, model_id, context=None):
+        if model_id:
+            model = self.pool.get('ir.model').read(cr, uid, model_id, ['model'])['model']
+            return {'value': {'model_name': model, 'model_id': False}}
+        return {}
+    
     _columns = {
-        'name': fields.char('Name of Template Fragment', size=100, required=True),
-        'for_template': fields.many2one('poweremail.templates', 'Email Template'),
-        'model_id': fields.many2one('ir.model', 'Model', required=True),
+        'name': fields.char('Fragment Name', size=100, required=True),
+        'model_id': fields.many2one('ir.model', 'Model (Change Only)', help="Use this field to find the string representation of the model, this field does not represent the model used."),
+        'model_name': fields.char('Model', size=100, required=True, help="The string representation of the model this fragment relates to"),
         'template_language': fields.selection(template.TEMPLATE_ENGINES, 'Templating Language', required=True),
-        'fragments_lines_ids': fields.one2many('poweremail.template_fragments_lines', 'template_fragment', string="Fragments Lines")
+        'fragments_lines_ids': fields.one2many('poweremail.template_fragments_lines', 'template_fragment_id', string="Fragments Lines")
         }
+    
+    _sql_constraints = [
+        ('name_uniq', 'UNIQUE(name, model_name)', 'A template fragment with this name and model'),
+    ]    
     
 poweremail_template_fragments()
     
@@ -49,18 +59,57 @@ class poweremail_template_fragments_lines(osv.osv):
         if context is None:
             context = {}
         for line in self.browse(cr, uid, ids, context=context):
-            if line.res_id != 0 and line.template_fragment:
-                res[line.id] = self.pool.get(line.template_fragment.model_id.model).browse(cr, uid, line.res_id, context=context).name 
+            if line.res_id != 0:
+                record = self.pool.get(line.template_fragment_id.model_name).read(cr, uid, line.res_id, ['name'], context=context)
+                if record:
+                    res[line.id] = record['name']
+                else:
+                    res[line.id] = "<NOT FOUND>"
+            else:
+                res[line.id] = "<DEFAULT>"
         return res
-        
+    
+    def _get_fragment_ids(self, cr, uid, ids, context=None):
+        res = set()
+        for move in self.pool.get('poweremail.template_fragments').browse(cr, uid, ids, context):
+            res.update([x.id for x in move.fragments_lines_ids])
+        return list(res)
+    
+    def onchange_res_id(self, cr, uid, ids, res_id, model_name, context=None):
+        if res_id == 0:
+            return {'value': {'name': "<DEFAULT>"}}
+        model_pool = False
+        if model_name:
+            model_pool = self.pool.get(model_name)
+        if model_pool:
+            record = model_pool.read(cr, uid, res_id, ['name'], context=context)
+            if record:
+                return {'value': {'name': record['name']}}
+            else:
+                return {'value': {'name': "<NOT FOUND>"}}
+        else:
+            return {'warning': {'title': 'Unable to find model', 'message': 'Model is either not set or is incorrect in the Template Fragment object'}}
+    
     _columns = {
-        'template_fragment': fields.many2one('poweremail.template_fragments', 'Template Fragment'),
+        'template_fragment_id': fields.many2one('poweremail.template_fragments', 'Template Fragment'),
         'res_id': fields.integer('Resource'),
-        'name': fields.function(_get_resource_name, type='char', size=128, string='Resource Name', store=True),
-        'lang': fields.many2one('res.lang', 'Language'),
-        'body': fields.text('Fragment Content'),
-        'partner_id': fields.many2one('res.partner', 'Partner', ondelete='cascade'),
+        'model_name': fields.related('template_fragment_id', 'model_name', type='char', readonly=True,
+            store={
+                'poweremail.template_fragments_lines': (lambda self, cr, uid, ids, ctx: ids, ['template_fragment_id'], 10),
+                'poweremail.template_fragments': (_get_fragment_ids, ['model_name'], 20)
+            }),
+        'name': fields.function(_get_resource_name, type='char', size=128, string='Resource Name',
+            store={
+                'poweremail.template_fragments_lines': (lambda self, cr, uid, ids, ctx: ids, ['res_id', 'template_fragment_id'], 10),
+                'poweremail.template_fragments': (_get_fragment_ids, ['model_name'], 20)
+            }),
+        'lang_id': fields.many2one('res.lang', 'Language', required=True),
+        'body': fields.text('Fragment Content', required=True),
         }
+
+    _sql_constraints = [
+        ('res_id_uniq', 'UNIQUE(res_id, template_fragment_id, lang_id)', 'A template fragment line already exists for this template fragment, resource and language.'),
+    ]    
     
     def _get_lang(self, cr, uid, context=None):
         if context is None:
@@ -70,52 +119,40 @@ class poweremail_template_fragments_lines(osv.osv):
         return lang_ids and lang_ids[0] or False
     
     _defaults = {
-        'lang': _get_lang,
+        'lang_id': _get_lang,
         'res_id': 0
     }
     
-    def _check_resource_exists(self, cr, uid, ids, context=None):
-        for l in self.browse(cr, uid, ids, context=context):
-            if not l.template_fragment:
-                raise osv.except_osv(_('No fragment found !'), _('Save the Fragment.'))
-            
-            if l.res_id != 0:
-                resources = self.pool.get(l.template_fragment.model_id.model).search(cr, uid, [('id','=',l.res_id)], context=context)
-                if not resources:
-                    return False
-        return True
+    _order = 'lang_id asc, res_id asc'
     
-    _constraints = [
-        (_check_resource_exists, 'Resource ID doesn\'t exist!', ['res_id']),
-    ]
-    
-    def default_get(self, cr, uid, fields, context=None):
-        data = super(poweremail_template_fragments_lines, self).default_get(cr, uid, fields, context=context)
-        if context.get('default_record_id', False):
-            data.update({'res_id': context['default_record_id']})
-        return data
-    
-    def render_message(self, template_name, object, env):
-        fragment = self.search(env['ctx']['cursor'], env['ctx']['uid'], [('template_fragment.name','=',template_name),('res_id','=',env['ctx']['carrier'].id)], context=env['ctx'])
-        message = ''
-        #If no fragment found for a carrier, then use the default one.
-        if not fragment:
-            fragment = self.search(env['ctx']['cursor'], env['ctx']['uid'], [('template_fragment.name','=',template_name),('res_id','=',0)], context=env['ctx'])
-        if fragment:
-            message = self.browse(env['ctx']['cursor'], env['ctx']['uid'], fragment[0], context=env['ctx']).body
-        message = tools.ustr(message)
-        return MakoTemplate(message).render_unicode(object=object,
-                                                             peobject=object,
-                                                             env=env,
-                                                             format_exceptions=True)
-
+    def render_message(self, cr, uid, ids, template_name, res_id, lang_id, object, env, context=None):
+        if ids:
+            raise NotImplementedError("Ids is just there by convention! Don't use it yet, please.")
+        fragment_id = self.search(cr, uid, [('template_fragment_id.name','=',template_name),('res_id','=',res_id),('lang_id','=',lang_id)], context=context)
+        if not fragment_id:
+            fragment_id = self.search(cr, uid, [('template_fragment_id.name','=',template_name),('res_id','=',0),('lang_id','=',lang_id)], context=context)
+        if not fragment_id:
+            raise osv.except_osv('Unable to render the template', 'A template fragment line cannot be found for %s, with language %s, for res ID %d or default.' % (template_name, lang_id, res_id))
+        assert(len(fragment_id) == 1)
+        template = self.browse(cr, uid, fragment_id[0], context=context)['body']
+        if template.template_fragment_id.template_language == 'mako':
+            return MakoTemplate(tools.ustr(template.body)).render_unicode(object=object, peobject=object, env=env, format_exceptions=True)
+        else:
+            raise NotImplementedError("Template lanugage '%s' not currently supported by poweremail_template_fragments." % (template.template_fragment_id.template_language))
+ 
+    def render_message_wrapper(self, template_name, res_id, lang_id, object, env):
+        context = env.get('ctx', {})
+        cr = object._cr
+        uid = object._uid
+        return self.render_message(cr, uid, [], res_id, lang_id, object, env, context=context)
+ 
 poweremail_template_fragments_lines()
 
 class poweremail_templates(osv.osv):
     _inherit = 'poweremail.templates'
 
     def generate_mail(self, cursor, user, template_id, record_ids, context=None):
-        context.update({'fragment_function': self.pool.get('poweremail.template_fragments_lines').render_message, 'cursor': cursor})
+        context.update({'frag_func': self.pool.get('poweremail.template_fragments_lines').render_message_wrapper})
         return super(poweremail_templates, self).generate_mail(cursor, user, template_id, record_ids, context=context)
     
 poweremail_templates()

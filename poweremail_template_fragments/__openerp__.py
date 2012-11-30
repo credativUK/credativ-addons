@@ -35,6 +35,7 @@ This module facilitates email template fragments.
     """,
     "init_xml": [],
     "update_xml": [
+        'security/ir.model.access.csv',
         'template_view.xml',
         'partner_view.xml',
     ],

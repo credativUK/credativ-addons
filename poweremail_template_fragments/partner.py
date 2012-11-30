@@ -25,7 +25,7 @@ from osv import osv, fields
 class res_partner(osv.osv):
     _inherit = 'res.partner'
     _columns = {
-        'fragment_lines': fields.one2many('poweremail.template_fragments_lines', 'partner_id', 'Email Fragment Lines', ondelete='cascade'),
+        'fragment_lines': fields.one2many('poweremail.template_fragments_lines', 'res_id', domain=[('model_name','=','res.partner')], string='Email Fragment Lines'),
     }
     
 res_partner()
