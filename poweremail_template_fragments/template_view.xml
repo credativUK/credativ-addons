@@ -14,7 +14,22 @@
                     <field name="model_id" on_change="onchange_model(model_id)"/>
                     <newline/>
                     <separator colspan="4"/>
-                    <field name="fragments_lines_ids" colspan="4" nolabel="1"/>
+                    <field name="fragments_lines_ids" colspan="4" nolabel="1">
+                        <tree string="Template Fragments Lines">
+                            <field name="res_id"/>
+                            <field name="name"/>
+                            <field name="lang_id"/>
+                            <field name="body"/>
+                        </tree>
+                        <form string="Template Fragments Lines">
+                            <field name="res_id" on_change="onchange_res_id(res_id, parent.model_name)"/>
+                            <field name="name"/>
+                            <field name="lang_id" widget="selection"/>
+                            <newline/>
+                            <separator colspan="4" string="Fragment Content"/>
+                            <field name="body" colspan="4" nolabel="1"/>
+                        </form>
+                    </field>
                 </form>
             </field>
         </record>
@@ -25,10 +40,23 @@
             <field name="type">tree</field>
             <field name="arch" type="xml">
                 <tree string="Template Fragments">
-                    <field name="name" select="1"/>
-                    <field name="model_name" select="1"/>
-                    <field name="template_language" select="1"/>
+                    <field name="name"/>
+                    <field name="model_name"/>
+                    <field name="template_language"/>
                 </tree>
+            </field>
+        </record>
+        
+        <record model="ir.ui.view" id="poweremail_template_fragments_search">
+            <field name="name">poweremail.template_fragments.search</field>
+            <field name="model">poweremail.template_fragments</field>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <search string="Template Fragments">
+                    <field name="name"/>
+                    <field name="model_name"/>
+                    <field name="template_language"/>
+                </search>
             </field>
         </record>
         
@@ -50,11 +78,36 @@
             <field name="type">tree</field>
             <field name="arch" type="xml">
                 <tree string="Template Fragments Lines">
+                    <field name="template_fragment_id"/>
+                    <field name="model_name"/>
                     <field name="res_id"/>
                     <field name="name"/>
                     <field name="lang_id"/>
-                    <field name="body"/>
                 </tree>
+            </field>
+        </record>
+        
+        <record model="ir.ui.view" id="poweremail_template_fragments_lines_search">
+            <field name="name">poweremail.template_fragments_lines.search</field>
+            <field name="model">poweremail.template_fragments_lines</field>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <search string="Template Fragments Lines">
+                    <field name="template_fragment_id"/>
+                    <field name="model_name"/>
+                    <field name="res_id"/>
+                    <field name="name"/>
+                    <field name="lang_id"/>
+                    <newline/>
+                    <group expand="0" string="Group By..." groups="base.group_extended">
+                        <filter string="Template Fragment" icon="terp-accessories-archiver" domain="[]" context="{'group_by':'template_fragment_id'}"/>
+                        <filter string="Model" icon="terp-accessories-archiver" domain="[]" context="{'group_by':'model_name'}"/>
+                        <filter string="Language" icon="terp-accessories-archiver+" domain="[]" context="{'group_by':'lang_id'}"/>
+                        <separator orientation="vertical"/>
+                        <filter string="Resource" icon="terp-accessories-archiver" domain="[]" context="{'group_by':'res_id'}"/>
+                        <filter string="Resource Name" icon="terp-accessories-archiver+" domain="[]" context="{'group_by':'name'}"/>
+                    </group>
+                </search>
             </field>
         </record>
         
@@ -64,7 +117,8 @@
             <field name="type">form</field>
             <field name="arch" type="xml">
                 <form string="Template Fragments Lines">
-                    <field name="res_id" on_change="onchange_res_id(res_id, parent.model_name)"/>
+                    <field name="template_fragment_id" on_change="onchange_fragment_id(res_id, template_fragment_id)"/>
+                    <field name="res_id" on_change="onchange_fragment_id(res_id, template_fragment_id)"/>
                     <field name="name"/>
                     <field name="lang_id" widget="selection"/>
                     <newline/>
@@ -73,5 +127,17 @@
                 </form>
             </field>
         </record>
+        
+        <record model="ir.actions.act_window" id="poweremail_template_fragments_lines_view">
+            <field name="name">Template Fragment Lines</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">poweremail.template_fragments_lines</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="poweremail_template_fragments_lines_tree"/>
+        </record>
+        
+        <menuitem name="Template Fragment Lines" id="menu_poweremail_template_fragments_lines_view"
+            parent="poweremail.menu_poweremail_templates" action="poweremail_template_fragments_lines_view"/>
+        
     </data>
 </openerp>
