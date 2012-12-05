@@ -35,8 +35,8 @@ class mrp_production(osv.osv):
             prodlot_name = seq_obj.get(cr,uid, 'stock.lot.serial')
             for move in production.move_lines:
                 # TODO (derek.sheridan@credativ.co.uk): remove hard coding
-                # The supplier of raw material should be from Bremskerl Germany and prodlot_id of stock move should end at FA
-                if move.product_id.seller_ids and move.product_id.seller_ids[0].name.name == 'BREMSKERL REIBBELAGWERKE GMBH & CO.KG':
+                # The production lot name should change only if bom type is automatic and prodlot_id of stock move ends at FA
+                if production.bom_id and production.bom_id.type == 'automatic':
                     if move.prodlot_id and move.prodlot_id.name.endswith('FA'):
                         prodlot_name += '-' + move.prodlot_id.name
             finished_prodlot_id = prodlot_obj.create(cr, uid, {
