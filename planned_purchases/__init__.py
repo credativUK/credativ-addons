@@ -1,8 +1,10 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution
-#    Copyright (C) 2011 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
+#    OpenERP, Open Source Management Solution	
+#    Copyright (C) 2009 credativ Ltd (<http://credativ.co.uk>).
+#    All Rights Reserved
+#    $Id$
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -19,30 +21,6 @@
 #
 ##############################################################################
 
+import purchase
 
-{
-    'name': 'MRP Automation',
-    'version': '0.1',
-    'category': 'Localisation',
-    'description':
-        """
-        Automate the manufacturing order process
-        """,
-    'author': 'credativ Ltd',
-    'website' : 'http://credativ.co.uk',
-    'depends': [
-        'mrp',
-        'stock',
-        'sale',
-        'planned_purchases',
-        ],
-    'update_xml': [
-        "stock_view.xml",
-        "wizard/mrp_automated_new_prodlot_view.xml"
-        ],
-    'demo_xml': [],
-    'test': [],
-    'installable': True,
-    'active': False,
-}
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

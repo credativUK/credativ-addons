@@ -2,7 +2,9 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2011 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
+#    Copyright (C) 2009 credativ Ltd (<http://credativ.co.uk>).
+#    All Rights Reserved
+#    $Id$
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -18,31 +20,26 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-
-
 {
-    'name': 'MRP Automation',
-    'version': '0.1',
-    'category': 'Localisation',
-    'description':
-        """
-        Automate the manufacturing order process
-        """,
-    'author': 'credativ Ltd',
+    'name' : 'Planned Purchases',
+    'version' : '1.9.0',
+    'author' : 'credativ',
     'website' : 'http://credativ.co.uk',
-    'depends': [
-        'mrp',
-        'stock',
-        'sale',
-        'planned_purchases',
-        ],
-    'update_xml': [
-        "stock_view.xml",
-        "wizard/mrp_automated_new_prodlot_view.xml"
-        ],
-    'demo_xml': [],
-    'test': [],
-    'installable': True,
+    'depends' : [
+        'mrp', 
+    ],
+    'category' : 'Generic Modules/Purchases',
+    'description': '''
+Amalgamate new Purchase Orders with existing ones of the same product and company.
+
+''',
+    'init_xml' : [
+    ],
+    'demo_xml' : [],
+    'update_xml' : [
+    ],
     'active': False,
+    'installable': True
 }
+
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
