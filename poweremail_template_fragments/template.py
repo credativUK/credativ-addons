@@ -176,6 +176,8 @@ class poweremail_templates(osv.osv):
     _inherit = 'poweremail.templates'
 
     def generate_mail(self, cursor, user, template_id, record_ids, context=None):
+        if context is None:
+            context = {}
         context.update({'frag_func': self.pool.get('poweremail.template_fragments_lines').render_message_wrapper})
         return super(poweremail_templates, self).generate_mail(cursor, user, template_id, record_ids, context=context)
     
