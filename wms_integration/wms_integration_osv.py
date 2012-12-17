@@ -41,27 +41,28 @@ class wms_integration_osv(osv.osv):
         result = {'create_ids': [], 'write_ids': []}
         mapping_id = self.pool.get('external.mapping').search(cr, uid, [('model','=',self._name), ('referential_id','=',external_referential_id)])
         if mapping_id:
-            ext_ref = self.pool.get('external.mapping').read(cr, uid, mapping_id[0], ['location', 'external_key_name', 'external_list_method', 'column_headers', 'required_fields'])
-            mo = re.search(r'ftp://.*?:[0-9]+(.+)', ext_ref['location'])
+            #mapping = self.pool.get('external.mapping').read(cr, uid, mapping_id[0], ['location', 'external_key_name', 'external_list_method', 'column_headers', 'required_fields'])
+            mapping = self.pool.get('external.mapping').browse(cr, uid, mapping_id[0])
+            mo = re.search(r'ftp://.*?:[0-9]+(.+)', mapping.location)
             if not mo:
-                _logger.error('Referential location could not be parsed as an FTP URI: %s' % (ext_ref['location'],))
-                raise osv.except_osv(_("Connection Error"), _('Referential location could not be parsed as an FTP URI: %s' % (ext_ref['location'],)))
+                _logger.error('Referential location could not be parsed as an FTP URI: %s' % (mapping.location,))
+                raise osv.except_osv(_("Connection Error"), _('Referential location could not be parsed as an FTP URI: %s' % (mapping.location,)))
                 # TODO Report error
             (path,) = mo.groups()
             
             conn.init_import(import_csv_fn=path,
-                             external_key_name=ext_ref['external_key_name'],
-                             column_headers=ext_ref['column_headers'],
-                             required_fields=ext_ref['required_fields'])
+                             external_key_name=mapping.external_key_name,
+                             column_headers=mapping.get_column_headers(cr, uid, context=context),
+                             required_fields=mapping.get_column_headers(cr, uid, context=context))
             data = []
             if context.get('id', False):
-                get_method = ext_ref.get('external_get_method',False)
+                get_method = mapping.get('external_get_method',False)
                 if get_method:
                     data = [conn.call(get_method, [context.get('id', False)])]
                     data[0]['external_id'] = context.get('id', False)
                     result = self.ext_import(cr, uid, data, external_referential_id, defaults, context)
             else:
-                list_method = ext_ref.get('external_list_method',False)
+                list_method = mapping.get('external_list_method',False)
                 if list_method:
                     data = conn.call(list_method, context['ids_or_filter'])
                     result = self.ext_import(cr, uid, data, external_referential_id, defaults, context)
