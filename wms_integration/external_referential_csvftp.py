@@ -304,7 +304,7 @@ class Connection(object):
                         if id in self._export_cache:
                             op, rec = self._export_cache[id]
                             if op == 'update' or op == 'create':
-                                csv_out.writerow(self._export_cache[id][1])
+                                csv_out.writerow(rec)
                             elif op == 'delete':
                                 # TODO What to do with deleted records?
                                 pass
