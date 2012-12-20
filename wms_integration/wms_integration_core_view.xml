@@ -102,6 +102,17 @@
         </field>
     </record>
 
+    <record id="act_wms_integration_instances_tree" model="ir.actions.act_window">
+        <field name="name">WMS Integration Instances</field>
+        <field name="res_model">external.referential</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="view_type">form</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="wms_integration_instances_tree_view" />
+        <field name="domain">[('type_id.name','=','External WMS Integration')]</field>
+    </record>
+
+
     <record id="action_wms_integration_tree_view" model="ir.actions.act_window.view">
         <field eval="10" name="sequence"/>
         <field name="view_mode">tree</field>
@@ -113,16 +124,6 @@
         <field name="view_mode">form</field>
         <field name="view_id" ref="wms_external_referential_form_view"/>
         <field name="act_window_id" ref="act_wms_integration_instances_tree"/>
-    </record>
-        
-    <record id="act_wms_integration_instances_tree" model="ir.actions.act_window">
-        <field name="name">WMS Integration Instances</field>
-        <field name="res_model">external.referential</field>
-        <field name="type">ir.actions.act_window</field>
-        <field name="view_type">form</field>
-        <field name="view_mode">tree,form</field>
-        <field name="view_id" ref="wms_integration_instances_tree_view" />
-        <field name="domain">[('type_id.name','=','External WMS Integration')]</field>
     </record>
 
     <menuitem id="menu_wms_integration" parent="stock.menu_stock_root" name="External WMS" />
