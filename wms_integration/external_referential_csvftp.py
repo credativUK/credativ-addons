@@ -299,8 +299,8 @@ class Connection(object):
 
                 ids = sorted(list(set(self._import_cache.keys() + self._export_cache.keys())))
 
-                try:
-                    for id in ids:
+                for id in ids:
+                    try:
                         if id in self._export_cache:
                             op, rec = self._export_cache[id]
                             if op == 'update' or op == 'create':
@@ -310,12 +310,12 @@ class Connection(object):
                                 pass
                         elif id in self._import_cache:
                             csv_out.writerow(self._import_cache[id][1])
-                except csv.Error, X:
-                    self.logger.error('CSV export: CSV writing error: %s' % (X.message,))
-                    # TODO Report error
-                except ValueError, X:
-                    self.logger.error('CSV export: Attempted to write incorrect record: %s' % (X.message,))
-                    # TODO Report error
+                    except csv.Error, X:
+                        self.logger.error('CSV export: CSV writing error: %s' % (X.message,))
+                        # TODO Report error
+                    except ValueError, X:
+                        self.logger.error('CSV export: Attempted to write incorrect record: %s' % (X.message,))
+                        # TODO Report error
 
                 if self.debug:
                     self.logger.debug('CSV export: wrote %d records to local CSV file %s' % (len(ids), self._export_tmp_fn))

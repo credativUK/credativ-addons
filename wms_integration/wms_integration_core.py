@@ -108,6 +108,8 @@ class external_mapping_line(osv.osv):
     _sql_constraints = [
         ('sequence', 'unique(mapping_id, sequence)', 'Sequence number must be unique.')
         ]
+    
+    _order = 'sequence'
 
 external_mapping_line()
 
@@ -184,7 +186,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         referential = self._ensure_wms_integration_referential(cr, uid, id, context=context)
 
         obj = self.pool.get(model_name)
-        ids = obj.search(cr, uid, []) # FIXME: This needs to be a controlled set of IDs!
+        res_ids = obj.search(cr, uid, []) # FIXME: This needs to be a controlled set of IDs!
         
         conn = self.external_connection(cr, uid, id, DEBUG, context=context)
         mapping_ids = self.pool.get('external.mapping').search(cr, uid, [('referential_id','=',id),('model_id','=',model_name)])
@@ -199,12 +201,13 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             oe_columns = mapping_obj.get_oe_column_headers(cr, uid, mapping.id, context=context)
             conn.init_export(remote_csv_fn=mapping.external_export_uri, external_key_name=mapping.external_key_name, column_headers=ext_columns, required_fields=ext_columns)
             export_data = []
-            try:
-                data = mapping_obj.oe_keys_to_ext_keys(cr, uid, mapping.id, obj.read(cr, uid, id, [], context=context), context=context)
-                export_data.append(data)
-            except:
-                pass
-                # FIXME: something went wrong mapping the object - do proper log to indicate record cannot be exported and continue to the next, or should we fail completely?
+            for obj_data in obj.read(cr, uid, res_ids, [], context=context):
+                try:
+                    data = mapping_obj.oe_keys_to_ext_keys(cr, uid, mapping.id, obj_data, context=context)
+                    export_data.append(data)
+                except:
+                    pass
+                    # FIXME: something went wrong mapping the object - do proper log to indicate record cannot be exported and continue to the next, or should we fail completely?
                 
             conn.call(mapping.external_create_method, records=export_data)
             conn.finalize_export()
