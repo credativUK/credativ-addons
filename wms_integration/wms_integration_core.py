@@ -42,9 +42,9 @@ class external_mapping(osv.osv):
         res = []
         line_ids = self.pool.get('external.mapping.line').search(cr, uid, [('mapping_id','=',ids[0])])
         for line in self.pool.get('external.mapping.line').browse(cr, uid, line_ids):
-            res.append(line.external_field)
+            res.append((line.sequence, line.external_field))
 
-        return res
+        return [f for s, f in sorted(res, lambda a, b: cmp(a[0], b[0]))]
 
     def get_oe_column_headers(self, cr, uid, ids, context=None):
         if not isinstance(ids, list):
@@ -97,6 +97,20 @@ class external_mapping(osv.osv):
 
 external_mapping()
 
+class external_mapping_line(osv.osv):
+    _inherit = 'external.mapping.line'
+
+    _columns = {
+        'sequence': fields.integer('Position in field order', required=True,
+                                   help='Assign sequential numbers to each line to indicate their required order in the output data.')
+        }
+
+    _sql_constraints = [
+        ('sequence', 'unique(mapping_id, sequence)', 'Sequence number must be unique.')
+        ]
+
+external_mapping_line()
+
 class external_referential(wms_integration_osv.wms_integration_osv):
     _inherit = 'external.referential'
 
@@ -138,8 +152,6 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         referential = self._ensure_wms_integration_referential(cr, uid, id, context=context)
         if not referential:
             return super(external_referential, self).external_connection(cr, uid, id, DEBUG=DEBUG, context=context)
-
-        _logger.debug('external_connection(): referential = %s; .type_id = %s; .id = %s' % (referential, referential.type_id, referential.type_id.name.lower()))
 
         mo = re.search(r'ftp://(.*?):([0-9]+)', referential.location)
         if not mo:
@@ -187,19 +199,21 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             oe_columns = mapping_obj.get_oe_column_headers(cr, uid, mapping.id, context=context)
             conn.init_export(remote_csv_fn=mapping.external_export_uri, external_key_name=mapping.external_key_name, column_headers=ext_columns, required_fields=ext_columns)
             export_data = []
-            for id in ids[:10]:
-                try:
-                    data = mapping_obj.oe_keys_to_ext_keys(cr, uid, mapping.id, obj.read(cr, uid, id, [], context=context), context=context)
-                    export_data.append(data)
-                except:
-                    pass
-                    # FIXME: something went wrong mapping the object - do proper log to indicate record cannot be exported and continue to the next, or should we fail completely?
+            try:
+                data = mapping_obj.oe_keys_to_ext_keys(cr, uid, mapping.id, obj.read(cr, uid, id, [], context=context), context=context)
+                export_data.append(data)
+            except:
+                pass
+                # FIXME: something went wrong mapping the object - do proper log to indicate record cannot be exported and continue to the next, or should we fail completely?
                 
             conn.call(mapping.external_create_method, records=export_data)
             conn.finalize_export()
 
-            # TODO Defer the verification by some delay
-            # res[mapping.id] = self._verify_export(cr, uid, mapping, [res[mapping.external_key_name] for res in export_data], conn, context)
+            if mapping.external_verification_mapping:
+                # TODO Defer the verification by some delay
+                res[mapping.id] = self._verify_export(cr, uid, mapping, [res[mapping.external_key_name] for res in export_data], conn, context)
+            else:
+                _logger.info('CSV export: Mapping has no verification mapping defined.')
 
         return all(res.values())
 

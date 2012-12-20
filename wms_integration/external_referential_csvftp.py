@@ -292,7 +292,7 @@ class Connection(object):
     def _write_export_cache(self):
         try:
             with open(self._export_tmp_fn, 'wb') as f:
-                csv_out = csv.DictWriter(f, fieldnames=self._column_headers, quoting=csv.QUOTE_ALL)
+                csv_out = csv.DictWriter(f, fieldnames=self._column_headers, quoting=csv.QUOTE_NONNUMERIC)
                 # TODO Should we send just the altered records? Or all
                 # the data we imported with alterations? Let's assume
                 # it's everything with alterations for now
@@ -439,6 +439,10 @@ class Connection(object):
             records = [records]
 
         for rec in records:
+            if not self._id_col_name in rec:
+                self.logger.error('CSV export: Will not create record with missing key field: %s' % (rec,))
+                continue
+
             # do not replace existing records
             if rec[self._id_col_name] in self._import_cache:
                 self.logger.error('CSV export: Will not replace existing record: %s = %s' % (self._id_col_name, rec[self._id_col_name]))
