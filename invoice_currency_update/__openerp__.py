@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2011 credativ ltd (http://www.credativ.co.uk). All Rights Reserved
+#    Copyright (C) 2012 credativ ltd (http://www.credativ.co.uk). All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -20,12 +20,15 @@
 ##############################################################################
 
 {
-    "name": "Invoice Currency Update",
-    "version": "1.0",
-    "depends": ["account"],
-    "author": "credativ",
-    'description': """This module computes the balance for bank statements considering the related statement lines date for conversion instead of using the current date for currency conversion rates"""
-    "init_xml": [],
+    'name': 'Invoice Currency Update',
+    'version': '1.0',
+    'depends': ["account"],
+    'author': "credativ",
+    'description':
+        """
+        This module computes the balance for bank statements considering the related statement lines date for conversion instead of using the current date for currency conversion rates
+        """,
+    'init_xml': [],
     'update_xml': [],
     'demo_xml': [],
     'installable': True,
