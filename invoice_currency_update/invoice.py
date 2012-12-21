@@ -55,4 +55,48 @@ class account_change_currency(osv.osv_memory):
     
 account_change_currency()
 
+class account_bank_statement(osv.osv):
+    _inherit = 'account.bank.statement'
+
+    def _end_balance(self, cursor, user, ids, name, attr, context=None):
+        if context is None:
+            context = {}
+
+        res_currency_obj = self.pool.get('res.currency')
+        res_users_obj = self.pool.get('res.users')
+        res = {}
+
+        company_currency_id = res_users_obj.browse(cursor, user, user,
+                context=context).company_id.currency_id.id
+
+        statements = self.browse(cursor, user, ids, context=context)
+        for statement in statements:
+            res[statement.id] = statement.balance_start
+            currency_id = statement.currency.id
+            for line in statement.move_line_ids:
+                if line.debit > 0:
+                    if line.account_id.id == \
+                            statement.journal_id.default_debit_account_id.id:
+                        context.update({'date': line.date})
+                        res[statement.id] += res_currency_obj.compute(cursor,
+                                user, company_currency_id, currency_id,
+                                line.debit, context=context)
+                else:
+                    if line.account_id.id == \
+                            statement.journal_id.default_credit_account_id.id:
+                        res[statement.id] -= res_currency_obj.compute(cursor,
+                                user, company_currency_id, currency_id,
+                                line.credit, context=context)
+            if statement.state == 'draft':
+                for line in statement.line_ids:
+                    res[statement.id] += line.amount
+        for r in res:
+            res[r] = round(res[r], 2)
+        return res
+
+    _columns = {
+    'balance_end': fields.function(_end_balance, method=True, string='Balance'),    
+    }
+account_bank_statement()
+
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
