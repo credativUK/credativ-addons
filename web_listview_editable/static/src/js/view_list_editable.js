@@ -256,9 +256,9 @@ openerp.web_listview_editable = function (openerp) {
 		    	$new_row.find('> td').each(function (i) { $(this).addClass('oe-field-cell')
 								      .css('width', self.cell_widths[i+1]);
 		    						  $(this).find('input').css('width', self.cell_widths[i+1])
-								      .css('min-width', 10);
+                                                                      .css('min-width', 25);
 		    						  $(this).find('textarea').css('width', self.cell_widths[i+1])
-								      .css('min-width', 10).css('height', 22);
+                                                                      .css('min-width', 25).css('height', 22);
 								});
 		    	$new_row.find('td:last').removeClass('oe-field-cell');
 
