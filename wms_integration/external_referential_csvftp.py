@@ -38,6 +38,17 @@ import csv
 
 _logger = logging.getLogger(__name__)
 
+def encode_vals(d, encoding, errors='replace'):
+    res = {}
+    for k, v in d.items():
+        if isinstance(v, unicode):
+            res[k] = v.encode(encoding, errors)
+        elif isinstance(v, str):
+            res[k] = unicode(v.decode(encoding)).encode(encoding, errors)
+        else:
+            res[k] = v
+    return res
+
 class ExternalReferentialError(Exception):
     pass
 
@@ -66,7 +77,7 @@ class Connection(object):
     >>> conn.finalize_export()
     '''
 
-    def __init__(self, username, password, host, port=21, timeout=5, debug=False, logger=False):
+    def __init__(self, username, password, host, port=21, timeout=5, out_encoding='utf-8', debug=False, logger=False):
         '''
         The constructor sets up the FTP connection.
 
@@ -97,6 +108,7 @@ class Connection(object):
         self.port = port
         self.timeout = timeout
         self.debug = debug
+        self._out_encoding = out_encoding
         self.logger = logger or _logger
 
         self._import_ready = False
@@ -304,12 +316,12 @@ class Connection(object):
                         if id in self._export_cache:
                             op, rec = self._export_cache[id]
                             if op == 'update' or op == 'create':
-                                csv_out.writerow(rec)
+                                csv_out.writerow(encode_vals(rec, self._out_encoding))
                             elif op == 'delete':
                                 # TODO What to do with deleted records?
                                 pass
                         elif id in self._import_cache:
-                            csv_out.writerow(self._import_cache[id][1])
+                            csv_out.writerow(encode_vals(self._import_cache[id][1], self._out_encoding))
                     except csv.Error, X:
                         self.logger.error('CSV export: CSV writing error: %s' % (X.message,))
                         # TODO Report error
