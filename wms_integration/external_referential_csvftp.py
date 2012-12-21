@@ -77,7 +77,7 @@ class Connection(object):
     >>> conn.finalize_export()
     '''
 
-    def __init__(self, username, password, host, port=21, timeout=5, out_encoding='utf-8', debug=False, logger=False):
+    def __init__(self, username, password, host, port=21, timeout=5, out_encoding='utf-8', csv_writer_opts={}, debug=False, logger=False):
         '''
         The constructor sets up the FTP connection.
 
@@ -110,6 +110,16 @@ class Connection(object):
         self.debug = debug
         self._out_encoding = out_encoding
         self.logger = logger or _logger
+
+        class CustomWriterDialect(csv.Dialect):
+            delimiter = csv_writer_opts.get('delimier',',')
+            quotechar = csv_writer_opts.get('quotechar','"')
+            doublequote = csv_writer_opts.get('doublequote',True)
+            skipinitialspace = csv_writer_opts.get('skipinitialspace',False)
+            lineterminator = csv_writer_opts.get('lineterminator','\r\n')
+            quoting = csv_writer_opts.get('quoting',csv.QUOTE_NONE)
+        self._csv_writer_dialect = CustomWriterDialect()
+        self._csv_writer_field_proc = csv_writer_opts.get('fieldproc',lambda f: f)
 
         self._import_ready = False
         self._export_ready = False
@@ -304,7 +314,7 @@ class Connection(object):
     def _write_export_cache(self):
         try:
             with open(self._export_tmp_fn, 'wb') as f:
-                csv_out = csv.DictWriter(f, fieldnames=self._column_headers, quoting=csv.QUOTE_NONNUMERIC)
+                csv_out = csv.DictWriter(f, fieldnames=self._column_headers, dialect=self._csv_writer_dialect)
                 # TODO Should we send just the altered records? Or all
                 # the data we imported with alterations? Let's assume
                 # it's everything with alterations for now
@@ -316,12 +326,15 @@ class Connection(object):
                         if id in self._export_cache:
                             op, rec = self._export_cache[id]
                             if op == 'update' or op == 'create':
+                                rec = dict([(k, self._csv_writer_field_proc(v)) for k, v in rec.items()])
                                 csv_out.writerow(encode_vals(rec, self._out_encoding))
                             elif op == 'delete':
                                 # TODO What to do with deleted records?
                                 pass
                         elif id in self._import_cache:
-                            csv_out.writerow(encode_vals(self._import_cache[id][1], self._out_encoding))
+                            rec = self._import_cache[id][1]
+                            rec = dict([(k, self._csv_writer_field_proc(v)) for k, v in rec.items()])
+                            csv_out.writerow(encode_vals(rec, self._out_encoding))
                     except csv.Error, X:
                         self.logger.error('CSV export: CSV writing error: %s' % (X.message,))
                         # TODO Report error

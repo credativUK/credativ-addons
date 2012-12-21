@@ -160,7 +160,12 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             _logger.error('Referential location could not be parsed as an FTP URI: %s' % (referential.location,))
             return False
         (host, port) = mo.groups()
-        conn = Connection(username=referential.apiusername, password=referential.apipass, host=host, port=int(port), debug=DEBUG)
+
+        csv_opts = getattr(referential, 'output_options', {})
+        csv_opts['fieldproc'] = self.make_fieldproc(csv_opts)
+
+        conn = Connection(username=referential.apiusername, password=referential.apipass, host=host, port=int(port),
+                          csv_writer_opts=csv_opts, debug=DEBUG)
         return conn or False
 
     def connect(self, cr, uid, id, context=None):
@@ -177,6 +182,14 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             return core_imp_conn
         else:
             raise osv.except_osv(_("Connection Error"), _("Could not connect to server\nCheck location, username & password."))
+
+    def make_fieldproc(self, output_opts):
+        def strip_delimiter(field):
+            if isinstance(field, (str, unicode)):
+                return field.replace(output_opts.get('delimier',','),'')
+            else:
+                return field
+        return strip_delimiter
 
     def _export_all(self, cr, uid, id, model_name, context=None):
         if context is None:
