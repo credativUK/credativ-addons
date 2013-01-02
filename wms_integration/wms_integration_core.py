@@ -199,7 +199,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         referential = self._ensure_wms_integration_referential(cr, uid, id, context=context)
 
         obj = self.pool.get(model_name)
-        res_ids = obj.search(cr, uid, []) # FIXME: This needs to be a controlled set of IDs!
+        res_ids = obj.search(cr, uid, context.get('search_params',[]), context=context) # FIXME: This needs to be a controlled set of IDs!
         
         conn = self.external_connection(cr, uid, id, DEBUG, context=context)
         mapping_ids = self.pool.get('external.mapping').search(cr, uid, [('referential_id','=',id),('model_id','=',model_name)])
