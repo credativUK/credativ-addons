@@ -139,7 +139,8 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                 return False
 
     _columns = {
-        'active': fields.boolean('Active')
+        'active': fields.boolean('Active'),
+        'shop_id': fields.many2one('sale.shop', 'Shop', select=True)
         }
 
     _defaults = {

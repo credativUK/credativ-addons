@@ -15,6 +15,7 @@
                         <field name="type_id" />
                         <field name="location" />
                         <field name="active" select="2"/>
+                        <field name="shop_id" />
                     </page>
                     <page string="Authentication">
                         <field name="apiusername" />
