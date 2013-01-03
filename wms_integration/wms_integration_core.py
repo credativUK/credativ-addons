@@ -192,18 +192,23 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                 return field
         return strip_delimiter
 
-    def _export_all(self, cr, uid, id, model_name, context=None):
+    def _export(self, cr, uid, referential_id, model_name, res_ids=None, context=None):
         if context is None:
             context = {}
 
-        id = self._ensure_single_referential(cr, uid, id, context=context)
-        referential = self._ensure_wms_integration_referential(cr, uid, id, context=context)
+        referential_id = self._ensure_single_referential(cr, uid, referential_id, context=context)
+        referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
 
         obj = self.pool.get(model_name)
-        res_ids = obj.search(cr, uid, context.get('search_params',[]), context=context) # FIXME: This needs to be a controlled set of IDs!
+        res_ids = res_ids or obj.search(cr, uid, context.get('search_params',[]), context=context)
+
+        # find which of the supplied res_ids are updates
+        ir_model_data_obj = self.pool.get('ir.model.data')
+        ir_model_data_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',referential_id),('model','=',model_name),('res_id','in',res_ids)], context=context)
+        update_res_ids = [d['res_id'] for d in ir_model_data_obj.read(cr, uid, ir_model_data_ids, fields=['res_id'])]
         
-        conn = self.external_connection(cr, uid, id, DEBUG, context=context)
-        mapping_ids = self.pool.get('external.mapping').search(cr, uid, [('referential_id','=',id),('model_id','=',model_name)])
+        conn = self.external_connection(cr, uid, referential_id, DEBUG, context=context)
+        mapping_ids = self.pool.get('external.mapping').search(cr, uid, [('referential_id','=',referential_id),('model_id','=',model_name)])
         if not mapping_ids:
             raise osv.except_osv(_('Configuration error'), _('No mappings found for the referential "%s" of type "%s"' % (referential.name, referential.type_id.name)))
 
@@ -216,9 +221,35 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             export_data = []
             for obj_data in obj.read(cr, uid, res_ids, [], context=context):
                 try:
+                    # convert record key names from oe model to external model
                     data = mapping_obj.oe_keys_to_ext_keys(cr, uid, mapping.id, obj_data, context=context)
+
+                    # don't export records that don't have a key name field value
+                    if data[mapping.external_key_name].strip() == '':
+                        msg = 'CSV export: %s #%s has no %s value; will not export' % (model_name, obj_data['id'], mapping.external_key_name)
+                        _logger.error(msg)
+                        continue
+                        # TODO Report error
+
+                    # add record to export list
                     export_data.append(data)
-                except:
+
+                    # create ir_model_data record is necessary
+                    if obj_data['id'] not in update_res_ids:
+                        ir_model_data_rec = {
+                            'name': self._name.replace('.', '_') + '/' + data[mapping.external_key_name],
+                            'model': model_name,
+                            'res_id': obj_data['id'],
+                            'external_referential_id': referential_id,
+                            'module': 'extref/' + referential.name}
+                        ir_model_data_rec_id = ir_model_data_obj.create(cr, uid, ir_model_data_rec)
+                        if DEBUG:
+                            _logger.debug('CSV export: %s #%s not previously exported; created new ir_model_data #%s' % (model_name, obj_data['id'], ir_model_data_rec_id))
+                    else:
+                        if DEBUG:
+                            _logger.debug('CSV export: %s #%s previously exported' % (model_name, obj_data['id']))
+                except Exception, X:
+                    _logger.error(str(X))
                     pass
                     # FIXME: something went wrong mapping the object - do proper log to indicate record cannot be exported and continue to the next, or should we fail completely?
                 
@@ -254,6 +285,6 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             return False
 
     def export_products(self, cr, uid, id, context=None):
-        return self._export_all(cr, uid, id, 'product.product', context=context)
+        return self._export(cr, uid, id, 'product.product', context=context)
 
 external_referential()
