@@ -15,7 +15,6 @@
                         <field name="type_id" />
                         <field name="location" />
                         <field name="active" select="2"/>
-                        <field name="shop_id" />
                     </page>
                     <page string="Authentication">
                         <field name="apiusername" />
@@ -32,9 +31,6 @@
                         <button name="core_sync" string="2 - Synchronize Referential Settings" colspan="2" type="object" attrs="{'readonly':[('mapping_ids','=',[])]}"/>
                         <separator string="Regular actions" colspan="4" />
                         <button name="export_products" string="1 - Export Products" colspan="2" type="object" />
-                        <button name="export_purchase_orders" string="2 - Export Purchase Orders" colspan="2" type="object" />
-                        <button name="export_sale_orders" string="4 - Export Sale Orders" colspan="2" type="object" />
-                        <button name="export_dispatches" string="5 - Export Dispatches" colspan="2" type="object" />
                     </page>
                 </notebook>
             </group>
@@ -129,8 +125,19 @@
         <field name="act_window_id" ref="act_wms_integration_instances_tree"/>
     </record>
 
+    <record id="action_external_wms_external_report_line" model="ir.actions.act_window">
+        <field name="name">External Report Lines</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">external.report.line</field>
+        <field name="view_type">form</field>
+        <field name="domain">[('referential_id.type_id.name', 'like', 'External WMS Integration')]</field>
+        <field name="view_id" ref="base_external_referentials.external_report_line_tree_view"/>
+        <field name="search_view_id" ref="base_external_referentials.external_report_line_search_view"/>
+    </record>
+    
     <menuitem id="menu_wms_integration" parent="stock.menu_stock_root" name="External WMS" />
-    <menuitem id="menu_wms_integration_external_referentials" parent="menu_wms_integration" name="External referentials" action="act_wms_integration_instances_tree" />
+    <menuitem id="menu_wms_integration_external_referentials" parent="menu_wms_integration" name="External Referentials" action="act_wms_integration_instances_tree" />
+    <menuitem id="menu_wms_reporting_report_line" name="External Report Lines" parent="menu_wms_integration" action="action_external_wms_external_report_line" sequence="30"/>
         
     </data>
 </openerp>

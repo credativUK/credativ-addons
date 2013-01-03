@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution	
+#    OpenERP, Open Source Management Solution   
 #    Copyright (C) 2012 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -18,24 +18,14 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
+from osv import osv, fields
+from tools.translate import _
 
-{
-    'name': 'wms_integration',
-    'version': '0.1',
-    'category': 'Generic Modules/Warehouse',
-    'description': """
-    Allows data interchange with external warehouse management systems.
-    """,
-    'author': 'credativ',
-    'depends': ['base_external_referentials',
-                'stock',
-                'stock_dispatch',
-                'purchase',
-                'sale'],
-    'update_xml': ['wms_integration_core_view.xml',
-                   'stock_warehouse_view.xml',
-                   'settings/external.referential.type.csv'],
-    'demo_xml': [],
-    'installable': True,
-    'active': False,
-}
+class stock_warehouse(osv.osv):
+    _inherit = "stock.warehouse"
+
+    _columns = {
+        'referential_id': fields.many2one('external.referential', string='External Referential'),
+    }
+
+stock_warehouse()

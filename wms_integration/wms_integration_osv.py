@@ -74,9 +74,12 @@ class wms_integration_osv(osv.osv):
             context = {}
         return self.wms_import_base(cr, uid, conn, external_referential_id, defaults, context)
 
-
 def ext_create(self, cr, uid, data, conn, method, oe_id, context):
-    return conn.call(method, [data])
+    if context is None: context = {}
+    if context.get('ext_create_unpack_data', False):
+        return conn.call(method, data)
+    else:
+        return conn.call(method, [data])
 
 osv.osv.ext_create = ext_create
 

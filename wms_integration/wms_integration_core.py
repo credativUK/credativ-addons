@@ -140,7 +140,6 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
     _columns = {
         'active': fields.boolean('Active'),
-        'shop_id': fields.many2one('sale.shop', 'Shop', select=True)
         }
 
     _defaults = {
@@ -198,6 +197,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         referential_id = self._ensure_single_referential(cr, uid, referential_id, context=context)
         referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
+        report_line_obj = self.pool.get('external.report.line')
 
         obj = self.pool.get(model_name)
         res_ids = res_ids or obj.search(cr, uid, context.get('search_params',[]), context=context)
@@ -221,6 +221,8 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             export_data = []
             for obj_data in obj.read(cr, uid, res_ids, [], context=context):
                 try:
+                    if obj_data['id'] in update_res_ids:
+                        obj_data['ext_id'] = True
                     # convert record key names from oe model to external model
                     data = mapping_obj.oe_keys_to_ext_keys(cr, uid, mapping.id, obj_data, context=context)
 
@@ -228,8 +230,8 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                     if data[mapping.external_key_name].strip() == '':
                         msg = 'CSV export: %s #%s has no %s value; will not export' % (model_name, obj_data['id'], mapping.external_key_name)
                         _logger.error(msg)
+                        report_line_obj.log_failed(cr, uid, model_name, 'export', referential_id, res_id=obj_data['id'], defaults={}, context=context)
                         continue
-                        # TODO Report error
 
                     # add record to export list
                     export_data.append(data)
@@ -250,8 +252,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                             _logger.debug('CSV export: %s #%s previously exported' % (model_name, obj_data['id']))
                 except Exception, X:
                     _logger.error(str(X))
-                    pass
-                    # FIXME: something went wrong mapping the object - do proper log to indicate record cannot be exported and continue to the next, or should we fail completely?
+                    report_line_obj.log_failed(cr, uid, model_name, 'export', referential_id, res_id=obj_data['id'], defaults={}, context=context)
                 
             conn.call(mapping.external_create_method, records=export_data)
             conn.finalize_export()
@@ -285,6 +286,10 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             return False
 
     def export_products(self, cr, uid, id, context=None):
+        if context == None:
+            context = {}
+        if not 'search_params' in context:
+            context['search_params'] = [('type', 'in', ('consu', 'product'))]        
         return self._export(cr, uid, id, 'product.product', context=context)
 
 external_referential()
