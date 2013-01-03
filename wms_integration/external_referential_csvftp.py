@@ -58,7 +58,7 @@ class Connection(object):
 
     Synopnsis, import:
 
-    >>> conn = Connection('username', 'password', 'host')
+    >>> conn = Connection('username', 'password', 'host', 0, cr, uid)
     >>> conn.init_import(remote_csv_fn='OUT/data.csv', external_key_name='id', column_headers=['id', 'name', 'other'])
     >>> conn.call('list')
     [{'id': '1', 'name': 'Foo', 'other': 'something'}, {'id': '2', 'name': 'Bar', 'other': 'something'}]
@@ -70,24 +70,28 @@ class Connection(object):
 
     Synopsis, sync:
 
-    >>> conn = Connection('username', 'password', 'host')
+    >>> conn = Connection('username', 'password', 'host', 0, cr, uid)
     >>> conn.init_sync(import_csv_fn='OUT/data.csv', export_csv_fn='IN/data.csv', external_key_name='id', column_headers=['id', 'name', 'other'], required_fields=['id', 'name'])
     >>> conn.call('update', records=[{'id': '1', 'name': 'Baz'}, {'id': '2', 'other': 'something else'}])
     >>> conn.call('create', records=[{'id': '3', 'name': 'Bam'}, {'id': '5', 'name': 'Bat'}])
     >>> conn.finalize_export()
     '''
 
-    def __init__(self, username, password, host, port=21, timeout=5, out_encoding='utf-8', csv_writer_opts={}, debug=False, logger=False):
+    def __init__(self, username, password, host, referential_id, cr, uid, port=21, timeout=5, out_encoding='utf-8', csv_writer_opts={}, debug=False, logger=False, reporter=None):
         '''
         The constructor sets up the FTP connection.
 
         @username (str): FTP username
         @password (str): FTP password
         @host (str): FTP host name
+        @referential_id (int): the ID of the external referential which is using this FTP connection
+        @cr (Cursor): database cursor
+        @uid (int): OpenERP user ID
         @port (int): FTP port
         @timeout (int): FTP connection timeout
         @debug (bool): True if debugging messages should be issued
         @logger (Logger): a Logger object to log to
+        @reporter (external_report_lines): an external_report_lines to which some errors will be reported
 
         Class properties created in this constructor include:
 
@@ -105,11 +109,15 @@ class Connection(object):
         self.username = username
         self.password = password
         self.host = host
+        self.referential_id = referential_id
+        self.cr = cr
+        self.uid = uid
         self.port = port
         self.timeout = timeout
         self.debug = debug
         self._out_encoding = out_encoding
         self.logger = logger or _logger
+        self.reporter = reporter
 
         class CustomWriterDialect(csv.Dialect):
             delimiter = csv_writer_opts.get('delimier',',')
@@ -209,13 +217,19 @@ class Connection(object):
             self._import_cache = {}
             self._import_ready = True
         except IOError, X:
-            # TODO Report error
-            self.logger.error('CSV import: Could not retrieve %s (remote) into %s (local): [Errno %d] %s' % (remote_csv_fn, self._import_tmp.name, X.errno, X.strerror))
+            msg = 'CSV import: Could not retrieve %s (remote) into %s (local): [Errno %d] %s' %\
+                (remote_csv_fn, self._import_tmp.name, X.errno, X.strerror)
+            self.logger.error(msg)
+            if self.reporter:
+                self.reporter.log_system_fail(self.cr, self.uid, 'connect', self.referential_id, exc=X, msg=msg)
             self._clean_up_import()
             self._import_ready = False
         except ftplib.all_errors, X:
-            # TODO Report error
-            self.logger.error('CSV import: Could not retrieve %s (remote) into %s (local): %s' % (remote_csv_fn, self._import_tmp.name, X.message))
+            msg = 'CSV import: Could not retrieve %s (remote) into %s (local): %s' %\
+                (remote_csv_fn, self._import_tmp.name, X.message)
+            self.logger.error(msg)
+            if self.reporter:
+                self.reporter.log_system_fail(self.cr, self.uid, 'connect', self.referential_id, exc=X, msg=msg)
             self._clean_up_import()
             self._import_ready = False
     
@@ -237,8 +251,11 @@ class Connection(object):
             else:
                 return False
         except IOError, X:
-            self.logger.error('Error removing temporary local import file %s: [Errno %d] %s' % (self._import_tmp_fn, X.errno, X.strerror))
-            # TODO Report error
+            msg = 'Error removing temporary local import file %s: [Errno %d] %s' %\
+                (self._import_tmp_fn, X.errno, X.strerror)
+            self.logger.error(msg)
+            if self.reporter:
+                self.reporter.log_system_fail(self.cr, self.uid, 'import', self.referential_id, exc=X, msg=msg)
 
     def _check_import_ready(self):
         if not self._import_ready:
@@ -255,10 +272,13 @@ class Connection(object):
                         raise csv.Error('Fields in row do not match column headers')
                     yield (csv_in.line_num, row)
         except csv.Error, X:
-            self.logger.error('CSV import: error reading import CSV at line %d: %s' % (csv_in.line_num, X.message))
+            msg = 'CSV import: error reading import CSV at line %d: %s' %\
+                (csv_in.line_num, X.message)
+            self.logger.error(msg)
+            if self.reporter:
+                self.reporter.log_system_fail(self.cr, self.uid, 'import', self.referential_id, exc=X, msg=msg)
             self._clean_up_import()
             self._import_ready = False
-            # TODO Report error
         
     def finalize_import(self):
         self._clean_up_import()
@@ -282,8 +302,11 @@ class Connection(object):
             self._export_cache = {}
             self._export_ready = True
         except IOError, X:
-            # TODO Report error
-            self.logger.error('CSV export: Could not create local CSV cache file %s: [Errno %d] %s' % (self._export_tmp.name, X.errno, X.strerror))
+            msg = 'CSV export: Could not create local CSV cache file %s: [Errno %d] %s' %\
+                (self._export_tmp.name, X.errno, X.strerror)
+            if self.reporter:
+                self.reporter.log_system_fail(self.cr, self.uid, 'export', self.referential_id, exc=X, msg=msg)
+            self.logger.error(msg)
             self._clean_up_export()
             self._export_ready = False
         
@@ -302,12 +325,18 @@ class Connection(object):
             self._ftp_client.storbinary('STOR %s' % (self._export_remote_fn,), open(self._export_tmp_fn, 'rU'))
             self._clean_up_export()
         except IOError, X:
-            # TODO Report error
-            self.logger.error('CSV export: Could not send %s (local) to %s (remote): [Errno %d] %s' % (self._export_tmp_fn, self._export_remote_fn, X.errno, X.strerror))
+            msg = 'CSV export: Could not send %s (local) to %s (remote): [Errno %d] %s' %\
+                (self._export_tmp_fn, self._export_remote_fn, X.errno, X.strerror)
+            self.logger.error(msg)
+            if self.reporter:
+                self.reporter.log_system_fail(self.cr, self.uid, 'export', self.referential_id, exc=X, msg=msg)
             self._clean_up_export()
         except ftplib.all_errors, X:
-            # TODO Report error
-            self.logger.error('CSV export: Could not send %s (local) to %s (remote): %s' % (self._export_tmp_fn, self._export_remote_fn, X.message))
+            msg = 'CSV export: Could not send %s (local) to %s (remote): %s' %\
+                (self._export_tmp_fn, self._export_remote_fn, X.message)
+            self.logger.error(msg)
+            if self.reporter:
+                self.reporter.log_system_fail(self.cr, self.uid, 'export', self.referential_id, exc=X, msg=msg)
             self._clean_up_export()
             self._export_ready = False
 
@@ -337,16 +366,19 @@ class Connection(object):
                             csv_out.writerow(encode_vals(rec, self._out_encoding))
                     except csv.Error, X:
                         self.logger.error('CSV export: CSV writing error: %s' % (X.message,))
-                        # TODO Report error
+                        raise X
                     except ValueError, X:
                         self.logger.error('CSV export: Attempted to write incorrect record: %s' % (X.message,))
-                        # TODO Report error
+                        raise X
 
                 if self.debug:
                     self.logger.debug('CSV export: wrote %d records to local CSV file %s' % (len(ids), self._export_tmp_fn))
         except IOError, X:
-            # TODO Report error
-            self.logger.error('CSV export: Could not write to local CSV file %s: [Errno %d] %s' % (self._export_tmp_fn, self._export_remote_fn, X.errno, X.strerror))
+            msg = 'CSV export: Could not write to local CSV file %s: [Errno %d] %s' %\
+                (self._export_tmp_fn, self._export_remote_fn, X.errno, X.strerror)
+            self.logger.error(msg)
+            if self.reporter:
+                self.reporter.log_system_fail(self.cr, self.uid, 'export', self.referential_id, exc=X, msg=msg)
             self._clean_up_export()
 
     def _clean_up_export(self):
@@ -361,8 +393,11 @@ class Connection(object):
             os.remove(self._export_tmp_fn)
             return True
         except IOError, X:
-            self.logger.error('Error removing temporary local export file %s: [Errno %d] %s' % (self._export_tmp_fn, X.errno, X.strerror))
-            # TODO Report error
+            msg = 'Error removing temporary local export file %s: [Errno %d] %s' %\
+                (self._export_tmp_fn, X.errno, X.strerror)
+            self.logger.error(msg)
+            if self.reporter:
+                self.reporter.log_system_fail(self.cr, self.uid, 'export', self.referential_id, exc=X, msg=msg)
 
     def init_sync(self, import_csv_fn, export_csv_fn, external_key_name, column_headers, required_fields):
         self.init_import(import_csv_fn, external_key_name, column_headers)

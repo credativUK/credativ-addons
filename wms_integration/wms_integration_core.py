@@ -146,7 +146,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         'active': lambda *a: 1,
     }
 
-    def external_connection(self, cr, uid, id, DEBUG=False, context=None):
+    def external_connection(self, cr, uid, id, DEBUG=False, reporter=None, context=None):
         if context is None:
             context = {}
 
@@ -157,15 +157,26 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         mo = re.search(r'ftp://(.*?):([0-9]+)', referential.location)
         if not mo:
-            _logger.error('Referential location could not be parsed as an FTP URI: %s' % (referential.location,))
+            msg = 'Referential location could not be parsed as an FTP URI: %s' % (referential.location,)
+            _logger.error(msg)
+            if reporter:
+                report.log_system_fail(cr, uid, 'connect', id, exc=None, msg=msg, context=context)
             return False
         (host, port) = mo.groups()
 
         csv_opts = getattr(referential, 'output_options', {})
         csv_opts['fieldproc'] = self.make_fieldproc(csv_opts)
 
-        conn = Connection(username=referential.apiusername, password=referential.apipass, host=host, port=int(port),
-                          csv_writer_opts=csv_opts, debug=DEBUG)
+        conn = Connection(username=referential.apiusername,
+                          password=referential.apipass,
+                          referential_id=id,
+                          cr=cr,
+                          uid=uid,
+                          host=host,
+                          port=int(port),
+                          csv_writer_opts=csv_opts,
+                          reporter=reporter,
+                          debug=DEBUG)
         return conn or False
 
     def connect(self, cr, uid, id, context=None):
@@ -207,7 +218,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         ir_model_data_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',referential_id),('model','=',model_name),('res_id','in',res_ids)], context=context)
         update_res_ids = [d['res_id'] for d in ir_model_data_obj.read(cr, uid, ir_model_data_ids, fields=['res_id'])]
         
-        conn = self.external_connection(cr, uid, referential_id, DEBUG, context=context)
+        conn = self.external_connection(cr, uid, referential_id, DEBUG, reporter=report_line_obj, context=context)
         mapping_ids = self.pool.get('external.mapping').search(cr, uid, [('referential_id','=',referential_id),('model_id','=',model_name)])
         if not mapping_ids:
             raise osv.except_osv(_('Configuration error'), _('No mappings found for the referential "%s" of type "%s"' % (referential.name, referential.type_id.name)))
@@ -236,10 +247,10 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                     # add record to export list
                     export_data.append(data)
 
-                    # create ir_model_data record is necessary
+                    # create ir_model_data record if necessary
                     if obj_data['id'] not in update_res_ids:
                         ir_model_data_rec = {
-                            'name': self._name.replace('.', '_') + '/' + data[mapping.external_key_name],
+                            'name': model_name.replace('.', '_') + '/' + data[mapping.external_key_name],
                             'model': model_name,
                             'res_id': obj_data['id'],
                             'external_referential_id': referential_id,
@@ -265,6 +276,11 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         return all(res.values())
 
+    def _export_many(self, cr, uid, referential_id, model_name, export_ref_func, res_ids=None, context=None):
+        '''
+        This method exports each resource individually (e.g. a single file).
+        '''
+
     def _verify_export(self, cr, uid, export_mapping, export_ids, conn, context=None):
         if context is None:
             context = {}
@@ -281,15 +297,17 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             return True
         else:
             missing = list(set(export_ids) - set(received_ids))
-            _logger.error('CSV export: Verification IDs returned by server did not match sent IDs. Missing: %d.' % (len(missing),))
-            # TODO Report error
+            msg = 'CSV export: Verification IDs returned by server did not match sent IDs. Missing: %d.' % (len(missing),)
+            _logger.error(msg)
+            report_line_obj = self.pool.get('external.report.line')
+            repotr_line_obj.log_system_fail(cr, uid, 'verify', export_mapping.referential_id.id, exc=None, msg=msg, context=context)
             return False
 
     def export_products(self, cr, uid, id, context=None):
         if context == None:
             context = {}
         if not 'search_params' in context:
-            context['search_params'] = [('type', 'in', ('consu', 'product'))]        
+            context['search_params'] = [('type', 'in', ('consu', 'product'))]
         return self._export(cr, uid, id, 'product.product', context=context)
 
 external_referential()
