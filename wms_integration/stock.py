@@ -158,10 +158,10 @@ class purchase_order(osv.osv):
                 else: # Exported already, check if we have been edited
                     rec_check_ids = data_obj.search(cr, uid, [('model', '=', self._name), ('res_id', '=', po.id), ('module', 'ilike', 'extref'), ('external_referential_id', '=', po.warehouse_id.referential_id.id)])
                     if rec_check_ids:
-                        last_exported_times = data_obj.read(cr, uid, rec_check_ids[0], ['write_date', 'create_date'])
-                        last_exported_time = last_exported_times.get('write_date', False) or last_exported_times.get('create_date', False)
-                        this_record_times = self.read(cr, uid, po.id, ['write_date', 'create_date'])
-                        last_updated_time = this_record_times.get('write_date', False) or this_record_times.get('create_date', False)
+                        cr.execute("""select coalesce(write_date, create_date) from ir_model_data where id = %s""", (rec_check_ids[0],))
+                        last_exported_time = cr.fetchall()[0][0] or False
+                        cr.execute("""select coalesce(write_date, create_date) from purchase_order where id = %s""", (po.id,))
+                        last_updated_time = cr.fetchall()[0][0] or False
                         if last_updated_time < last_exported_time: # Do not export again if it does not need to be
                             continue
                     
