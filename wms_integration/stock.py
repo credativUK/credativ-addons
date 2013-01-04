@@ -33,18 +33,73 @@ class purchase_order(osv.osv):
     }
 
     def wms_export_one(self, cr, uid, id, context=None):
-        import ipdb; ipdb.set_trace()
         if context == None:
             context = {}
+        move_pool = self.pool.get('stock.move')
+        data_pool = self.pool.get('ir.model.data')
         po = self.browse(cr, uid, id, context=context)
         
         picking_ids = self.pool.get('stock.picking').search(cr, uid, [('purchase_id', '=', po.id)], context=context)
-        move_ids = self.pool.get('stock.move').search(cr, uid, [('picking_id', 'in', picking_ids)], context=context)
+        all_move_ids = self.pool.get('stock.move').search(cr, uid, [('picking_id', 'in', picking_ids)], context=context)
         
-        if 'remote_csv_fn_sub' not in context:
-            context['remote_csv_fn_sub'] = (po.name.split('-edit')[0], datetime.now().strftime('%Y-%m-%dT%H:%M:%S'))
+        wms_sm_sequence = {}
+        wms_sm_mode = {}
+        move_ids = []
         
-        self.pool.get('external.referential')._export(cr, uid, po.warehouse_id.referential_id.id, 'stock.move', move_ids, context=context)
+        for move in move_pool.browse(cr, uid, all_move_ids, context=context):
+            
+            if move.location_dest_id.id != po.warehouse_id.lot_input_id.id:
+                continue # We only want stock entering the input location, ie cross-dock
+            
+            rec_check_ids = data_pool.search(cr, uid, [('model', '=', 'stock.move'), ('res_id', '=', move.id), ('module', 'ilike', 'extref'), ('external_referential_id', '=', po.warehouse_id.referential_id.id)])
+            
+            if not (move.state == 'assigned' or (move.state == 'cancel' and rec_check_ids)):
+                continue # We only want exisintg or new ongoing moves, or moves which the external WMS knows about and need deleting
+            
+            if rec_check_ids:
+                rec_check = data_pool.browse(cr, uid, rec_check_ids[0], context=context)
+                try:
+                    po_name, sm_seq = rec_check.name.split('/')[1].split('_')
+                    assert po_name == po.name.split('-edit')[0]
+                except Exception, e:
+                    # Something is wrong with this referential, delete it and create a new one
+                    data_pool.unlink(cr, uid, rec_check_ids[0], context=context)
+                    rec_check_ids = []
+                else:
+                    wms_sm_sequence[move.id] = sm_seq
+                    if move.state == 'cancel':
+                        wms_sm_mode[move.id] = 'delete'
+                    else:
+                        wms_sm_mode[move.id] = 'update'
+                    move_ids.append(move.id)
+                    data_pool.write(cr, uid, rec_check_ids[0], {}, context=context)
+            
+            if not rec_check_ids:
+                # Find the next number in the sequence and create the ir_model_data entry for it
+                cr.execute("""SELECT
+                            MAX(COALESCE(SUBSTRING(name from 'stock_move/%s_([0-9]*)'), '0')::INTEGER) + 1
+                            FROM ir_model_data imd
+                            WHERE external_referential_id = %s
+                            AND model = 'stock.move'
+                            AND module ilike 'extref%%'""" % (po.name.split('-edit')[0], po.warehouse_id.referential_id.id,))
+                number = cr.fetchall()
+                if number:
+                    sm_seq = number[0][0]
+                else:
+                    sm_seq = 1
+                
+                move_pool.create_external_id_vals(cr, uid, move.id, "%s_%d" % (po.name.split('-edit')[0], sm_seq), po.warehouse_id.referential_id.id, context=context)
+                
+                wms_sm_sequence[move.id] = sm_seq
+                wms_sm_mode[move.id] = 'create'
+                move_ids.append(move.id)
+        
+        if move_ids:
+            ctx = context.copy()
+            if 'remote_csv_fn_sub' not in ctx: # Add the PO name and timestamp into the file
+                ctx['remote_csv_fn_sub'] = (po.name, datetime.now().strftime('%Y-%m-%dT%H:%M:%S'))
+            ctx.update({'wms_sm_sequence': wms_sm_sequence, 'wms_sm_mode': wms_sm_mode})
+            self.pool.get('external.referential')._export(cr, uid, po.warehouse_id.referential_id.id, 'stock.move', move_ids, context=ctx)
         
         return
 
@@ -184,8 +239,6 @@ class stock_warehouse(osv.osv):
             po_ids = self.get_exportable_pos(cr, uid, [warehouse.id,], warehouse.referential_id.id, context=context)
             if po_ids:
                 po_obj.wms_export_orders(cr, uid, po_ids, warehouse.referential_id.id, context=context)
-        
-        # TODO: Add functionality for deleting cancelled POs
         
         return True
 
