@@ -230,6 +230,8 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         res = {}
         mapping_obj = self.pool.get('external.mapping')
         for mapping in mapping_obj.browse(cr, uid, mapping_ids):
+            res[mapping.id] = False
+
             # export the model data
             ext_columns = mapping_obj.get_ext_column_headers(cr, uid, mapping.id, context=context)
             remote_csv_fn = mapping.external_export_uri % context.get('remote_csv_fn_sub', ())
@@ -273,40 +275,101 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             conn.call(mapping.external_create_method, records=export_data)
             conn.finalize_export()
 
-            if mapping.external_verification_mapping:
-                # TODO Defer the verification by some delay
-                res[mapping.id] = self._verify_export(cr, uid, mapping, [res[mapping.external_key_name] for res in export_data], conn, context)
-            else:
-                _logger.info('CSV export: Mapping has no verification mapping defined.')
+            res[mapping.id] = True
 
         return all(res.values())
 
-    def _export_many(self, cr, uid, referential_id, model_name, export_ref_func, res_ids=None, context=None):
-        '''
-        This method exports each resource individually (e.g. a single file).
-        '''
-
-    def _verify_export(self, cr, uid, export_mapping, export_ids, conn, context=None):
+    def _get_exported_ids(self, cr, uid, referential_id, model_name, export_datetime, context=None):
         if context is None:
             context = {}
+
+        referential_id = self._ensure_single_referential(cr, uid, referential_id, context=context)
+        referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
+
+        table_name = model_name.replace('.', '_')
+        cr.execute("""SELECT id FROM ir_model_data WHERE date_trunc('minute', %s) AND model=%s AND external_referential_id=%s""",
+                   (export_datetime, table_name, referential_id))
+        ir_model_data_ids = [r[0] for r in cr.fetchall()]
+        ir_model_data_obj = self.pool.get('ir.model.data')
+        return [d['res_id'] for d in ir_model_data_obj.read(cr, uid, ir_model_data_ids, fields=['res_id'])]
+        
+    def _get_last_exported_ids(self, cr, uid, referential_id, model_name, context=None):
+        if context is None:
+            context = {}
+
+        referential_id = self._ensure_single_referential(cr, uid, referential_id, context=context)
+        referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
+
+        table_name = model_name.replace('.', '_')
+        cr.execute("""SELECT date_trunc('minute', max(create_date)) FROM ir_model_data WHERE model=%s AND external_referential_id=%s""",
+                   (table_name, referential_id))
+        res = cr.fetchone()
+        if res and len(res) > 0:
+            last_date = res[0]
+            return self._get_exported_ids(cr, uid, referential_id, model_name, last_date, context=context)
+        else:
+            return []
+
+    def _verify_export(self, cr, uid, export_mapping, exported_ids, success_fun, context=None):
+        '''
+        This method imports from the external WMS using the
+        'verification'-type mapping associated with the supplied
+        export_mapping. success_fun should be a Boolean function
+        accepting two parameters. For each imported resource, this
+        method applies success_fun to that resource and the
+        corresponding exported resource. If success_fun returns False,
+        the two resources are appended to a mistaches list. The method
+        then returns a dictionary containing this list plus a list of
+        records which were exported but are missing from the imported
+        confirmation resources.
+        '''
+        if context is None:
+            context = {}
+
+        # import the confirmation records
+        conn = self.external_connection(cr, uid, export_mapping.referential_id, DEBUG, context=context)
 
         mapping_obj = self.pool.get('external.mapping')
         verification_mapping = mapping_obj.browse(cr, uid, export_mapping.external_verification_mapping.id, context=context)
         verification_columns = mapping_obj.get_ext_column_headers(cr, uid, verification_mapping.id)
-        conn.init_import(remote_csv_fn=verification_mapping.external_import_uri, oe_model_name=export_mapping.model_id.name, external_key_name=verification_mapping.external_key_name, column_headers=verification_columns)
+        conn.init_import(remote_csv_fn=verification_mapping.external_import_uri,
+                         oe_model_name=export_mapping.model_id.name,
+                         external_key_name=verification_mapping.external_key_name,
+                         column_headers=verification_columns)
         verification = conn.call(verification_mapping.external_list_method)
         conn.finalize_import()
 
+        res = {'mismatches': [], 'missing': [], 'unexpected': []}
+
+        # test the confirmation records against the exported records
+        obj = self.pool.get(export_mapping.model_id.name)
+        exported = dict([(r['id'], r) for r in obj.read(cr, uid, exported_ids)])
+        ir_model_data_obj = self.pool.get(export_mapping.model_id.name)
+        ir_model_data_exported_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',export_mapping.referential_id), ('model','=',export_mapping.model_id.name),('res_id','in',exported_ids)], context=context)
+        res_ids = dict([(r['name'], r['res_id']) for r in ir_model_data_obj.read(cr, uid, ir_model_data_exported_ids, fields=['res_id','name'])])
+
+        for vres in verification:
+            res_id = res_ids.get(vres[export_mapping.external_key_name], None)
+            exp_res = exported.get(res_id, None)
+            if res_id and exp_res:
+                if not success_fun(exp_res, vres):
+                    res['mismatches'].append({'exported': exp_res, 'receipt': vres})
+            else:
+                res['unexpected'].append(vres)
+
+        # check for any missing records (i.e. exported but not
+        # included in the confirmation receipt)
         received_ids = [r[verification_mapping.external_key_name] for r in verification]
-        if set(export_ids) == set(received_ids):
-            return True
-        else:
-            missing = list(set(export_ids) - set(received_ids))
+        if set(exported_ids) > set(received_ids):
+            missing = list(set(exported_ids) - set(received_ids))
+            res['missing'] = [exported[id] for id in missing]
+
             msg = 'CSV export: Verification IDs returned by server did not match sent IDs. Missing: %d.' % (len(missing),)
             _logger.error(msg)
             report_line_obj = self.pool.get('external.report.line')
             report_line_obj.log_system_fail(cr, uid, export_mapping.model_id.name, 'verify', export_mapping.referential_id.id, exc=None, msg=msg, context=context)
-            return False
+
+        return res
 
     def export_products(self, cr, uid, id, context=None):
         if context == None:

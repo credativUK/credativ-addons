@@ -242,4 +242,28 @@ class stock_warehouse(osv.osv):
         
         return True
 
+    def import_purchase_order_receipts(self, cr, uid, ids, context=None):
+        if context == None:
+            context = {}
+
+        for warehouse in self.browse(cr, uid, ids):
+            if not warehouse.referential_id:
+                continue
+
+            mapping_obj = self.pool.get('external.mapping')
+            mapping_ids = mapping_obj.search(cr, uid, [('referential_id','=',warehouse.referential_id.id),('model_id','=','purchase.order')])
+            if not mapping_ids:
+                raise osv.except_osv(_('Configuration error'), _('No mappings found for the referential "%s" of type "%s"' % (warehouse.referential_id.name, warehouse.referential_id.type_id.name)))
+
+            res = {}
+
+            for mapping in mapping_obj.browse(cr, uid, mapping_ids):
+                exported_ids = self._get_last_exported_ids(cr, uid, warehouse.referential_id.id, mapping.model_id.name, context=context)
+                # TODO Define a proper success_func for the
+                # verification
+                res[mapping.id] = self.pool.get('external.referential')._verify_export(cr, uid, mapping, exported_ids, lambda exp, conf: exp['Expected Quantity'] == conf['Quantity Received'], context=context)
+
+        return res
+
+
 stock_warehouse()
