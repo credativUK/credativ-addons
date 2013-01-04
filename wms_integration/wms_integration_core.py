@@ -146,9 +146,11 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         'active': lambda *a: 1,
     }
 
-    def external_connection(self, cr, uid, id, DEBUG=False, reporter=None, context=None):
+    def external_connection(self, cr, uid, id, DEBUG=False, context=None):
         if context is None:
             context = {}
+
+        reporter = context.pop('reporter', None)
 
         id = self._ensure_single_referential(cr, uid, id, context=context)
         referential = self._ensure_wms_integration_referential(cr, uid, id, context=context)
@@ -160,7 +162,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             msg = 'Referential location could not be parsed as an FTP URI: %s' % (referential.location,)
             _logger.error(msg)
             if reporter:
-                report.log_system_fail(cr, uid, 'connect', id, exc=None, msg=msg, context=context)
+                reporter.log_system_fail(cr, uid, None, 'connect', id, exc=None, msg=msg, context=context)
             return False
         (host, port) = mo.groups()
 
@@ -209,6 +211,8 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         referential_id = self._ensure_single_referential(cr, uid, referential_id, context=context)
         referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
         report_line_obj = self.pool.get('external.report.line')
+        context['use_external_log'] = True
+        context['reporter'] = report_line_obj
 
         obj = self.pool.get(model_name)
         res_ids = res_ids or obj.search(cr, uid, context.get('search_params',[]), context=context)
@@ -218,7 +222,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         ir_model_data_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',referential_id),('model','=',model_name),('res_id','in',res_ids)], context=context)
         update_res_ids = [d['res_id'] for d in ir_model_data_obj.read(cr, uid, ir_model_data_ids, fields=['res_id'])]
         
-        conn = self.external_connection(cr, uid, referential_id, DEBUG, reporter=report_line_obj, context=context)
+        conn = self.external_connection(cr, uid, referential_id, DEBUG, context=context)
         mapping_ids = self.pool.get('external.mapping').search(cr, uid, [('referential_id','=',referential_id),('model_id','=',model_name)])
         if not mapping_ids:
             raise osv.except_osv(_('Configuration error'), _('No mappings found for the referential "%s" of type "%s"' % (referential.name, referential.type_id.name)))
@@ -228,7 +232,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         for mapping in mapping_obj.browse(cr, uid, mapping_ids):
             # export the model data
             ext_columns = mapping_obj.get_ext_column_headers(cr, uid, mapping.id, context=context)
-            conn.init_export(remote_csv_fn=mapping.external_export_uri, external_key_name=mapping.external_key_name, column_headers=ext_columns, required_fields=ext_columns)
+            conn.init_export(remote_csv_fn=mapping.external_export_uri, oe_model_name=mapping.model_id.name, external_key_name=mapping.external_key_name, column_headers=ext_columns, required_fields=ext_columns)
             export_data = []
             for obj_data in obj.read(cr, uid, res_ids, [], context=context):
                 try:
@@ -288,7 +292,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         mapping_obj = self.pool.get('external.mapping')
         verification_mapping = mapping_obj.browse(cr, uid, export_mapping.external_verification_mapping.id, context=context)
         verification_columns = mapping_obj.get_ext_column_headers(cr, uid, verification_mapping.id)
-        conn.init_import(remote_csv_fn=verification_mapping.external_import_uri, external_key_name=verification_mapping.external_key_name, column_headers=verification_columns)
+        conn.init_import(remote_csv_fn=verification_mapping.external_import_uri, oe_model_name=export_mapping.model_id.name, external_key_name=verification_mapping.external_key_name, column_headers=verification_columns)
         verification = conn.call(verification_mapping.external_list_method)
         conn.finalize_import()
 
@@ -300,7 +304,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             msg = 'CSV export: Verification IDs returned by server did not match sent IDs. Missing: %d.' % (len(missing),)
             _logger.error(msg)
             report_line_obj = self.pool.get('external.report.line')
-            repotr_line_obj.log_system_fail(cr, uid, 'verify', export_mapping.referential_id.id, exc=None, msg=msg, context=context)
+            report_line_obj.log_system_fail(cr, uid, export_mapping.model_id.name, 'verify', export_mapping.referential_id.id, exc=None, msg=msg, context=context)
             return False
 
     def export_products(self, cr, uid, id, context=None):

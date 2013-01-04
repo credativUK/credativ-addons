@@ -21,3 +21,4 @@
 
 import wms_integration_core
 import stock
+import report
