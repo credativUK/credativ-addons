@@ -371,6 +371,40 @@ class stock_warehouse(osv.osv):
         po_ids = self.pool.get('purchase.order').search(cr, uid, [('id', 'in', [x[0] for x in po_ids]),], context=context)
         return po_ids
 
+    def import_export_confirmations(self, cr, uid, ids, model_name, success_fun, context=None):
+        '''
+        This method implements the import of the data confirming the
+        receipt of exported records.
+
+        @model_name (str): is the name of model from which the export
+        was made.
+
+        @success_fun (function): is a Boolean function of two
+        arguments, the exported record and the corresponding
+        confirmation record; it should return True if the export of
+        the record was successful, or False otherwise
+        '''
+        if context is None:
+            context = {}
+        extref_obj = self.pool.get('external.referential')
+
+        for warehouse in self.browse(cr, uid, ids):
+            if not warehouse.referential_id:
+                continue
+
+            mapping_obj = self.pool.get('external.mapping')
+            mapping_ids = mapping_obj.search(cr, uid, [('referential_id','=',warehouse.referential_id.id),('model_id','=',model_name)])
+            if not mapping_ids:
+                raise osv.except_osv(_('Configuration error'), _('No mappings found for the referential "%s" of type "%s"' % (warehouse.referential_id.name, warehouse.referential_id.type_id.name)))
+
+            res = {}
+
+            for mapping in mapping_obj.browse(cr, uid, mapping_ids):
+                exported_ids = extref_obj._get_last_exported_ids(cr, uid, warehouse.referential_id.id, mapping.model_id.name, context=context)
+                res[mapping.id] = extref_obj._verify_export(cr, uid, mapping, exported_ids, success_fun, context=context)
+
+        return res
+
     def export_purchase_orders(self, cr, uid, ids, context=None):
         if context == None:
             context = {}
@@ -392,6 +426,24 @@ class stock_warehouse(osv.osv):
                 po_obj.wms_export_orders(cr, uid, po_ids, warehouse.referential_id.id, context=context)
         
         return True
+
+    def import_purchase_order_export_confirmation(self, cr, uid, ids, context=None):
+        '''
+        This method imports the confirmation of receipt of export data.
+        '''
+        if context == None:
+            context = {}
+
+        # The success_func for the verification has no data to work
+        # with, so we'll just return True
+        return self.import_export_confirmations(cr, uid, ids, model_name='purchase.order', success_fun=lambda exp, conf: True, context=context)
+
+    def import_purchase_order_receipts(self, cr, uid, ids, context=None):
+        '''
+        This method imports the data confirming the receipt of
+        purchase order goods into the warehouse.
+        '''
+        pass
 
     def get_exportable_dispatches(self, cr, uid, ids, referential_id, context=None):
         if not ids:
@@ -436,29 +488,6 @@ class stock_warehouse(osv.osv):
                 dispatch_obj.wms_export_orders(cr, uid, dispatch_ids, warehouse.referential_id.id, context=context)
         
         return True
-
-    def import_purchase_order_receipts(self, cr, uid, ids, context=None):
-        if context == None:
-            context = {}
-
-        for warehouse in self.browse(cr, uid, ids):
-            if not warehouse.referential_id:
-                continue
-
-            mapping_obj = self.pool.get('external.mapping')
-            mapping_ids = mapping_obj.search(cr, uid, [('referential_id','=',warehouse.referential_id.id),('model_id','=','purchase.order')])
-            if not mapping_ids:
-                raise osv.except_osv(_('Configuration error'), _('No mappings found for the referential "%s" of type "%s"' % (warehouse.referential_id.name, warehouse.referential_id.type_id.name)))
-
-            res = {}
-
-            for mapping in mapping_obj.browse(cr, uid, mapping_ids):
-                exported_ids = self._get_last_exported_ids(cr, uid, warehouse.referential_id.id, mapping.model_id.name, context=context)
-                # TODO Define a proper success_func for the
-                # verification
-                res[mapping.id] = self.pool.get('external.referential')._verify_export(cr, uid, mapping, exported_ids, lambda exp, conf: exp['Expected Quantity'] == conf['Quantity Received'], context=context)
-
-        return res
 
 
 stock_warehouse()

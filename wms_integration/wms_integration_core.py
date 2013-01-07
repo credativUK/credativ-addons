@@ -321,9 +321,13 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         method applies success_fun to that resource and the
         corresponding exported resource. If success_fun returns False,
         the two resources are appended to a mistaches list. The method
-        then returns a dictionary containing this list plus a list of
+        then returns a dictionary containing this list, a list of
         records which were exported but are missing from the imported
-        confirmation resources.
+        confirmation resources, and a list of records which were
+        confirmed but that were not exported. As well as returning
+        this information, the method will also mark any successfully
+        confirmed records as exported/confirmed in ir_model_data and
+        generate external_report_lines for all the erroneous records.
         '''
         if context is None:
             context = {}
@@ -341,7 +345,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         verification = conn.call(verification_mapping.external_list_method)
         conn.finalize_import()
 
-        res = {'mismatches': [], 'missing': [], 'unexpected': []}
+        res = {'mismatch': [], 'missing': [], 'unexpected': []}
 
         # test the confirmation records against the exported records
         obj = self.pool.get(export_mapping.model_id.name)
@@ -350,26 +354,38 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         ir_model_data_exported_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',export_mapping.referential_id), ('model','=',export_mapping.model_id.name),('res_id','in',exported_ids)], context=context)
         res_ids = dict([(r['name'], r['res_id']) for r in ir_model_data_obj.read(cr, uid, ir_model_data_exported_ids, fields=['res_id','name'])])
 
-        for vres in verification:
-            res_id = res_ids.get(vres[export_mapping.external_key_name], None)
+        for conf_res in verification:
+            res_id = res_ids.get(conf_res[export_mapping.external_key_name], None)
             exp_res = exported.get(res_id, None)
             if res_id and exp_res:
-                if not success_fun(exp_res, vres):
-                    res['mismatches'].append({'exported': exp_res, 'receipt': vres})
+                if not success_fun(exp_res, conf_res):
+                    res['mismatch'].append({'exported': exp_res, 'received': conf_res})
+                else:
+                    # TODO Mark the record as export confirmed
+                    pass
             else:
-                res['unexpected'].append(vres)
+                res['unexpected'].append({'exported': None, 'received': conf_res})
 
         # check for any missing records (i.e. exported but not
         # included in the confirmation receipt)
         received_ids = [r[verification_mapping.external_key_name] for r in verification]
         if set(exported_ids) > set(received_ids):
             missing = list(set(exported_ids) - set(received_ids))
-            res['missing'] = [exported[id] for id in missing]
+            res['missing'] = [{'exported': {'res_id': exported[id]}, 'received': None} for id in missing]
 
-            msg = 'CSV export: Verification IDs returned by server did not match sent IDs. Missing: %d.' % (len(missing),)
-            _logger.error(msg)
-            report_line_obj = self.pool.get('external.report.line')
-            report_line_obj.log_system_fail(cr, uid, export_mapping.model_id.name, 'verify', export_mapping.referential_id.id, exc=None, msg=msg, context=context)
+        # Generate external_report_lines errors for all the erroneous
+        # records
+        report_line_obj = self.pool.get('external.report.line')
+        error_types = {
+            'mismatch':   ('exported', 'CSV export: Resource with ID "%s" failed the verification test.'),
+            'missing':    ('exported', 'CSV export: Resource with ID "%s" was exported, but does not appear in confirmation receipt.'),
+            'unexpected': ('received', 'CSV export: Resource with ID "%s" appears in confirmation receipt, but was not exported.')}
+        for error, records in res:
+            for r in records:
+                (rec_type, msg) = error_types[error]
+                msg = msg % r[rec_type]
+                _logger.error(msg)
+                report_line_obj.log_failed(cr, uid, export_mapping.model_id.name, 'verify', export_mapping.referential_id.id, res_id=r[rec_type]['res_id'], data_record=r[rec_type], context=context)
 
         return res
 
