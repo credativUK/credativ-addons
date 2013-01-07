@@ -223,7 +223,9 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         update_res_ids = [d['res_id'] for d in ir_model_data_obj.read(cr, uid, ir_model_data_ids, fields=['res_id'])]
         
         conn = self.external_connection(cr, uid, referential_id, DEBUG, context=context)
-        mapping_ids = self.pool.get('external.mapping').search(cr, uid, [('referential_id','=',referential_id),('model_id','=',model_name)])
+        mapping_ids = context.get('external_mapping_ids', False)
+        if not mapping_ids:
+            mapping_ids = self.pool.get('external.mapping').search(cr, uid, [('referential_id','=',referential_id),('model_id','=',model_name)])
         if not mapping_ids:
             raise osv.except_osv(_('Configuration error'), _('No mappings found for the referential "%s" of type "%s"' % (referential.name, referential.type_id.name)))
 

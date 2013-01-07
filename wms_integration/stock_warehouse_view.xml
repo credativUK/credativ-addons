@@ -13,10 +13,12 @@
                         <notebook colspan="4">
                             <page string="Actions">
                                 <separator string="Regular actions" colspan="4" />
-                                <button name="export_purchase_orders" string="1 - Export Purchase Orders" colspan="2" type="object" />
-                                <button name="import_purchase_order_receipts" string="2 - Import Purchase Order Receipts" colspan="2" type="object" />
-                                <button name="export_dispatches" string="3 - Export Dispatches" colspan="2" type="object" />
-                                <button name="import_dispatch_receipts" string="4 - Import Dispatch Receipts" colspan="2" type="object" />
+                                <button name="export_purchase_orders" string="1 - Export Purchase Orders" colspan="1" type="object" />
+                                <button name="import_purchase_order_receipts" string="2 - Import Purchase Order Receipts" colspan="1" type="object" />
+                                <field name="mapping_purchase_orders_id" domain="[('referential_id', '=', referential_id), ('model_id.model', '=', 'stock.move')]"/>
+                                <button name="export_dispatches" string="3 - Export Dispatches" colspan="1" type="object" />
+                                <button name="import_dispatch_receipts" string="4 - Import Dispatch Receipts" colspan="1" type="object" />
+                                <field name="mapping_dispatch_orders_id" domain="[('referential_id', '=', referential_id), ('model_id.model', '=', 'stock.move')]"/>
                             </page>
                             <page string="External Warehouse Settings">
                                 <field name="referential_id"/>
