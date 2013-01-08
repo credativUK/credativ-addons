@@ -24,7 +24,7 @@ import wms_integration_osv
 
 ## TODO Decide whether ER_CSVFTP should be a separate addon or just a
 ## module in this addon
-from external_referential_csvftp import Connection
+from external_referential_csvftp import Connection, ExternalReferentialError
 
 import re
 import logging
@@ -162,8 +162,8 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             msg = 'Referential location could not be parsed as an FTP URI: %s' % (referential.location,)
             _logger.error(msg)
             if reporter:
-                reporter.log_system_fail(cr, uid, None, 'connect', id, exc=None, msg=msg, context=context)
-            return False
+                reporter.log_system_fail(cr, uid, 'external.referential', 'connect', id, exc=None, msg=msg, context=context)
+            raise osv.except_osv(_('Configuration error'), _(msg))
         (host, port) = mo.groups()
 
         csv_opts = getattr(referential, 'output_options', {})
@@ -223,6 +223,9 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         update_res_ids = [d['res_id'] for d in ir_model_data_obj.read(cr, uid, ir_model_data_ids, fields=['res_id'])]
         
         conn = self.external_connection(cr, uid, referential_id, DEBUG, context=context)
+        if not conn:
+            raise osv.except_osv(_('Connection error'), _('Error establishing connection to external referential.'))
+
         mapping_ids = context.get('external_mapping_ids', False)
         if not mapping_ids:
             mapping_ids = self.pool.get('external.mapping').search(cr, uid, [('referential_id','=',referential_id),('model_id','=',model_name)])
@@ -230,9 +233,11 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             raise osv.except_osv(_('Configuration error'), _('No mappings found for the referential "%s" of type "%s"' % (referential.name, referential.type_id.name)))
 
         res = {}
+        self._exported = {}
         mapping_obj = self.pool.get('external.mapping')
         for mapping in mapping_obj.browse(cr, uid, mapping_ids):
             res[mapping.id] = False
+            self._exported[mapping.id] = []
 
             # export the model data
             ext_columns = mapping_obj.get_ext_column_headers(cr, uid, mapping.id, context=context)
@@ -254,7 +259,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                         continue
 
                     # add record to export list
-                    export_data.append(data)
+                    export_data.append((obj_data['id'], data))
 
                     # create ir_model_data record if necessary
                     if obj_data['id'] not in update_res_ids:
@@ -265,6 +270,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                             'external_referential_id': referential_id,
                             'module': 'extref/' + referential.name}
                         ir_model_data_rec_id = ir_model_data_obj.create(cr, uid, ir_model_data_rec)
+                        self._exported[mapping.id].append(ir_model_data_rec_id)
                         if DEBUG:
                             _logger.debug('CSV export: %s #%s not previously exported; created new ir_model_data #%s' % (model_name, obj_data['id'], ir_model_data_rec_id))
                     else:
@@ -273,13 +279,49 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                 except Exception, X:
                     _logger.error(str(X))
                     report_line_obj.log_failed(cr, uid, model_name, 'export', referential_id, res_id=obj_data['id'], defaults={}, context=context)
-                
-            conn.call(mapping.external_create_method, records=export_data)
-            conn.finalize_export()
+
+            try:
+                conn.call(mapping.external_create_method, records=export_data)
+                conn.finalize_export()
+            except ExternalReferentialError, X:
+                for res_id in X.res_ids:
+                    report_line_obj.log_failed(cr, uid, X.model_name, 'export', referential_id, res_id=res_id, defaults={}, context=context)
+                self._undo_export(cr, uid, referential_id, model_name, res_ids, context=context)
+            except Exception, X:
+                self._undo_export(cr, uid, referential_id, model_name, context=context)
+                raise osv.except_osv(_('Export error'), X.message)
 
             res[mapping.id] = True
 
+        # Once the export has completed successfully, reset the list
+        # of exported records
+        self._exported = {}
+
         return all(res.values())
+
+    def _undo_export(self, cr, uid, referential_id, model_name, res_ids=None, context=None):
+        '''
+        On a failure that prevents data from being transferred to the
+        remote system, this method should be called to unmark any
+        exported records.
+        '''
+        if context is None:
+            context = {}
+
+        if not hasattr(self, '_exported'):
+            return
+
+        res_ids = res_ids or None
+
+        data_pool = self.pool.get('ir.model.data')
+        for mapping_id, exported in self._exported.items():
+            if res_ids:
+                exported = list(set(exported) & set(res_ids))
+            data_pool.unlink(cr, uid, exported, context=context)
+            if DEBUG:
+                _logger.debug('CSV export: Export failed, so removing ir_model_data records: %s' % (exported,))
+
+        self._exported = {}
 
     def _get_exported_ids(self, cr, uid, referential_id, model_name, export_datetime, context=None):
         if context is None:

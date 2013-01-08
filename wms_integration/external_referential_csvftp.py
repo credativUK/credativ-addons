@@ -50,7 +50,10 @@ def encode_vals(d, encoding, errors='replace'):
     return res
 
 class ExternalReferentialError(Exception):
-    pass
+    def __init__(self, message, model_name=None, res_ids=None):
+        super(Exception, self).__init__(message)
+        self.model_name = model_name
+        self.res_ids = res_ids
 
 class Connection(object):
     '''
@@ -72,8 +75,8 @@ class Connection(object):
 
     >>> conn = Connection('username', 'password', 'host', 0, cr, uid)
     >>> conn.init_sync(import_csv_fn='OUT/data.csv', export_csv_fn='IN/data.csv', oe_model_name='foo.bar', external_key_name='id', column_headers=['id', 'name', 'other'], required_fields=['id', 'name'])
-    >>> conn.call('update', records=[{'id': '1', 'name': 'Baz'}, {'id': '2', 'other': 'something else'}])
-    >>> conn.call('create', records=[{'id': '3', 'name': 'Bam'}, {'id': '5', 'name': 'Bat'}])
+    >>> conn.call('update', records=[(1, {'id': '1', 'name': 'Baz'}), (2, {'id': '2', 'other': 'something else'})])
+    >>> conn.call('create', records=[(3, {'id': '3', 'name': 'Bam'}), (5, {'id': '5', 'name': 'Bat'})])
     >>> conn.finalize_export()
     '''
 
@@ -99,9 +102,10 @@ class Connection(object):
             a record number from the CSV file, and a dict of the
             record
 
-          - _export_cache which is a list of 2-tuples each comprising
-            a string which may be 'update', 'create', or 'delete', and
-            a dict of the altered record
+          - _export_cache which is a list of 3-tuples each comprising
+            a string which may be 'update', 'create', or 'delete', the
+            res_id of the original resource, and a dict of the altered
+            record
         '''
         assert(isinstance(port, int))
         assert(isinstance(timeout, int))
@@ -114,6 +118,7 @@ class Connection(object):
         self.uid = uid
         self.port = port
         self.timeout = timeout
+        self._oe_model_name = 'external.referential'
         self.debug = debug
         self._out_encoding = out_encoding
         self.logger = logger or _logger
@@ -179,9 +184,9 @@ class Connection(object):
                 self.logger.error(except_msg)
                 time.sleep(wait_time)
  
-        #raise except_osv(_('Connection Error'), _('\n'.join(error_list)))
-        # TODO Issue error email; can we do this by raising an
-        # exception?
+        err_msg = '\n'.join(error_list)
+        self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=None, msg=err_msg)
+        raise osv.except_osv(_('Connection Error'), _(err_msg))
 
     def _disconnect(self):
         try:
@@ -333,6 +338,7 @@ class Connection(object):
             if self.reporter:
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg)
             self._clean_up_export()
+            raise X
         except ftplib.all_errors, X:
             msg = 'CSV export: Could not send %s (local) to %s (remote): %s' %\
                 (self._export_tmp_fn, self._export_remote_fn, X.message)
@@ -341,6 +347,7 @@ class Connection(object):
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg)
             self._clean_up_export()
             self._export_ready = False
+            raise X
 
     def _write_export_cache(self):
         try:
@@ -355,7 +362,7 @@ class Connection(object):
                 for id in ids:
                     try:
                         if id in self._export_cache:
-                            op, rec = self._export_cache[id]
+                            op, res_id, rec = self._export_cache[id]
                             if op == 'update' or op == 'create':
                                 rec = dict([(k, self._csv_writer_field_proc(v)) for k, v in rec.items()])
                                 csv_out.writerow(encode_vals(rec, self._out_encoding))
@@ -382,6 +389,7 @@ class Connection(object):
             if self.reporter:
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg)
             self._clean_up_export()
+            raise X
 
     def _clean_up_export(self):
         try:
@@ -400,6 +408,7 @@ class Connection(object):
             self.logger.error(msg)
             if self.reporter:
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg)
+            raise X
 
     def init_sync(self, import_csv_fn, export_csv_fn, oe_model_name, external_key_name, column_headers, required_fields):
         self.init_import(import_csv_fn, oe_model_name, external_key_name, column_headers)
@@ -424,7 +433,9 @@ class Connection(object):
     def call(self, method, **kw_args):
         applicable_method = self._dispatch_table.get(method, None)
         if applicable_method:
-            return applicable_method(**kw_args)
+            res = applicable_method(**kw_args)
+            if res:
+                raise ExternalReferentialError('Method "%s" failed for IDs: %s' % (method, res), self._oe_model_name, res)
         else:
             raise NotImplementedError('External referential for CSV over FTP has no implementation for method: %s' % (method,))
 
@@ -448,10 +459,10 @@ class Connection(object):
         # if the export cache or import cache contains a record for
         # the give ID, return that record
         if self._id_col_name in search_fields:
-            for cache in [self._export_cache, self._import_cache]:
-                rec_no, record = cache.get(search_fields[self._id_col_name], (None, None))
-                if record:
-                    return [record]
+            if search_fields[self._id_col_name] in self._export_cache:
+                return [self._export_cache[search_fields[self._id_col_name]][2]]
+            if search_fields[self._id_col_name] in self._import_cache:
+                return [self._import_cache[search_fields[self._id_col_name]][1]]
 
         # otherwise find the records in the local CSV file
         result = [row for rec_num, row in self._import_records_iter()
@@ -482,17 +493,19 @@ class Connection(object):
 
         # FIXME This method can't be used to change the ID value of
         # records
-        for rec in records:
+        for res_id, rec in records:
             if self._id_col_name not in rec:
                 self.logger.error('CSV export: Cannot update record with no given ID: %s' % (rec,))
                 continue
             if self._get(**{self._id_col_name: rec[self._id_col_name]}):
                 cpy = self._import_cache[rec[self._id_col_name]][1]
                 cpy.update(rec)
-                print 'Updating %s with %s to make %s' % (self._import_cache[rec[self._id_col_name]][1], rec, cpy)
-                self._export_cache[rec[self._id_col_name]] = ('update', cpy)
+                self._export_cache[rec[self._id_col_name]] = ('update', res_id, cpy)
                 if self.debug:
                     self.logger.debug('CSV export: updating record with %s=%s' % (self._id_col_name, rec[self._id_col_name]))
+
+        # return a list of res_ids which will *not* be updated
+        return list(set([res_id for res_id, r in records]) - set([res_id for op, res_id, rec in self._export_cache.values()]))
 
     def _create(self, records):
         self._check_export_ready()
@@ -500,7 +513,7 @@ class Connection(object):
         if isinstance(records, dict):
             records = [records]
 
-        for rec in records:
+        for res_id, rec in records:
             if not self._id_col_name in rec:
                 self.logger.error('CSV export: Will not create record with missing key field: %s' % (rec,))
                 continue
@@ -520,9 +533,12 @@ class Connection(object):
             rec.update(dict([(fn, '') for fn in self._column_headers if fn not in rec.keys()]))
 
             # add the new record to the export cache
-            self._export_cache[rec[self._id_col_name]] = ('create', rec)
+            self._export_cache[rec[self._id_col_name]] = ('create', res_id, rec)
             if self.debug:
                 self.logger.debug('CSV export: creating record with %s=%s' % (self._id_col_name, rec[self._id_col_name]))
+
+        # return a list of res_ids which will *not* be exported
+        return list(set([res_id for res_id, r in records]) - set([res_id for op, res_id, rec in self._export_cache.values()]))
 
     def _delete(self, ids):
         # FIXME How will delete actually work? Do we need to have
@@ -533,10 +549,17 @@ class Connection(object):
         if not isinstance(ids, list):
             ids = [ids]
 
+        failed = []
         for id in ids:
             if self._get(**{self._id_col_name: id}):
-                self._export_cache[id] = ('delete', self._import_cache[id][1])
+                # FIXME What is the res_id?
+                self._export_cache[id] = ('delete', None, self._import_cache[id][1])
                 if self.debug:
                     self.logger.debug('CSV export: deleting record with %s=%s' % (self._id_col_name, id))
             else:
                 self.logger.error('CSV export: Cannot delete record, unknown %s value "%s"' % (self._id_col_name, id))
+                failed.append(id)
+
+        # return a list of record IDs which will *not* be deleted
+        # FIXME This should be res_ids; it currently returns external keys
+        return failed
