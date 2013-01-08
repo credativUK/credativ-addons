@@ -301,9 +301,9 @@ class Connection(object):
 
             self._id_col_name = external_key_name
             self._column_headers = column_headers
-            self._id_col = self._column_headers.index(self._id_col_name)
-            if self._id_col_name not in required_fields:
-                required_fields.append(self._id_col_name)
+            #self._id_col = self._column_headers.index(self._id_col_name)
+            #if self._id_col_name not in required_fields:
+            #    required_fields.append(self._id_col_name)
             self._required_fields = required_fields
 
             self._export_cache = {}
@@ -364,14 +364,14 @@ class Connection(object):
                         if id in self._export_cache:
                             op, res_id, rec = self._export_cache[id]
                             if op == 'update' or op == 'create':
-                                rec = dict([(k, self._csv_writer_field_proc(v)) for k, v in rec.items()])
+                                rec = dict([(k, self._csv_writer_field_proc(v)) for k, v in rec.items() if k in self._column_headers])
                                 csv_out.writerow(encode_vals(rec, self._out_encoding))
                             elif op == 'delete':
                                 # TODO What to do with deleted records?
                                 pass
                         elif id in self._import_cache:
                             rec = self._import_cache[id][1]
-                            rec = dict([(k, self._csv_writer_field_proc(v)) for k, v in rec.items()])
+                            rec = dict([(k, self._csv_writer_field_proc(v)) for k, v in rec.items() if k in self._column_headers])
                             csv_out.writerow(encode_vals(rec, self._out_encoding))
                     except csv.Error, X:
                         self.logger.error('CSV export: CSV writing error: %s' % (X.message,))
@@ -524,7 +524,7 @@ class Connection(object):
                 continue
                 
             # ensure the new record has all the required fields
-            if not(set(rec.keys()) <= set(self._required_fields)):
+            if set(self._required_fields).difference(set(rec.keys())):
                 self.logger.error('CSV export: Will not create record with missing required fields: %s; %s' %
                                   (', '.join(list(set(self._required_fields) - set(rec.keys()))), rec))
                 continue

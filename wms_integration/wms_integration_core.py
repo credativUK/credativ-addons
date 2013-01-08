@@ -242,7 +242,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             # export the model data
             ext_columns = mapping_obj.get_ext_column_headers(cr, uid, mapping.id, context=context)
             remote_csv_fn = mapping.external_export_uri % context.get('remote_csv_fn_sub', ())
-            conn.init_export(remote_csv_fn=remote_csv_fn, oe_model_name=mapping.model_id.name, external_key_name=mapping.external_key_name, column_headers=ext_columns, required_fields=ext_columns)
+            conn.init_export(remote_csv_fn=remote_csv_fn, oe_model_name=mapping.model_id.name, external_key_name=mapping.external_key_name, column_headers=ext_columns, required_fields=[])
             export_data = []
             for obj_data in obj.read(cr, uid, res_ids, [], context=context):
                 try:

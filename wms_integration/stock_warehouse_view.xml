@@ -16,7 +16,7 @@
                                 <button name="export_purchase_orders" string="1 - Export Purchase Orders" colspan="1" type="object" />
                                 <button name="import_purchase_order_receipts" string="2 - Import Purchase Order Receipts" colspan="1" type="object" />
                                 <field name="mapping_purchase_orders_id" domain="[('referential_id', '=', referential_id), ('model_id.model', '=', 'stock.move')]"/>
-                                <button name="export_dispatches" string="3 - Export Dispatches" colspan="1" type="object" />
+                                <button name="export_dispatch_orders" string="3 - Export Dispatches" colspan="1" type="object" />
                                 <button name="import_dispatch_receipts" string="4 - Import Dispatch Receipts" colspan="1" type="object" />
                                 <field name="mapping_dispatch_orders_id" domain="[('referential_id', '=', referential_id), ('model_id.model', '=', 'stock.move')]"/>
                                 <separator string="Confirmation actions" colspan="4" />
