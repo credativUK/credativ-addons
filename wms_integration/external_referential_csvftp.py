@@ -29,6 +29,7 @@ import logging
 from base_external_referentials import external_osv
 
 import os
+import re
 import time
 import socket
 import datetime
@@ -239,6 +240,24 @@ class Connection(object):
             self._clean_up_import()
             self._import_ready = False
     
+    def find_importables(self, dirs, matching=None):
+        matching = matching or re.compile('.*')
+        res = []
+        for d in dirs:
+            try:
+                self._ftp_client.cwd(d)
+                res.extend(map(lambda f: d + '/' + f, filter(lambda f: matching.search(f), self._ftp_client.nlst())))
+            except ftplib.error_perm, X:
+                if str(X) == "550 No files found":
+                    # if a directory is empty it doesn't matter
+                    continue
+                else:
+                    msg = 'CSV import: Could not retrieve list of importables from %s matching "%s": %s' %\
+                        (d, matching.pattern, X.message)
+                    self.logger.error(msg)
+                    if self.reporter:
+                        self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'import', self.referential_id, exc=X, msg=msg)
+
     def _clean_up_import(self):
         try:
             self._import_cache = {}

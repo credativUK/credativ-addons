@@ -27,6 +27,7 @@ import wms_integration_osv
 from external_referential_csvftp import Connection, ExternalReferentialError
 
 import re
+import os
 import logging
 import datetime
 
@@ -393,12 +394,22 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         now = datetime.datetime.now()
         import_uri_params = {'year': now.strftime('%Y'), 'month': now.strftime('%m'), 'day': now.strftime('%d'),
                              'hour': now.strftime('%H'), 'minute': now.strftime('%M'), 'second': now.strftime('%S')}
-        import_uri_params.update(context)
-        remote_csv_fn = verification_mapping.external_import_uri.format(**import_uri_params)
 
+        dirname, basename = os.path.split(verification_mapping.external_import_uri.format(**import_uri_params))
+        dirs = (dirname and [dirname]) or ['/']
+        importables = conn.find_importables(dirs, re.compile(basename))
+
+        if len(importables) > 1:
+            raise osv.except_osv(_('Import error'), _('The pattern "%s" matched multiple importables on the external system: %s\nWill not continue with import.' % (basename, importables)))
+        elif len(importables) == 0:
+            raise osv.except_osv(_('Import error'), _('The pattern "%s" matched no importables on the external system. Cannot continue with import.' % (basename, importables)))
+
+        remote_csv_fn = importables[0]
+        if DEBUG:
+            _logger.debug('CSV import: selected importable URI: %s' % (remote_csv_fn,))
 
         verification_columns = mapping_obj.get_ext_column_headers(cr, uid, verification_mapping.id)
-        conn.init_import(remote_csv_fn=verification_mapping.external_import_uri,
+        conn.init_import(remote_csv_fn=remote_csv_fn,
                          oe_model_name=export_mapping.model_id.name,
                          external_key_name=verification_mapping.external_key_name,
                          column_headers=verification_columns)
