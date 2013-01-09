@@ -96,9 +96,7 @@ class purchase_order(osv.osv):
         
         if move_ids:
             ctx = context.copy()
-            if 'remote_csv_fn_sub' not in ctx: # Add the PO name and timestamp into the file
-                ctx['remote_csv_fn_sub'] = (po.name, datetime.now().strftime('%Y%m%d_%H%M%S'))
-            ctx.update({'wms_sm_sequence': wms_sm_sequence, 'wms_sm_mode': wms_sm_mode})
+            ctx.update({'wms_sm_sequence': wms_sm_sequence, 'wms_sm_mode': wms_sm_mode, 'name': po.name.split('-edit')[0]})
             if po.warehouse_id.mapping_purchase_orders_id:
                 ctx.update({'external_mapping_ids': [po.warehouse_id.mapping_purchase_orders_id.id,]})
             self.pool.get('external.referential')._export(cr, uid, po.warehouse_id.referential_id.id, 'stock.move', move_ids, context=ctx)

@@ -28,6 +28,7 @@ from external_referential_csvftp import Connection, ExternalReferentialError
 
 import re
 import logging
+import datetime
 
 _logger = logging.getLogger(__name__)
 DEBUG = True
@@ -239,10 +240,18 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             res[mapping.id] = False
             self._exported[mapping.id] = []
 
-            # export the model data
+            # prepare the export file name
+            now = datetime.datetime.now()
+            export_uri_params = {'year': now.strftime('%Y'), 'month': now.strftime('%m'), 'day': now.strftime('%d'),
+                                 'hour': now.strftime('%H'), 'minute': now.strftime('%M'), 'second': now.strftime('%S')}
+            export_uri_params.update(context)
+            remote_csv_fn = mapping.external_export_uri.format(**export_uri_params)
+
+            # initialise the external referential export
             ext_columns = mapping_obj.get_ext_column_headers(cr, uid, mapping.id, context=context)
-            remote_csv_fn = mapping.external_export_uri % context.get('remote_csv_fn_sub', ())
             conn.init_export(remote_csv_fn=remote_csv_fn, oe_model_name=mapping.model_id.name, external_key_name=mapping.external_key_name, column_headers=ext_columns, required_fields=[])
+
+            # export the model data
             export_data = []
             for obj_data in obj.read(cr, uid, res_ids, [], context=context):
                 try:
@@ -379,6 +388,15 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         mapping_obj = self.pool.get('external.mapping')
         verification_mapping = mapping_obj.browse(cr, uid, export_mapping.external_verification_mapping.id, context=context)
+
+        # prepare the import file name
+        now = datetime.datetime.now()
+        import_uri_params = {'year': now.strftime('%Y'), 'month': now.strftime('%m'), 'day': now.strftime('%d'),
+                             'hour': now.strftime('%H'), 'minute': now.strftime('%M'), 'second': now.strftime('%S')}
+        import_uri_params.update(context)
+        remote_csv_fn = verification_mapping.external_import_uri.format(**import_uri_params)
+
+
         verification_columns = mapping_obj.get_ext_column_headers(cr, uid, verification_mapping.id)
         conn.init_import(remote_csv_fn=verification_mapping.external_import_uri,
                          oe_model_name=export_mapping.model_id.name,
