@@ -115,6 +115,16 @@ class external_mapping_line(osv.osv):
 
 external_mapping_line()
 
+class ir_model_data(osv.osv):
+    _inherit = 'ir.model.data'
+
+    _columns = {
+        'external_referential_exec_id': fields.char('Execution ID', size=15,
+                                                    help='Unique ID of the execution of the extref under which this record was imported/exported')
+        }
+
+ir_model_data()
+
 class external_referential(wms_integration_osv.wms_integration_osv):
     _inherit = 'external.referential'
 
@@ -206,9 +216,36 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                 return field
         return strip_delimiter
 
+    def _get_execution_id(self, cr, uid, referential_id, context=None):
+        '''
+        This method gets a new unique ID from ir_model_data for
+        external.referential which represents an execution
+        (import/export) of the referential.
+        '''
+        if context is None:
+            context = {}
+
+        extref_exec_id = self.pool.get('ir.sequence').next_by_code(cr, uid, 'wms_integration.extref_exec_id', context=context)
+        _logger.debug('Created execution id: %s' % (extref_exec_id,))
+
+        referential_id = self._ensure_single_referential(cr, uid, referential_id, context=context)
+        referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
+
+        data_pool = self.pool.get('ir.model.data')
+        data_pool.create(cr, uid, {'name': 'external_referential/wms_integration',
+                                   'model': 'external.referential',
+                                   'res_id': int(''.join([x for x in extref_exec_id if x.isdigit()])),
+                                   'external_referential_id': referential_id,
+                                   'module': 'extref/' + referential.name})
+
+        return extref_exec_id
+        
     def _export(self, cr, uid, referential_id, model_name, res_ids=None, context=None):
         if context is None:
             context = {}
+
+        if 'extref_exec_id' not in context:
+            _logger.warn('External referential execution ID was not passed to _export in context')
 
         referential_id = self._ensure_single_referential(cr, uid, referential_id, context=context)
         referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
@@ -221,7 +258,9 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         # find which of the supplied res_ids are updates
         ir_model_data_obj = self.pool.get('ir.model.data')
-        ir_model_data_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',referential_id),('model','=',model_name),('res_id','in',res_ids)], context=context)
+        ir_model_data_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',referential_id),
+                                                               ('model','=',model_name),
+                                                               ('res_id','in',res_ids)], context=context)
         update_res_ids = [d['res_id'] for d in ir_model_data_obj.read(cr, uid, ir_model_data_ids, fields=['res_id'])]
         
         conn = self.external_connection(cr, uid, referential_id, DEBUG, context=context)
@@ -276,6 +315,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                         ir_model_data_rec = {
                             'name': model_name.replace('.', '_') + '/' + data[mapping.external_key_name],
                             'model': model_name,
+                            'external_referential_exec_id': context.get('extref_exec_id', None),
                             'res_id': obj_data['id'],
                             'external_referential_id': referential_id,
                             'module': 'extref/' + referential.name}
@@ -422,8 +462,10 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         obj = self.pool.get(export_mapping.model_id.name)
         exported = dict([(r['id'], r) for r in obj.read(cr, uid, exported_ids)])
         ir_model_data_obj = self.pool.get(export_mapping.model_id.name)
-        ir_model_data_exported_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',export_mapping.referential_id), ('model','=',export_mapping.model_id.name),('res_id','in',exported_ids)], context=context)
-        res_ids = dict([(r['name'], r['res_id']) for r in ir_model_data_obj.read(cr, uid, ir_model_data_exported_ids, fields=['res_id','name'])])
+        ir_model_data_exported_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',export_mapping.referential_id),
+                                                                        ('model','=',export_mapping.model_id.name),
+                                                                        ('res_id','in',exported_ids)], context=context)
+        res_ids = dict([(r['name'].strip(export_mapping.model_id.name.replace('.', '_') + '/'), r['res_id']) for r in ir_model_data_obj.read(cr, uid, ir_model_data_exported_ids, fields=['res_id','name'])])
 
         for conf_res in verification:
             res_id = res_ids.get(conf_res[export_mapping.external_key_name], None)

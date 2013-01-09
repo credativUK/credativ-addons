@@ -132,6 +132,8 @@ class purchase_order(osv.osv):
             context = {}
         data_obj = self.pool.get('ir.model.data')
         
+        context['extref_exec_id'] = self.pool.get('external.referential')._get_execution_id(cr, uid, referential_id, context=context)
+
         for po in self.browse(cr, uid, ids):
             if not po.warehouse_id or not po.warehouse_id.referential_id:
                 continue
@@ -243,6 +245,7 @@ class stock_dispatch(osv.osv):
             ctx.update({'wms_sm_sequence': wms_sm_sequence})
             if dispatch.warehouse_id.mapping_dispatch_orders_id:
                 ctx.update({'external_mapping_ids': [dispatch.warehouse_id.mapping_dispatch_orders_id.id,]})
+            ctx['extref_exec_id'] = self.pool.get('external.referential')._get_execution_id(cr, uid, dispatch.warehouse_id.referential_id.id, context=context)
             self.pool.get('external.referential')._export(cr, uid, dispatch.warehouse_id.referential_id.id, 'stock.move', final_move_ids, context=ctx)
         
         return
@@ -283,6 +286,7 @@ class stock_warehouse(osv.osv):
         'mapping_purchase_orders_id': fields.many2one('external.mapping', string='Override Purchase Orders Export Mapping'),
         'mapping_dispatch_orders_id': fields.many2one('external.mapping', string='Override Dispatch Export Mapping'),
     }
+    _override_mappings = ['mapping_purchase_orders_id', 'mapping_dispatch_orders_id']
     
     def get_exportable_pos(self, cr, uid, ids, referential_id, context=None):
         if not ids:
@@ -331,22 +335,40 @@ class stock_warehouse(osv.osv):
         '''
         if context is None:
             context = {}
-        extref_obj = self.pool.get('external.referential')
+        extref_pool = self.pool.get('external.referential')
+
+        model_pool = self.pool.get('ir.model')
+        mapping_pool = self.pool.get('external.mapping')
 
         for warehouse in self.browse(cr, uid, ids):
             if not warehouse.referential_id:
                 continue
 
-            mapping_obj = self.pool.get('external.mapping')
-            mapping_ids = mapping_obj.search(cr, uid, [('referential_id','=',warehouse.referential_id.id),('model_id','=',model_name)])
+            # get the mapping; either from one of the override
+            # mappings, or from the given model
+            mapping_ids = [getattr(warehouse, ovr_mapping) for ovr_mapping in self._override_mappings]
             if not mapping_ids:
-                raise osv.except_osv(_('Configuration error'), _('No mappings found for the referential "%s" of type "%s"' % (warehouse.referential_id.name, warehouse.referential_id.type_id.name)))
+                model_ids = model_pool.search(cr, uid, [('model','=',model_name)])
+                if len(model_ids) > 1:
+                    raise osv.except_osv(_('Integrity error'), _('Model name "%s" is ambiguous.' % (model_name,)))
+                if not model_ids:
+                    raise osv.except_osv(_('Data error'), _('No such model: "%s"' % (model_name,)))
+                model_id = model_ids[0]
+                mapping_ids = mapping_pool.search(cr, uid, [('referential_id','=',warehouse.referential_id.id),
+                                                            ('model_id','=',model_id),
+                                                            ('purpose','=','data')])
+
+            if not mapping_ids:
+                raise osv.except_osv(_('Configuration error'),
+                                     _('No mappings found for the referential "%s" of type "%s"' %\
+                                           (warehouse.referential_id.name, warehouse.referential_id.type_id.name)))
 
             res = {}
 
-            for mapping in mapping_obj.browse(cr, uid, mapping_ids):
-                exported_ids = extref_obj._get_last_exported_ids(cr, uid, warehouse.referential_id.id, mapping.model_id.name, context=context)
-                res[mapping.id] = extref_obj._verify_export(cr, uid, mapping, exported_ids, success_fun, context=context)
+            for mapping in mapping_pool.browse(cr, uid, mapping_ids):
+                referential = extref_pool.browse(cr, uid, warehouse.referential_id.id, context=context)
+                exported_ids = referential._get_last_exported_ids(cr, uid, warehouse.referential_id.id, mapping.model_id.name, context=context)
+                res[mapping.id] = extref_pool._verify_export(cr, uid, mapping, exported_ids, success_fun, context=context)
 
         return res
 
@@ -381,7 +403,7 @@ class stock_warehouse(osv.osv):
 
         # The success_func for the verification has no data to work
         # with, so we'll just return True
-        return self.import_export_confirmations(cr, uid, ids, model_name='purchase.order', success_fun=lambda exp, conf: True, context=context)
+        return self.import_export_confirmations(cr, uid, ids, model_name='stock.move', success_fun=lambda exp, conf: True, context=context)
 
     def import_purchase_order_receipts(self, cr, uid, ids, context=None):
         '''
