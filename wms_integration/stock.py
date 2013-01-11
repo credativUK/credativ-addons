@@ -180,6 +180,54 @@ class purchase_order(osv.osv):
             
         return True
     
+    def wms_import_moves(self, cr, uid, ids, move_lines, context=None):
+        sm_obj = self.pool.get('stock.move')
+        pick_obj = self.pool.get('stock.picking')
+        
+        stock_moves = sm_obj.browse(cr, uid, move_lines.keys(), context=context)
+        picking_dict = {}
+        
+        for stock_move in stock_moves:
+            picking_dict.setdefault(stock_move.picking_id, []).append(stock_move)
+        
+        for picking, moves in picking_dict.iteritems():
+            for move in picking.move_lines:
+                lot_missing_id = (picking.purchase_id.warehouse_id.lot_missing_id and picking.purchase_id.warehouse_id.lot_missing_id.id
+                                                                                  or move.product_id.product_tmpl_id.property_stock_inventory.id)
+                rqty = float(move_lines.get(move.id, {}).get('qty', 0.0))
+                if move.state not in ('assigned'):
+                    _logger.warn('Stock move %d in unexpected state %s' % (move.id, move.state,))
+                if move.product_qty == rqty: # Exact amount received
+                    sm_obj.action_done(cr, uid, [move.id], context=context)
+                elif move.product_qty < rqty: # Too much received
+                    new_data = {
+                            'product_qty':  rqty - move.product_qty,
+                            'product_uos_qty':  rqty - move.product_qty,
+                            'location_id': lot_missing_id,
+                        }
+                    new_sm = sm_obj.copy(cr, uid, move.id, new_data, context=context)
+                    sm_obj.action_done(cr, uid, [move.id, new_sm], context=context)
+                else: # Too little received
+                    new_data = {
+                            'product_qty': move.product_qty - rqty,
+                            'product_uos_qty': move.product_qty - rqty,
+                            'location_dest_id': lot_missing_id,
+                        }
+                    new_sm = sm_obj.copy(cr, uid, move.id, new_data, context=context)
+                    sm_obj.action_done(cr, uid, [new_sm], context=context)
+                    if rqty:
+                        sm_obj.write(cr, uid, [move.id], {'product_qty': rqty}, context=context)
+                        sm_obj.action_done(cr, uid, [move.id], context=context)
+                    else: # None received
+                        sm_obj.action_cancel(cr, uid, [move.id], context=context)
+            
+            picking = pick_obj.browse(cr, uid, picking.id, context=context)
+            if not all([x.state in ('done', 'cancel') for x in picking.move_lines]):
+                _logger.error('Not all stock moves in picking %d are in the expected states' % (picking.id,))
+            else:
+                pick_obj.action_done(cr, uid, [picking.id], context=context)
+        return True
+    
 purchase_order()
 
 class stock_dispatch(osv.osv):
@@ -283,6 +331,8 @@ class stock_warehouse(osv.osv):
 
     _columns = {
         'referential_id': fields.many2one('external.referential', string='External Referential'),
+        'lot_missing_id': fields.many2one('stock.location', 'Missing Stock Location', domain=[('usage','<>','view')],
+            help='This location is used similar to inventory loss for discrepancies for automatic Purhcase Order imports through the external WMS. If not filled Inventory Loss will be used.'),
         'mapping_purchase_orders_id': fields.many2one('external.mapping', string='Override Purchase Orders Export Mapping'),
         'mapping_dispatch_orders_id': fields.many2one('external.mapping', string='Override Dispatch Export Mapping'),
         'mapping_purchase_orders_import_id': fields.many2one('external.mapping', string='Override Purchase Orders Import Mapping'),
@@ -402,6 +452,7 @@ class stock_warehouse(osv.osv):
         if not isinstance(ids, list):
             ids = [ids]
         po_obj = self.pool.get('purchase.order')
+        sm_obj = self.pool.get('stock.move')
         
         for warehouse in self.browse(cr, uid, ids):
             if not warehouse.referential_id or not warehouse.mapping_purchase_orders_import_id:
@@ -409,12 +460,20 @@ class stock_warehouse(osv.osv):
             
             # Find PO files to import
             po_import = self.pool.get('external.referential')._import(cr, uid, warehouse.mapping_purchase_orders_import_id, context=context)
-
-            print po_import
-            import ipdb; ipdb.set_trace()
-            pass
-            # Import each PO file
+            sm_lines = []
+            [sm_lines.extend(x) for x in po_import]
             
+            imported_sm = {}
+            # Map each stock move to the corresponding id through ir_model_data
+            for sm_line in sm_lines:
+                external_name = "%s_%s" % (sm_line['ref'], sm_line['lineref'])
+                erp_id = sm_obj.extid_to_oeid(cr, uid, external_name, warehouse.referential_id.id, context=context)
+                if erp_id:
+                    imported_sm[erp_id] = sm_line
+                    _logger.info('Imported PO stock move %s mapped to OpenERP ID %d' % (external_name, erp_id))
+                else:
+                    _logger.warn('Imported PO stock move %s does not exist in OpenERP' % (external_name,))
+            po_obj.wms_import_moves(cr, uid, [], imported_sm, context=context)
         return True
 
     def import_purchase_order_export_confirmation(self, cr, uid, ids, context=None):
