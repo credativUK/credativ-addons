@@ -285,6 +285,8 @@ class stock_warehouse(osv.osv):
         'referential_id': fields.many2one('external.referential', string='External Referential'),
         'mapping_purchase_orders_id': fields.many2one('external.mapping', string='Override Purchase Orders Export Mapping'),
         'mapping_dispatch_orders_id': fields.many2one('external.mapping', string='Override Dispatch Export Mapping'),
+        'mapping_purchase_orders_import_id': fields.many2one('external.mapping', string='Override Purchase Orders Import Mapping'),
+        'mapping_dispatch_orders_import_id': fields.many2one('external.mapping', string='Override Dispatch Import Mapping'),
     }
     _override_mappings = ['mapping_purchase_orders_id', 'mapping_dispatch_orders_id']
     
@@ -394,6 +396,27 @@ class stock_warehouse(osv.osv):
         
         return True
 
+    def import_purchase_order_receipts(self, cr, uid, ids, context=None):
+        if context == None:
+            context = {}
+        if not isinstance(ids, list):
+            ids = [ids]
+        po_obj = self.pool.get('purchase.order')
+        
+        for warehouse in self.browse(cr, uid, ids):
+            if not warehouse.referential_id or not warehouse.mapping_purchase_orders_import_id:
+                continue
+            
+            # Find PO files to import
+            po_import = self.pool.get('external.referential')._import(cr, uid, warehouse.mapping_purchase_orders_import_id, context=context)
+
+            print po_import
+            import ipdb; ipdb.set_trace()
+            pass
+            # Import each PO file
+            
+        return True
+
     def import_purchase_order_export_confirmation(self, cr, uid, ids, context=None):
         '''
         This method imports the confirmation of receipt of export data.
@@ -404,13 +427,6 @@ class stock_warehouse(osv.osv):
         # The success_func for the verification has no data to work
         # with, so we'll just return True
         return self.import_export_confirmations(cr, uid, ids, model_name='stock.move', success_fun=lambda exp, conf: True, context=context)
-
-    def import_purchase_order_receipts(self, cr, uid, ids, context=None):
-        '''
-        This method imports the data confirming the receipt of
-        purchase order goods into the warehouse.
-        '''
-        pass
 
     def get_exportable_dispatches(self, cr, uid, ids, referential_id, context=None):
         if not ids:

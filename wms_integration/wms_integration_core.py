@@ -502,6 +502,43 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         return res
 
+    def _import(self, cr, uid, import_mapping, context=None):
+        if context is None:
+            context = {}
+
+        # import the confirmation records
+        conn = self.external_connection(cr, uid, import_mapping.referential_id.id, DEBUG, context=context)
+
+        mapping_obj = self.pool.get('external.mapping')
+
+        # prepare the import file name
+        now = datetime.datetime.now()
+        import_uri_params = {'year': now.strftime('%Y'), 'month': now.strftime('%m'), 'day': now.strftime('%d'),
+                             'hour': now.strftime('%H'), 'minute': now.strftime('%M'), 'second': now.strftime('%S')}
+
+        dirname, basename = os.path.split(import_mapping.external_import_uri.format(**import_uri_params))
+        dirs = (dirname and [dirname]) or ['/']
+        importables = conn.find_importables(dirs, re.compile(basename))
+        import_line = []
+
+        if len(importables) == 0:
+            raise osv.except_osv(_('Import error'), _('The pattern "%s" matched no importables on the external system. Cannot continue with import.' % (basename, importables)))
+
+        for remote_csv_fn in importables:
+            if DEBUG:
+                _logger.debug('CSV import: selected importable URI: %s' % (remote_csv_fn,))
+
+            import_columns = mapping_obj.get_ext_column_headers(cr, uid, import_mapping.id)
+            conn.init_import(remote_csv_fn=remote_csv_fn,
+                            oe_model_name=import_mapping.model_id.name,
+                            external_key_name=import_mapping.external_key_name,
+                            column_headers=import_columns)
+            import_data = conn.call(import_mapping.external_list_method)
+            conn.finalize_import()
+            import_line.append(import_data)
+
+        return import_line
+
     def export_products(self, cr, uid, id, context=None):
         if context == None:
             context = {}

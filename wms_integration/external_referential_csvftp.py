@@ -257,6 +257,7 @@ class Connection(object):
                     self.logger.error(msg)
                     if self.reporter:
                         self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'import', self.referential_id, exc=X, msg=msg)
+        return res
 
     def _clean_up_import(self):
         try:
@@ -454,6 +455,7 @@ class Connection(object):
         if applicable_method:
             res = applicable_method(**kw_args)
             if res:
+                return res
                 raise ExternalReferentialError('Method "%s" failed for IDs: %s' % (method, res), self._oe_model_name, res)
         else:
             raise NotImplementedError('External referential for CSV over FTP has no implementation for method: %s' % (method,))
