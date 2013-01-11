@@ -274,11 +274,11 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             raise osv.except_osv(_('Configuration error'), _('No mappings found for the referential "%s" of type "%s"' % (referential.name, referential.type_id.name)))
 
         res = {}
-        self._exported = {}
+        self._new_exported = {}
         mapping_obj = self.pool.get('external.mapping')
         for mapping in mapping_obj.browse(cr, uid, mapping_ids):
             res[mapping.id] = False
-            self._exported[mapping.id] = []
+            self._new_exported[mapping.id] = []
 
             # prepare the export file name
             now = datetime.datetime.now()
@@ -320,7 +320,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                             'external_referential_id': referential_id,
                             'module': 'extref/' + referential.name}
                         ir_model_data_rec_id = ir_model_data_obj.create(cr, uid, ir_model_data_rec)
-                        self._exported[mapping.id].append(ir_model_data_rec_id)
+                        self._new_exported[mapping.id].append(ir_model_data_rec_id)
                         if DEBUG:
                             _logger.debug('CSV export: %s #%s not previously exported; created new ir_model_data #%s' % (model_name, obj_data['id'], ir_model_data_rec_id))
                     else:
@@ -344,8 +344,8 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             res[mapping.id] = True
 
         # Once the export has completed successfully, reset the list
-        # of exported records
-        self._exported = {}
+        # of newly exported records
+        self._new_exported = {}
 
         return all(res.values())
 
@@ -358,20 +358,17 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         if context is None:
             context = {}
 
-        if not hasattr(self, '_exported'):
+        if not hasattr(self, '_new_exported'):
             return
 
         res_ids = res_ids or None
 
-        data_pool = self.pool.get('ir.model.data')
-        for mapping_id, exported in self._exported.items():
-            if res_ids:
-                exported = list(set(exported) & set(res_ids))
-            data_pool.unlink(cr, uid, exported, context=context)
+        if res_ids or any(self._new_exported.values()):
+            cr.rollback()
             if DEBUG:
-                _logger.debug('CSV export: Export failed, so removing ir_model_data records: %s' % (exported,))
+                _logger.debug('CSV export: Export failed, so rollback ir_model_data records')
 
-        self._exported = {}
+        self._new_exported = {}
 
     def _get_exported_ids(self, cr, uid, referential_id, model_name, export_datetime, context=None):
         if context is None:
