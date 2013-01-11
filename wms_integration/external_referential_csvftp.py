@@ -453,10 +453,7 @@ class Connection(object):
     def call(self, method, **kw_args):
         applicable_method = self._dispatch_table.get(method, None)
         if applicable_method:
-            res = applicable_method(**kw_args)
-            if res:
-                return res
-                raise ExternalReferentialError('Method "%s" failed for IDs: %s' % (method, res), self._oe_model_name, res)
+            return applicable_method(**kw_args)
         else:
             raise NotImplementedError('External referential for CSV over FTP has no implementation for method: %s' % (method,))
 
@@ -525,8 +522,10 @@ class Connection(object):
                 if self.debug:
                     self.logger.debug('CSV export: updating record with %s=%s' % (self._id_col_name, rec[self._id_col_name]))
 
-        # return a list of res_ids which will *not* be updated
-        return list(set([res_id for res_id, r in records]) - set([res_id for op, res_id, rec in self._export_cache.values()]))
+        # generate a list of res_ids which will *not* be updated
+        failed = list(set([res_id for res_id, r in records]) - set([res_id for op, res_id, rec in self._export_cache.values()]))
+        if failed:
+            raise ExternalReferentialError('Method "update" failed for IDs: %s' % (failed,), self._oe_model_name, failed)
 
     def _create(self, records):
         self._check_export_ready()
@@ -558,8 +557,10 @@ class Connection(object):
             if self.debug:
                 self.logger.debug('CSV export: creating record with %s=%s' % (self._id_col_name, rec[self._id_col_name]))
 
-        # return a list of res_ids which will *not* be exported
-        return list(set([res_id for res_id, r in records]) - set([res_id for op, res_id, rec in self._export_cache.values()]))
+        # generate a list of res_ids which will *not* be exported
+        failed = list(set([res_id for res_id, r in records]) - set([res_id for op, res_id, rec in self._export_cache.values()]))
+        if failed:
+            raise ExternalReferentialError('Method "create" failed for IDs: %s' % (failed,), self._oe_model_name, failed)
 
     def _delete(self, ids):
         # FIXME How will delete actually work? Do we need to have
@@ -581,6 +582,7 @@ class Connection(object):
                 self.logger.error('CSV export: Cannot delete record, unknown %s value "%s"' % (self._id_col_name, id))
                 failed.append(id)
 
-        # return a list of record IDs which will *not* be deleted
-        # FIXME This should be res_ids; it currently returns external keys
-        return failed
+        # FIXME failed should contain res_ids; it currently returns external keys
+        if failed:
+            raise ExternalReferentialError('Method "delete" failed for IDs: %s' % (failed,), self._oe_model_name, failed)
+
