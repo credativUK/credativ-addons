@@ -198,7 +198,10 @@ class Connection(object):
             if self.debug:
                 self.logger.warn('Disconnect from FTP %s:%d failed: %s' % (self.host, self.port, X.message))
 
-    def init_import(self, remote_csv_fn, oe_model_name, external_key_name, column_headers):
+    def init_import(self, remote_csv_fn, oe_model_name, external_key_name, column_headers, context=None):
+        if not context:
+            context = {}
+
         try:
             self._oe_model_name = oe_model_name
             # make a temporary file to store the CSV
@@ -240,7 +243,10 @@ class Connection(object):
             self._clean_up_import()
             self._import_ready = False
     
-    def find_importables(self, dirs, matching=None):
+    def find_importables(self, dirs, matching=None, context=None):
+        if not context:
+            context = {}
+
         matching = matching or re.compile('.*')
         res = []
         for d in dirs:
@@ -306,11 +312,17 @@ class Connection(object):
             self._clean_up_import()
             self._import_ready = False
         
-    def finalize_import(self):
+    def finalize_import(self, context=None):
+        if not context:
+            context = {}
+
         self._clean_up_import()
         self._import_ready = False
 
-    def init_export(self, remote_csv_fn, oe_model_name, external_key_name, column_headers, required_fields):
+    def init_export(self, remote_csv_fn, oe_model_name, external_key_name, column_headers, required_fields, context=None):
+        if not context:
+            context = {}
+
         try:
             self._oe_model_name = oe_model_name
             self._export_remote_fn = remote_csv_fn
@@ -342,7 +354,10 @@ class Connection(object):
             raise ExternalReferentialError('External referential CRUD call made before export initialised.')
         return True
 
-    def finalize_export(self):
+    def finalize_export(self, context=None):
+        if not context:
+            context = {}
+
         self._check_export_ready()
         try:
             self._export_ready = False
@@ -430,7 +445,10 @@ class Connection(object):
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg)
             raise X
 
-    def init_sync(self, import_csv_fn, export_csv_fn, oe_model_name, external_key_name, column_headers, required_fields):
+    def init_sync(self, import_csv_fn, export_csv_fn, oe_model_name, external_key_name, column_headers, required_fields, context=None):
+        if not context:
+            context = {}
+
         self.init_import(import_csv_fn, oe_model_name, external_key_name, column_headers)
         self._cache_import()
         self.init_export(export_csv_fn, oe_model_name, external_key_name, column_headers, required_fields)
