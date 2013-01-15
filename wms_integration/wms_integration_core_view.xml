@@ -2,7 +2,7 @@
 <openerp>
     <data>
     <record id="wms_external_referential_form_view" model="ir.ui.view">
-    <field name="name">wms external_referential_form_view</field>
+    <field name="name">wms_external_referential_form_view</field>
     <field name="model">external.referential</field>
     <field name="type">form</field>
     <field name="arch" type="xml">

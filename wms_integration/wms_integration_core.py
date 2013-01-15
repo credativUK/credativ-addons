@@ -115,16 +115,6 @@ class external_mapping_line(osv.osv):
 
 external_mapping_line()
 
-class ir_model_data(osv.osv):
-    _inherit = 'ir.model.data'
-
-    _columns = {
-        'external_referential_exec_id': fields.char('Execution ID', size=15,
-                                                    help='Unique ID of the execution of the extref under which this record was imported/exported')
-        }
-
-ir_model_data()
-
 class external_referential(wms_integration_osv.wms_integration_osv):
     _inherit = 'external.referential'
 
@@ -216,36 +206,13 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                 return field
         return strip_delimiter
 
-    def _get_execution_id(self, cr, uid, referential_id, context=None):
-        '''
-        This method gets a new unique ID from ir_model_data for
-        external.referential which represents an execution
-        (import/export) of the referential.
-        '''
-        if context is None:
-            context = {}
-
-        extref_exec_id = self.pool.get('ir.sequence').next_by_code(cr, uid, 'wms_integration.extref_exec_id', context=context)
-        _logger.debug('Created execution id: %s' % (extref_exec_id,))
-
-        referential_id = self._ensure_single_referential(cr, uid, referential_id, context=context)
-        referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
-
-        data_pool = self.pool.get('ir.model.data')
-        data_pool.create(cr, uid, {'name': 'external_referential/wms_integration',
-                                   'model': 'external.referential',
-                                   'res_id': int(''.join([x for x in extref_exec_id if x.isdigit()])),
-                                   'external_referential_id': referential_id,
-                                   'module': 'extref/' + referential.name})
-
-        return extref_exec_id
-        
     def _export(self, cr, uid, referential_id, model_name, res_ids=None, context=None):
         if context is None:
             context = {}
 
-        if 'extref_exec_id' not in context:
+        if not context.get('external_log_id', None):
             _logger.warn('External referential execution ID was not passed to _export in context')
+            raise osv.except_osv('External referential execution ID was not passed to _export in context')
 
         referential_id = self._ensure_single_referential(cr, uid, referential_id, context=context)
         referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
@@ -289,7 +256,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
             # initialise the external referential export
             ext_columns = mapping_obj.get_ext_column_headers(cr, uid, mapping.id, context=context)
-            conn.init_export(remote_csv_fn=remote_csv_fn, oe_model_name=mapping.model_id.name, external_key_name=mapping.external_key_name, column_headers=ext_columns, required_fields=[])
+            conn.init_export(remote_csv_fn=remote_csv_fn, oe_model_name=mapping.model_id.model, external_key_name=mapping.external_key_name, column_headers=ext_columns, required_fields=[], context=context)
 
             # export the model data
             export_data = []
@@ -315,15 +282,17 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                         ir_model_data_rec = {
                             'name': model_name.replace('.', '_') + '/' + data[mapping.external_key_name],
                             'model': model_name,
-                            'external_referential_exec_id': context.get('extref_exec_id', None),
+                            'external_log_id': context.get('external_log_id', None),
                             'res_id': obj_data['id'],
                             'external_referential_id': referential_id,
                             'module': 'extref/' + referential.name}
                         ir_model_data_rec_id = ir_model_data_obj.create(cr, uid, ir_model_data_rec)
                         self._new_exported[mapping.id].append(ir_model_data_rec_id)
+                        report_line_obj.log_exported(cr, uid, model_name, 'export', referential_id, res_id=obj_data['id'], defaults={}, context=context)
                         if DEBUG:
                             _logger.debug('CSV export: %s #%s not previously exported; created new ir_model_data #%s' % (model_name, obj_data['id'], ir_model_data_rec_id))
                     else:
+                        report_line_obj.log_updated(cr, uid, model_name, 'export', referential_id, res_id=obj_data['id'], defaults={}, context=context)
                         if DEBUG:
                             _logger.debug('CSV export: %s #%s previously exported' % (model_name, obj_data['id']))
                 except Exception, X:
@@ -332,13 +301,15 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
             try:
                 conn.call(mapping.external_create_method, records=export_data)
-                conn.finalize_export()
+                conn.finalize_export(context=context)
             except ExternalReferentialError, X:
                 for res_id in X.res_ids:
                     report_line_obj.log_failed(cr, uid, X.model_name, 'export', referential_id, res_id=res_id, defaults={}, context=context)
                 self._undo_export(cr, uid, referential_id, model_name, res_ids, context=context)
+                self.pool.get('external.log').end_transfer(cr, uid, context.get('external_log_id', None), context=context)
             except Exception, X:
                 self._undo_export(cr, uid, referential_id, model_name, context=context)
+                self.pool.get('external.log').end_transfer(cr, uid, context.get('external_log_id', None), context=context)
                 raise osv.except_osv(_('Export error'), X.message)
 
             res[mapping.id] = True
@@ -363,14 +334,38 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         res_ids = res_ids or None
 
-        if res_ids or any(self._new_exported.values()):
-            cr.rollback()
+        data_pool = self.pool.get('ir.model.data')
+        for mapping_id, exported in self._new_exported.items():
+            if res_ids:
+                exported = list(set(exported) & set(res_ids))
+            data_pool.unlink(cr, uid, exported, context=context)
             if DEBUG:
-                _logger.debug('CSV export: Export failed, so rollback ir_model_data records')
+                _logger.debug('CSV export: Export failed, so removing ir_model_data records: %s' % (exported,))
+
+        # if res_ids or any(self._new_exported.values()):
+        #     cr.rollback()
+        #     if DEBUG:
+        #         _logger.debug('CSV export: Export failed, so rollback ir_model_data records')
 
         self._new_exported = {}
 
-    def _get_exported_ids(self, cr, uid, referential_id, model_name, export_datetime, context=None):
+    def _get_exported_ids_by_log(self, cr, uid, referential_id, model_name, external_log_id, context=None):
+        if context is None:
+            context = {}
+
+        referential_id = self._ensure_single_referential(cr, uid, referential_id, context=context)
+        referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
+
+        data_pool = self.pool.get('ir.model.data')
+        ir_model_data_ids =\
+            data_pool.search(cr, uid, [('model','=',model_name),
+                                       ('module','ilike','extref'),
+                                       ('external_referential_id','=',referential_id),
+                                       ('external_log_id','=',external_log_id)], context=context)
+
+        return [d['res_id'] for d in data_pool.read(cr, uid, ir_model_data_ids, fields=['res_id'])]
+        
+    def _get_exported_ids_by_date(self, cr, uid, referential_id, model_name, export_datetime, range='minute', context=None):
         if context is None:
             context = {}
 
@@ -378,11 +373,11 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
 
         table_name = model_name.replace('.', '_')
-        cr.execute("""SELECT id FROM ir_model_data WHERE date_trunc('minute', %s) AND model=%s AND external_referential_id=%s""",
-                   (export_datetime, table_name, referential_id))
+        cr.execute("""SELECT id FROM ir_model_data WHERE date_trunc('%s', %s) AND model=%s AND external_referential_id=%s""",
+                   (range, export_datetime, table_name, referential_id))
         ir_model_data_ids = [r[0] for r in cr.fetchall()]
-        ir_model_data_obj = self.pool.get('ir.model.data')
-        return [d['res_id'] for d in ir_model_data_obj.read(cr, uid, ir_model_data_ids, fields=['res_id'])]
+        data_pool = self.pool.get('ir.model.data')
+        return [d['res_id'] for d in data_pool.read(cr, uid, ir_model_data_ids, fields=['res_id'])]
         
     def _get_last_exported_ids(self, cr, uid, referential_id, model_name, context=None):
         if context is None:
@@ -397,7 +392,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         res = cr.fetchone()
         if res and len(res) > 0:
             last_date = res[0]
-            return self._get_exported_ids(cr, uid, referential_id, model_name, last_date, context=context)
+            return self._get_exported_ids_by_date(cr, uid, referential_id, model_name, last_date, 'minute', context=context)
         else:
             return []
 
@@ -434,7 +429,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         dirname, basename = os.path.split(verification_mapping.external_import_uri.format(**import_uri_params))
         dirs = (dirname and [dirname]) or ['/']
-        importables = conn.find_importables(dirs, re.compile(basename))
+        importables = conn.find_importables(dirs, re.compile(basename), context=context)
 
         if len(importables) > 1:
             raise osv.except_osv(_('Import error'), _('The pattern "%s" matched multiple importables on the external system: %s\nWill not continue with import.' % (basename, importables)))
@@ -446,23 +441,26 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             _logger.debug('CSV import: selected importable URI: %s' % (remote_csv_fn,))
 
         verification_columns = mapping_obj.get_ext_column_headers(cr, uid, verification_mapping.id)
+        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], export_mapping.referential_id, export_mapping.model_id.model, context=context)
+        context['external_log_id'] = external_log_id
         conn.init_import(remote_csv_fn=remote_csv_fn,
-                         oe_model_name=export_mapping.model_id.name,
+                         oe_model_name=export_mapping.model_id.model,
                          external_key_name=verification_mapping.external_key_name,
-                         column_headers=verification_columns)
+                         column_headers=verification_columns,
+                         context=context)
         verification = conn.call(verification_mapping.external_list_method)
-        conn.finalize_import()
+        conn.finalize_import(context=context)
 
         res = {'mismatch': [], 'missing': [], 'unexpected': []}
 
         # test the confirmation records against the exported records
-        obj = self.pool.get(export_mapping.model_id.name)
+        obj = self.pool.get(export_mapping.model_id.model)
         exported = dict([(r['id'], r) for r in obj.read(cr, uid, exported_ids)])
-        ir_model_data_obj = self.pool.get(export_mapping.model_id.name)
+        ir_model_data_obj = self.pool.get(export_mapping.model_id.model)
         ir_model_data_exported_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',export_mapping.referential_id),
-                                                                        ('model','=',export_mapping.model_id.name),
+                                                                        ('model','=',export_mapping.model_id.model),
                                                                         ('res_id','in',exported_ids)], context=context)
-        res_ids = dict([(r['name'].strip(export_mapping.model_id.name.replace('.', '_') + '/'), r['res_id']) for r in ir_model_data_obj.read(cr, uid, ir_model_data_exported_ids, fields=['res_id','name'])])
+        res_ids = dict([(r['name'].strip(export_mapping.model_id.model.replace('.', '_') + '/'), r['res_id']) for r in ir_model_data_obj.read(cr, uid, ir_model_data_exported_ids, fields=['res_id','name'])])
 
         for conf_res in verification:
             res_id = res_ids.get(conf_res[export_mapping.external_key_name], None)
@@ -495,7 +493,9 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                 (rec_type, msg) = error_types[error]
                 msg = msg % r[rec_type]
                 _logger.error(msg)
-                report_line_obj.log_failed(cr, uid, export_mapping.model_id.name, 'verify', export_mapping.referential_id.id, res_id=r[rec_type]['res_id'], data_record=r[rec_type], context=context)
+                report_line_obj.log_failed(cr, uid, export_mapping.model_id.model, 'verify', export_mapping.referential_id.id, res_id=r[rec_type]['res_id'], data_record=r[rec_type], context=context)
+
+        self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
 
         return res
 
@@ -515,11 +515,14 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         dirname, basename = os.path.split(import_mapping.external_import_uri.format(**import_uri_params))
         dirs = (dirname and [dirname]) or ['/']
-        importables = conn.find_importables(dirs, re.compile(basename))
+        importables = conn.find_importables(dirs, re.compile(basename), context=context)
         import_line = []
 
         if len(importables) == 0:
             raise osv.except_osv(_('Import error'), _('The pattern "%s" matched no importables on the external system. Cannot continue with import.' % (basename, importables)))
+
+        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], import_mapping.referential_id.id, import_mapping.model_id.model, context=context)
+        context['external_log_id'] = external_log_id
 
         for remote_csv_fn in importables:
             if DEBUG:
@@ -527,12 +530,15 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
             import_columns = mapping_obj.get_ext_column_headers(cr, uid, import_mapping.id)
             conn.init_import(remote_csv_fn=remote_csv_fn,
-                            oe_model_name=import_mapping.model_id.name,
-                            external_key_name=import_mapping.external_key_name,
-                            column_headers=import_columns)
+                             oe_model_name=import_mapping.model_id.model,
+                             external_key_name=import_mapping.external_key_name,
+                             column_headers=import_columns,
+                             context=context)
             import_data = conn.call(import_mapping.external_list_method)
-            conn.finalize_import()
+            conn.finalize_import(context=context)
             import_line.append(import_data)
+
+        self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
 
         return import_line
 
@@ -541,6 +547,15 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             context = {}
         if not 'search_params' in context:
             context['search_params'] = [('type', 'in', ('consu', 'product'))]
-        return self._export(cr, uid, id, 'product.product', context=context)
+
+        referential_id = self._ensure_single_referential(cr, uid, id, context=context)
+        referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
+
+        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], referential_id, 'product.product', context=context)
+        context['external_log_id'] = external_log_id
+        res = self._export(cr, uid, referential_id, 'product.product', context=context)
+        self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
+
+        return res
 
 external_referential()

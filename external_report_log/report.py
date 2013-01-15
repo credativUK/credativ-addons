@@ -20,42 +20,64 @@
 ##############################################################################
 import pooler
 from osv import osv, fields
+from tools.translate import _
 
 import datetime
+
+import logging
+_logger = logging.getLogger(__name__)
 
 class external_log(osv.osv):
     _name = 'external.log'
     _description = 'External referential transfer log'
-    _order = 'start_time'
+    _order = 'start_time desc'
 
     _columns = {
         'name': fields.char('Execution reference', type='char', size=15, required=True),
         'referential_id': fields.many2one('external.referential', 'External referential', required=True, readonly=True),
         'retry_of': fields.many2one('external.log', 'Retry of', readonly=True),
         'start_time': fields.datetime('Start time', required=True, readonly=True),
-        'end_time': fields.datetime('End time', required=True, readonly=True),
+        'end_time': fields.datetime('End time', readonly=True),
         'status': fields.selection([('in-progress', 'In progress'),
                                     ('exported-fail', 'Exported - with errors'),
                                     ('exported-success', 'Exported - correct'),
                                     ('complete-rejections', 'Complete - rejections'),
-                                    ('complete-complete', 'Complete')], required=True, readonly=True),
+                                    ('complete-complete', 'Complete')], string='Status', required=True, readonly=True),
+        'model_id': fields.many2one('ir.model', 'Model', readonly=True),
+        'create_uid': fields.many2one('res.users', 'User', readonly=True),
         'line_ids': fields.one2many('external.report.line', 'external_log_id', 'Report lines')
         }
 
     _defaults = {
-        'name': lambda self, cr, uid, context: self.pool.get('ir.sequence').next_by_code(cr, uid, 'external_report_log.extref_exec_id', context=context)
+        'name': lambda self, cr, uid, context: self.pool.get('ir.sequence').next_by_code(cr, uid, 'extref_exec_id', context=context)
         }
 
-    def start_transfer(self, cr, uid, ids, referential_id, context=None):
+    def start_transfer(self, cr, uid, ids, referential_id, model_name, context=None):
         if context is None:
             context = {}
 
-        return self.create(cr, uid, {'referential_id': referential_id,
-                                     'retry_of': context.get('retry_of_execution', None),
-                                     'start_time': datetime.datetime.now(),
-                                     'status': 'in-progress'}, context=context)
+        try:
+            model_id = self.pool.get('ir.model').search(cr, uid, [('model','=',model_name)], context=context)[0]
+        except:
+            raise osv.except_osv(_('Configuration error'), _('Could not find model: "%s"' % (model_name,)))
 
-    def end_transfer(self, cr, uid, ids, context=None):
+        try:
+            log_cr = pooler.get_db(cr.dbname).cursor()
+            log_id = self.create(log_cr, uid, {'referential_id': referential_id,
+                                               'retry_of': context.get('retry_of_execution', None),
+                                               'start_time': datetime.datetime.now(),
+                                               'status': 'in-progress',
+                                               'model_id': model_id}, context=context)
+        except:
+            log_cr.rollback()
+            raise
+        else:
+            log_cr.commit()
+        finally:
+            log_cr.close()
+        return log_id
+
+    def end_transfer(self, cr, uid, ids, force_status=None, context=None):
         if context is None:
             context = {}
 
@@ -66,18 +88,37 @@ class external_log(osv.osv):
         if not log:
             raise ValueError('Cannot call end_transfer on non-existant log: %d' % (ids,))
 
-        self.write(cr, uid, ids, {'end_time': datetime.datetime.now(),
-                                  'status': all([line.state == 'exported' for line in log.line_ids]) and 'exported-success' or 'exported-fail'})
-
+        try:
+            log_cr = pooler.get_db(cr.dbname).cursor()
+            self.write(log_cr, uid, ids, {'end_time': datetime.datetime.now(),
+                                          'status': force_status or all([line.state == 'exported' for line in log.line_ids]) and 'exported-success' or 'exported-fail'})
+        except:
+            log_cr.rollback()
+            raise
+        else:
+            log_cr.commit()
+        finally:
+            log_cr.close()
 
 external_log()
 
-        
+
+class external_referential(osv.osv):
+    _inherit = 'external.referential'
+
+    _columns = {
+        'external_log_ids': fields.one2many('external.log', 'referential_id', 'External log entries')
+        }
+
+external_referential()
+
+
 class external_report_lines(osv.osv):
     _inherit = 'external.report.line'
 
     _columns = {
         'state': fields.selection([('exported','Exported'),
+                                   ('updated', 'Updated'),
                                    ('failed','Failed'),
                                    ('confirmed','Confirmed'),
                                    ('rejected','Rejected')], required=True, readonly=True),
@@ -105,6 +146,8 @@ class external_report_lines(osv.osv):
                 referential_id=referential_id, data_record=None, context=context)
             vals.update(info)
             vals['message'] = msg
+            vals['external_log_id'] = context.get('external_log_id')
+            _logger.debug('Create system fail with vals: %s' % (vals,))
             report = self.create(log_cr, uid, vals, context=context)
         except:
             log_cr.rollback()
@@ -128,7 +171,7 @@ class external_report_lines(osv.osv):
         log_cr = pooler.get_db(cr.dbname).cursor()
 
         try:
-            exists = self.search(cr, uid, [('model','=',model),
+            exists = self.search(cr, uid, [('res_model','=',model),
                                            ('action','=',action),
                                            ('referential_id','=',referential_id),
                                            ('res_id','=',res_id)], context=context)
@@ -144,6 +187,8 @@ class external_report_lines(osv.osv):
                 vals = self._prepare_log_vals(log_cr, uid, model, action, res_id=None, external_id=None, referential_id=referential_id, data_record=None, context=context)
                 vals.update(info)
                 vals['status'] = status
+                vals['external_log_id'] = context.get('external_log_id')
+                _logger.debug('Create log entry with vals: %s' % (vals,))
                 report = self.create(log_cr, uid, vals, context=context)
         except:
             log_cr.rollback()
@@ -157,6 +202,9 @@ class external_report_lines(osv.osv):
     def log_exported(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, data_record=None, defaults=None, context=None):
         return self._log(cr, uid, model, action, referential_id, 'exported', res_id, external_id, data_record, defaults, context=context)
 
+    def log_updated(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, data_record=None, defaults=None, context=None):
+        return self._log(cr, uid, model, action, referential_id, 'updated', res_id, external_id, data_record, defaults, context=context)
+
     def log_failed(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, data_record=None, defaults=None, context=None):
 
         res = super(external_report_lines, self).log_failed(cr, uid, model, action, referential_id, res_id, external_id, data_record, defaults, context)
@@ -166,8 +214,9 @@ class external_report_lines(osv.osv):
 
         # FIXME The super method actually removes the fail log, so we
         # probably don't actually want to do this
-        res = super(external_report_lines, self).log_success(cr, uid, model, action, referential_id, res_id, external_id, context)
-        return res
+        #res = super(external_report_lines, self).log_success(cr, uid, model, action, referential_id, res_id, external_id, context)
+        #return res
+        pass
 
     def log_rejected(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, context=None):
         return self._log(cr, uid, model, action, referential_id, 'rejected', res_id, external_id, context=context)
@@ -178,3 +227,13 @@ class external_report_lines(osv.osv):
         return res
 
 external_report_lines()
+
+
+class ir_model_data(osv.osv):
+    _inherit = 'ir.model.data'
+    
+    _columns = {
+        'external_log_id': fields.integer('Execution ID', help='Unique ID of the execution of the extref under which this record was imported/exported')
+        }
+    
+ir_model_data()

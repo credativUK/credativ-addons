@@ -131,8 +131,10 @@ class purchase_order(osv.osv):
         if context == None:
             context = {}
         data_obj = self.pool.get('ir.model.data')
-        
-        context['extref_exec_id'] = self.pool.get('external.referential')._get_execution_id(cr, uid, referential_id, context=context)
+
+        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], referential_id, 'stock.move', context=context)
+        #external_log = self.pool.get('external.log').browse(cr, uid, external_log_id, context=context)
+        context['external_log_id'] = external_log_id
 
         for po in self.browse(cr, uid, ids):
             if not po.warehouse_id or not po.warehouse_id.referential_id:
@@ -177,7 +179,9 @@ class purchase_order(osv.osv):
             except Exception, e:
                 raise
                 pass
-            
+
+        self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
+
         return True
     
     def wms_import_moves(self, cr, uid, ids, move_lines, context=None):
@@ -293,15 +297,21 @@ class stock_dispatch(osv.osv):
             ctx.update({'wms_sm_sequence': wms_sm_sequence})
             if dispatch.warehouse_id.mapping_dispatch_orders_id:
                 ctx.update({'external_mapping_ids': [dispatch.warehouse_id.mapping_dispatch_orders_id.id,]})
-            ctx['extref_exec_id'] = self.pool.get('external.referential')._get_execution_id(cr, uid, dispatch.warehouse_id.referential_id.id, context=context)
+
+            external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], dispatch.warehouse_id.referential_id.id, 'stock.move', context=context)
+            #external_log = self.pool.get('external.log').browse(cr, uid, external_log_id, context=context)
+            ctx['external_log_id'] = external_log_id
+
             self.pool.get('external.referential')._export(cr, uid, dispatch.warehouse_id.referential_id.id, 'stock.move', final_move_ids, context=ctx)
+
+            self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
         
         return
     
     def wms_export_orders(self, cr, uid, ids, referential_id, context=None):
         if context == None:
             context = {}
-        data_obj = self.pool.get('ir.model.data')
+
         export_dispatch_id = []
         
         for dispatch in self.browse(cr, uid, ids):
@@ -372,13 +382,16 @@ class stock_warehouse(osv.osv):
         po_ids = self.pool.get('purchase.order').search(cr, uid, [('id', 'in', [x[0] for x in po_ids]),], context=context)
         return po_ids
 
-    def import_export_confirmations(self, cr, uid, ids, model_name, success_fun, context=None):
+    def import_export_confirmations(self, cr, uid, ids, model_name, success_fun, external_log_id, context=None):
         '''
         This method implements the import of the data confirming the
         receipt of exported records.
 
         @model_name (str): is the name of model from which the export
         was made.
+
+        @external_log_id (int): ID of an external_log whose child
+        export records will be polled for confirmation
 
         @success_fun (function): is a Boolean function of two
         arguments, the exported record and the corresponding
@@ -419,7 +432,7 @@ class stock_warehouse(osv.osv):
 
             for mapping in mapping_pool.browse(cr, uid, mapping_ids):
                 referential = extref_pool.browse(cr, uid, warehouse.referential_id.id, context=context)
-                exported_ids = referential._get_last_exported_ids(cr, uid, warehouse.referential_id.id, mapping.model_id.name, context=context)
+                exported_ids = referential._get_exported_ids_by_log(cr, uid, warehouse.referential_id.id, mapping.model_id.model, external_log_id, context=context)
                 res[mapping.id] = extref_pool._verify_export(cr, uid, mapping, exported_ids, success_fun, context=context)
 
         return res

@@ -124,6 +124,7 @@ class Connection(object):
         self._out_encoding = out_encoding
         self.logger = logger or _logger
         self.reporter = reporter
+        self._saved_ctx = {}
 
         class CustomWriterDialect(csv.Dialect):
             delimiter = csv_writer_opts.get('delimier',',')
@@ -186,7 +187,7 @@ class Connection(object):
                 time.sleep(wait_time)
  
         err_msg = '\n'.join(error_list)
-        self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=None, msg=err_msg)
+        self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=None, msg=err_msg, context=self._saved_ctx)
         raise osv.except_osv(_('Connection Error'), _(err_msg))
 
     def _disconnect(self):
@@ -201,6 +202,7 @@ class Connection(object):
     def init_import(self, remote_csv_fn, oe_model_name, external_key_name, column_headers, context=None):
         if not context:
             context = {}
+        self._saved_ctx = context
 
         try:
             self._oe_model_name = oe_model_name
@@ -231,7 +233,7 @@ class Connection(object):
                 (remote_csv_fn, self._import_tmp.name, X.errno, X.strerror)
             self.logger.error(msg)
             if self.reporter:
-                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=X, msg=msg)
+                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=X, msg=msg, context=context)
             self._clean_up_import()
             self._import_ready = False
         except ftplib.all_errors, X:
@@ -239,13 +241,14 @@ class Connection(object):
                 (remote_csv_fn, self._import_tmp.name, X.message)
             self.logger.error(msg)
             if self.reporter:
-                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=X, msg=msg)
+                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=X, msg=msg, context=context)
             self._clean_up_import()
             self._import_ready = False
     
     def find_importables(self, dirs, matching=None, context=None):
         if not context:
             context = {}
+        self._saved_ctx = context
 
         matching = matching or re.compile('.*')
         res = []
@@ -262,7 +265,7 @@ class Connection(object):
                         (d, matching.pattern, X.message)
                     self.logger.error(msg)
                     if self.reporter:
-                        self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'import', self.referential_id, exc=X, msg=msg)
+                        self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'import', self.referential_id, exc=X, msg=msg, context=context)
         return res
 
     def _clean_up_import(self):
@@ -287,7 +290,7 @@ class Connection(object):
                 (self._import_tmp_fn, X.errno, X.strerror)
             self.logger.error(msg)
             if self.reporter:
-                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'import', self.referential_id, exc=X, msg=msg)
+                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'import', self.referential_id, exc=X, msg=msg, context=self._saved_ctx)
 
     def _check_import_ready(self):
         if not self._import_ready:
@@ -308,13 +311,14 @@ class Connection(object):
                 (csv_in.line_num, X.message)
             self.logger.error(msg)
             if self.reporter:
-                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'import', self.referential_id, exc=X, msg=msg)
+                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'import', self.referential_id, exc=X, msg=msg, context=self._saved_ctx)
             self._clean_up_import()
             self._import_ready = False
         
     def finalize_import(self, context=None):
         if not context:
             context = {}
+        self._saved_ctx = context
 
         self._clean_up_import()
         self._import_ready = False
@@ -322,6 +326,7 @@ class Connection(object):
     def init_export(self, remote_csv_fn, oe_model_name, external_key_name, column_headers, required_fields, context=None):
         if not context:
             context = {}
+        self._saved_ctx = context
 
         try:
             self._oe_model_name = oe_model_name
@@ -344,7 +349,7 @@ class Connection(object):
             msg = 'CSV export: Could not create local CSV cache file %s: [Errno %d] %s' %\
                 (self._export_tmp.name, X.errno, X.strerror)
             if self.reporter:
-                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg)
+                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg, context=context)
             self.logger.error(msg)
             self._clean_up_export()
             self._export_ready = False
@@ -357,6 +362,7 @@ class Connection(object):
     def finalize_export(self, context=None):
         if not context:
             context = {}
+        self._saved_ctx = context
 
         self._check_export_ready()
         try:
@@ -371,7 +377,7 @@ class Connection(object):
                 (self._export_tmp_fn, self._export_remote_fn, X.errno, X.strerror)
             self.logger.error(msg)
             if self.reporter:
-                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg)
+                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg, context=context)
             self._clean_up_export()
             raise X
         except ftplib.all_errors, X:
@@ -379,7 +385,7 @@ class Connection(object):
                 (self._export_tmp_fn, self._export_remote_fn, X.message)
             self.logger.error(msg)
             if self.reporter:
-                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg)
+                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg, context=context)
             self._clean_up_export()
             self._export_ready = False
             raise X
@@ -422,7 +428,7 @@ class Connection(object):
                 (self._export_tmp_fn, self._export_remote_fn, X.errno, X.strerror)
             self.logger.error(msg)
             if self.reporter:
-                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg)
+                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg, context=self._saved_ctx)
             self._clean_up_export()
             raise X
 
@@ -442,12 +448,13 @@ class Connection(object):
                 (self._export_tmp_fn, X.errno, X.strerror)
             self.logger.error(msg)
             if self.reporter:
-                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg)
+                self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg, context=self._saved_ctx)
             raise X
 
     def init_sync(self, import_csv_fn, export_csv_fn, oe_model_name, external_key_name, column_headers, required_fields, context=None):
         if not context:
             context = {}
+        self._saved_ctx = context
 
         self.init_import(import_csv_fn, oe_model_name, external_key_name, column_headers)
         self._cache_import()

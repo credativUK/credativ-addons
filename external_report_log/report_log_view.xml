@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<openerp>
+    <data>
+        <!--
+        <record id="external_log_tree_view" model="ir.ui.view">
+            <field name="name">external_log_tree_view</field>
+            <field name="model">external.log</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Execution reports">
+                    <field name="name" />
+                    <field name="start_time" />
+                    <field name="end_time" />
+                    <field name="status" />
+                    <button name="import_confirmation" string="Get confirmation" icon="gtk-go-forward" type="object" colspan="2" domain="[('status','in',['exported-fail','exported-success'])]" />
+                </tree>
+            </field>
+        </record>
+        -->
+
+        <!-- Add external log tree to external referential form view -->
+        <!-- FIXME This is only for wms_external_referential_form_view; should be for all external referentials -->
+        <record id="wms_external_referential_log_view" model="ir.ui.view">
+            <field name="name">wms external_referential_log_view</field>
+            <field name="model">external.referential</field>
+            <field name="inherit_id" ref="wms_integration.wms_external_referential_form_view" />
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <xpath expr="//page[@string='Referential Actions']" position="after">
+                    <page string="History and confirmations">
+                        <field name="external_log_ids">
+                            <tree string="Execution reports">
+                                <field name="name" />
+                                <field name="model_id" />
+                                <field name="create_uid" />
+                                <field name="start_time" />
+                                <field name="end_time" />
+                                <field name="status" />
+                                <button name="import_confirmation" string="Get confirmation" icon="gtk-go-forward" type="object" colspan="2" domain="[('status','in',['exported-fail','exported-success'])]" />
+                            </tree>
+                        </field>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Add the log ID to external_report_lines tree view and search view -->
+        <record id="external_report_log_line_search_view" model="ir.ui.view">
+            <field name="name">external_report_log_line_search_view</field>
+            <field name="model">external.report.line</field>
+            <field name="inherit_id" ref="base_external_referentials.external_report_line_search_view" />
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <field name="referential_id" position="after">
+                    <field name="external_log_id" />
+                </field>
+                <filter string='External Referential' position="after">
+                    <filter string="External log" icon="terp-stock_symbol-selection" domain="[]" context="{'group_by': 'external_log_id'}" />
+                </filter>
+            </field>
+        </record>
+
+        <record id="external_report_log_line_tree_view" model="ir.ui.view">
+            <field name="name">external_report_log_line_tree_view</field>
+            <field name="model">external.report.line</field>
+            <field name="inherit_id" ref="base_external_referentials.external_report_line_tree_view" />
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <field name="referential_id" position="after">
+                    <field name="external_log_id" />
+                </field>
+            </field>
+        </record>
+    </data>
+</openerp>
