@@ -191,6 +191,10 @@ class purchase_order(osv.osv):
         stock_moves = sm_obj.browse(cr, uid, move_lines.keys(), context=context)
         picking_dict = {}
         
+        add_moves = {}
+        add_moves['less'] = []
+        add_moves['more'] = []
+        
         for stock_move in stock_moves:
             picking_dict.setdefault(stock_move.picking_id, []).append(stock_move)
         
@@ -200,7 +204,8 @@ class purchase_order(osv.osv):
                                                                                   or move.product_id.product_tmpl_id.property_stock_inventory.id)
                 rqty = float(move_lines.get(move.id, {}).get('qty', 0.0))
                 if move.state not in ('assigned'):
-                    _logger.warn('Stock move %d in unexpected state %s' % (move.id, move.state,))
+                    _logger.warn('Stock move %d in unexpected state %s, skipping' % (move.id, move.state,))
+                    continue
                 if move.product_qty == rqty: # Exact amount received
                     sm_obj.action_done(cr, uid, [move.id], context=context)
                 elif move.product_qty < rqty: # Too much received
@@ -211,6 +216,7 @@ class purchase_order(osv.osv):
                         }
                     new_sm = sm_obj.copy(cr, uid, move.id, new_data, context=context)
                     sm_obj.action_done(cr, uid, [move.id, new_sm], context=context)
+                    add_moves['more'].append(new_sm)
                 else: # Too little received
                     new_data = {
                             'product_qty': move.product_qty - rqty,
@@ -219,10 +225,12 @@ class purchase_order(osv.osv):
                         }
                     new_sm = sm_obj.copy(cr, uid, move.id, new_data, context=context)
                     sm_obj.action_done(cr, uid, [new_sm], context=context)
+                    add_moves['less'].append(new_sm)
                     if rqty:
-                        sm_obj.write(cr, uid, [move.id], {'product_qty': rqty}, context=context)
+                        sm_obj.write(cr, uid, [move.id], {'product_qty': rqty, 'product_uos_qty': rqty}, context=context)
                         sm_obj.action_done(cr, uid, [move.id], context=context)
                     else: # None received
+                        sm_obj.write(cr, uid, [move.id], {'product_qty': 0, 'product_uos_qty': 0}, context=context)
                         sm_obj.action_cancel(cr, uid, [move.id], context=context)
             
             picking = pick_obj.browse(cr, uid, picking.id, context=context)
@@ -230,7 +238,7 @@ class purchase_order(osv.osv):
                 _logger.error('Not all stock moves in picking %d are in the expected states' % (picking.id,))
             else:
                 pick_obj.action_done(cr, uid, [picking.id], context=context)
-        return True
+        return add_moves
     
 purchase_order()
 
@@ -487,6 +495,7 @@ class stock_warehouse(osv.osv):
                 else:
                     _logger.warn('Imported PO stock move %s does not exist in OpenERP' % (external_name,))
             po_obj.wms_import_moves(cr, uid, [], imported_sm, context=context)
+        # TODO: Archive files after import
         return True
 
     def import_purchase_order_export_confirmation(self, cr, uid, ids, context=None):
