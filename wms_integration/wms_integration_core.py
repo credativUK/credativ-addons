@@ -18,6 +18,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
+import pooler
 from osv import osv, fields
 from tools.translate import _
 import wms_integration_osv
@@ -165,7 +166,6 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             _logger.error(msg)
             if reporter:
                 reporter.log_system_fail(cr, uid, 'external.referential', 'connect', id, exc=None, msg=msg, context=context)
-            raise osv.except_osv(_('Configuration error'), _(msg))
         (host, port) = mo.groups()
 
         csv_opts = getattr(referential, 'output_options', {})
@@ -181,22 +181,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                           csv_writer_opts=csv_opts,
                           reporter=reporter,
                           debug=DEBUG)
-        return conn or False
-
-    def connect(self, cr, uid, id, context=None):
-        if context is None:
-            context = {}
-
-        id = self._ensure_single_referential(cr, uid, id, context=context)
-        referential = self._ensure_wms_integration_referential(cr, uid, id, context=context)
-        if not referential:
-            return super(external_referential, self).external_connection(cr, uid, id, DEBUG=DEBUG, context=context)
-
-        core_imp_conn = self.external_connection(cr, uid, id, DEBUG, context=context)
-        if core_imp_conn.connect():
-            return core_imp_conn
-        else:
-            raise osv.except_osv(_("Connection Error"), _("Could not connect to server\nCheck location, username & password."))
+        return conn.ready() and conn or False
 
     def make_fieldproc(self, output_opts):
         def strip_delimiter(field):
@@ -211,8 +196,8 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             context = {}
 
         if not context.get('external_log_id', None):
-            _logger.warn('External referential execution ID was not passed to _export in context')
-            raise osv.except_osv('External referential execution ID was not passed to _export in context')
+            _logger.error('External referential execution ID was not passed to _export in context')
+            return False
 
         referential_id = self._ensure_single_referential(cr, uid, referential_id, context=context)
         referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
@@ -305,12 +290,11 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             except ExternalReferentialError, X:
                 for res_id in X.res_ids:
                     report_line_obj.log_failed(cr, uid, X.model_name, 'export', referential_id, res_id=res_id, defaults={}, context=context)
-                self._undo_export(cr, uid, referential_id, model_name, res_ids, context=context)
                 self.pool.get('external.log').end_transfer(cr, uid, context.get('external_log_id', None), context=context)
             except Exception, X:
                 self._undo_export(cr, uid, referential_id, model_name, context=context)
-                self.pool.get('external.log').end_transfer(cr, uid, context.get('external_log_id', None), context=context)
-                raise osv.except_osv(_('Export error'), X.message)
+                self.pool.get('external.log').end_transfer(cr, uid, context.get('external_log_id', None), force_status='transfer-failed', context=context)
+                _logger.error(X.message)
 
             res[mapping.id] = True
 
@@ -334,6 +318,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         res_ids = res_ids or None
 
+        # remove resources from ir_model_data
         data_pool = self.pool.get('ir.model.data')
         for mapping_id, exported in self._new_exported.items():
             if res_ids:
@@ -342,10 +327,27 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             if DEBUG:
                 _logger.debug('CSV export: Export failed, so removing ir_model_data records: %s' % (exported,))
 
-        # if res_ids or any(self._new_exported.values()):
-        #     cr.rollback()
-        #     if DEBUG:
-        #         _logger.debug('CSV export: Export failed, so rollback ir_model_data records')
+        # remove state in ('exported','updated','confirmed') resources
+        # from external_report_line
+        if 'external_log_id' in context and isinstance(context['external_log_id'], (int, long)):
+            report_line_pool = self.pool.get('external.report.line')
+            try:
+                # create a temporary cursor to remove the redundant
+                # report lines; this overcomes the default isolation
+                # level
+                _cr = pooler.get_db(cr.dbname).cursor()
+                report_line_ids = report_line_pool.search(_cr, uid, [('state','in',['exported','updated','confirmed']),
+                                                                     ('external_log_id','=',context['external_log_id'])], context=context)
+                report_line_pool.unlink(_cr, uid, report_line_ids, context=context)
+                if DEBUG:
+                    _logger.debug('CSV export: Export failed, so removing external_report_line records: %s' % (report_line_ids,))
+            except:
+                _cr.rollback()
+                raise
+            else:
+                _cr.commit()
+            finally:
+                _cr.close()
 
         self._new_exported = {}
 

@@ -188,16 +188,20 @@ class Connection(object):
  
         err_msg = '\n'.join(error_list)
         self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=None, msg=err_msg, context=self._saved_ctx)
-        raise osv.except_osv(_('Connection Error'), _(err_msg))
+        self._ftp_client = None
 
     def _disconnect(self):
         try:
             if self.debug:
                 self.logger.debug('Disconnecting from FTP %s:%d' % (self.host, self.port))
             self._ftp_client.quit()
+            self._ftp_client = None
         except ftplib.all_errors, X:
             if self.debug:
                 self.logger.warn('Disconnect from FTP %s:%d failed: %s' % (self.host, self.port, X.message))
+
+    def ready(self):
+        return self._ftp_client is not None
 
     def init_import(self, remote_csv_fn, oe_model_name, external_key_name, column_headers, context=None):
         if not context:
@@ -353,6 +357,7 @@ class Connection(object):
             self.logger.error(msg)
             self._clean_up_export()
             self._export_ready = False
+            raise X
         
     def _check_export_ready(self):
         if not self._export_ready:
@@ -416,10 +421,8 @@ class Connection(object):
                             csv_out.writerow(encode_vals(rec, self._out_encoding))
                     except csv.Error, X:
                         self.logger.error('CSV export: CSV writing error: %s' % (X.message,))
-                        raise X
                     except ValueError, X:
                         self.logger.error('CSV export: Attempted to write incorrect record: %s' % (X.message,))
-                        raise X
 
                 if self.debug:
                     self.logger.debug('CSV export: wrote %d records to local CSV file %s' % (len(ids), self._export_tmp_fn))
@@ -430,7 +433,6 @@ class Connection(object):
             if self.reporter:
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg, context=self._saved_ctx)
             self._clean_up_export()
-            raise X
 
     def _clean_up_export(self):
         try:
@@ -449,7 +451,6 @@ class Connection(object):
             self.logger.error(msg)
             if self.reporter:
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg, context=self._saved_ctx)
-            raise X
 
     def init_sync(self, import_csv_fn, export_csv_fn, oe_model_name, external_key_name, column_headers, required_fields, context=None):
         if not context:

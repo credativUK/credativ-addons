@@ -39,6 +39,9 @@ class external_log(osv.osv):
         'start_time': fields.datetime('Start time', required=True, readonly=True),
         'end_time': fields.datetime('End time', readonly=True),
         'status': fields.selection([('in-progress', 'In progress'),
+                                    ('transfer-failed', 'Transfer failed'),
+                                    ('imported-fail', 'Imported - with errors'),
+                                    ('imported-success', 'Imported - correct'),
                                     ('exported-fail', 'Exported - with errors'),
                                     ('exported-success', 'Exported - correct'),
                                     ('complete-rejections', 'Complete - rejections'),
@@ -51,6 +54,18 @@ class external_log(osv.osv):
     _defaults = {
         'name': lambda self, cr, uid, context: self.pool.get('ir.sequence').next_by_code(cr, uid, 'extref_exec_id', context=context)
         }
+
+    _allowed_status_moves = [
+        ('in-progress', 'transfer-failed'),
+        ('in-progress', 'imported-failed'),
+        ('in-progress', 'imported-success'),
+        ('in-progress', 'exported-fail'),
+        ('in-progress', 'exported-success'),
+        ('imported-success', 'complete-rejections'),
+        ('imported-success', 'complete-complete'),
+        ('exported-success', 'complete-rejections'),
+        ('exported-success', 'complete-complete')
+        ]
 
     def start_transfer(self, cr, uid, ids, referential_id, model_name, context=None):
         if context is None:
@@ -84,14 +99,20 @@ class external_log(osv.osv):
         if isinstance(ids, (list, tuple)):
             ids = ids[0]
 
-        log = self.browse(cr, uid, ids)
-        if not log:
-            raise ValueError('Cannot call end_transfer on non-existant log: %d' % (ids,))
-
         try:
             log_cr = pooler.get_db(cr.dbname).cursor()
-            self.write(log_cr, uid, ids, {'end_time': datetime.datetime.now(),
-                                          'status': force_status or all([line.state == 'exported' for line in log.line_ids]) and 'exported-success' or 'exported-fail'})
+            log = self.browse(log_cr, uid, ids)
+
+            if not log:
+                raise ValueError('Cannot call end_transfer on non-existant log: %d' % (ids,))
+
+            # FIXME Needs to account for import and confirmation
+            # operations
+            new_status = force_status or all([line.state in ['exported', 'updated'] for line in log.line_ids]) and 'exported-success' or 'exported-fail'
+            if (log.status, new_status) in self._allowed_status_moves:
+                self.write(log_cr, uid, ids, {'end_time': datetime.datetime.now(), 'status': new_status})
+            else:
+                _logger.warn('Cannot update transfer log status from "%s" to "%s"; status change ignored.' % (log.status, new_status))
         except:
             log_cr.rollback()
             raise
@@ -164,32 +185,25 @@ class external_report_lines(osv.osv):
     def retry_system(self, cr, uid):
         raise NotImplementedError()
 
-    def _log(self, cr, uid, model, action, referential_id, status, res_id=None, external_id=None, data_record=None, defaults=None, context=None):
+    def _log(self, cr, uid, model, action, referential_id, state, res_id=None, external_id=None, data_record=None, defaults=None, context=None):
         defaults = defaults or {}
         context = context or {}
 
         log_cr = pooler.get_db(cr.dbname).cursor()
 
         try:
-            exists = self.search(cr, uid, [('res_model','=',model),
-                                           ('action','=',action),
-                                           ('referential_id','=',referential_id),
-                                           ('res_id','=',res_id)], context=context)
             origin_defaults = defaults.copy()
             origin_context = context.copy()
             # connection object cannot be serialised
             if origin_context.get('conn_obj', False):
                 del origin_context['conn_obj']
             info = self._prepare_log_info(log_cr, uid, origin_defaults, origin_context, context=context)
-            if exists:
-                self.write(log_cr, uid, exists[0], info, context=context)
-            else:
-                vals = self._prepare_log_vals(log_cr, uid, model, action, res_id=None, external_id=None, referential_id=referential_id, data_record=None, context=context)
-                vals.update(info)
-                vals['status'] = status
-                vals['external_log_id'] = context.get('external_log_id')
-                _logger.debug('Create log entry with vals: %s' % (vals,))
-                report = self.create(log_cr, uid, vals, context=context)
+            vals = self._prepare_log_vals(log_cr, uid, model, action, res_id=res_id, external_id=external_id,
+                                          referential_id=referential_id, data_record=data_record, context=context)
+            vals.update(info)
+            vals['state'] = state
+            vals['external_log_id'] = context.get('external_log_id')
+            report = self.create(log_cr, uid, vals, context=context)
         except:
             log_cr.rollback()
             raise
@@ -200,18 +214,17 @@ class external_report_lines(osv.osv):
         return report
         
     def log_exported(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, data_record=None, defaults=None, context=None):
-        return self._log(cr, uid, model, action, referential_id, 'exported', res_id, external_id, data_record, defaults, context=context)
+        return self._log(cr, uid, model, action, referential_id, 'exported', res_id=res_id, external_id=external_id, data_record=data_record, defaults=defaults, context=context)
 
     def log_updated(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, data_record=None, defaults=None, context=None):
-        return self._log(cr, uid, model, action, referential_id, 'updated', res_id, external_id, data_record, defaults, context=context)
+        return self._log(cr, uid, model, action, referential_id, 'updated', res_id=res_id, external_id=external_id, data_record=data_record, defaults=defaults, context=context)
 
     def log_failed(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, data_record=None, defaults=None, context=None):
 
-        res = super(external_report_lines, self).log_failed(cr, uid, model, action, referential_id, res_id, external_id, data_record, defaults, context)
+        res = super(external_report_lines, self).log_failed(cr, uid, model, action, referential_id, res_id=res_id, external_id=external_id, data_record=data_record, defaults=defaults, context=context)
         return res
 
     def log_success(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, context=None):
-
         # FIXME The super method actually removes the fail log, so we
         # probably don't actually want to do this
         #res = super(external_report_lines, self).log_success(cr, uid, model, action, referential_id, res_id, external_id, context)
@@ -219,7 +232,7 @@ class external_report_lines(osv.osv):
         pass
 
     def log_rejected(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, context=None):
-        return self._log(cr, uid, model, action, referential_id, 'rejected', res_id, external_id, context=context)
+        return self._log(cr, uid, model, action, referential_id, 'rejected', res_id=res_id, external_id=external_id, context=context)
 
     def retry(self, cr, uid, ids, context=None):
 
