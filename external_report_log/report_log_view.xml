@@ -20,7 +20,7 @@
 
         <!-- Add external log tree to external referential form view -->
         <!-- FIXME This is only for wms_external_referential_form_view; should be for all external referentials -->
-        <record id="wms_external_referential_log_view" model="ir.ui.view">
+        <!--<record id="wms_external_referential_log_view" model="ir.ui.view">
             <field name="name">wms external_referential_log_view</field>
             <field name="model">external.referential</field>
             <field name="inherit_id" ref="wms_integration.wms_external_referential_form_view" />
@@ -42,7 +42,7 @@
                     </page>
                 </xpath>
             </field>
-        </record>
+        </record>-->
 
         <!-- Add the log ID to external_report_lines tree view and search view -->
         <record id="external_report_log_line_search_view" model="ir.ui.view">

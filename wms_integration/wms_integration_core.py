@@ -546,7 +546,11 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         if context == None:
             context = {}
         if not 'search_params' in context:
-            context['search_params'] = [('type', 'in', ('consu', 'product'))]
+            context['search_params'] = [('type', 'in', ('consu', 'product')),
+                                        ('packaging.weight', '>', 0.0),
+                                        ('packaging.height', '>', 0.0),
+                                        ('packaging.width', '>', 0.0),
+                                        ('packaging.length', '>', 0.0)]
 
         referential_id = self._ensure_single_referential(cr, uid, id, context=context)
         referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
