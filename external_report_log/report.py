@@ -121,8 +121,8 @@ class external_report_lines(osv.osv):
                                    ('updated', 'Updated'),
                                    ('failed','Failed'),
                                    ('confirmed','Confirmed'),
-                                   ('rejected','Rejected')], required=True, readonly=True),
-        'external_log_id': fields.many2one('external.log', 'External log', required=True, readonly=True),
+                                   ('rejected','Rejected')], readonly=True),
+        'external_log_id': fields.many2one('external.log', 'External log', readonly=True),
         'message': fields.text('Error message', readonly=True)
         }
 
