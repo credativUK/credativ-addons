@@ -255,51 +255,54 @@ class stock_dispatch(osv.osv):
         wms_sm_sequence = {}
         
         for dispatch in self.browse(cr, uid, ids, context=context):
-            move_ids = []
-            for move in dispatch.stock_moves:
-                
-                rec_check_ids = data_pool.search(cr, uid, [('model', '=', 'stock.move'), ('res_id', '=', move.id), ('module', 'ilike', 'extref'), ('external_referential_id', '=', dispatch.warehouse_id.referential_id.id)])
-                
-                if rec_check_ids:
-                    rec_checks = data_pool.browse(cr, uid, rec_check_ids, context=context)
-                    rec_check_ids = []
-                    for rec_check in rec_checks:
-                        try:
-                            dispatch_name, sm_seq = rec_check.name.split('/')[1].split('_')
-                            if dispatch_name == dispatch.name:
-                                rec_check_ids.append(rec_check.id)
-                        except Exception, e:
-                            # Something is wrong with this referential, delete it and create a new one
-                            data_pool.unlink(cr, uid, rec_checks.id, context=context)
-                            rec_check_ids = []
-                        else:
-                            wms_sm_sequence[move.id] = sm_seq
-                            if move.state == 'cancel' or move.dispatch_id.id != dispatch.id:
-                                continue
-                            move_ids.append(move.id)
-                            data_pool.write(cr, uid, rec_check.id, {}, context=context)
-                else:
-                    if move.state == 'cancel':
-                        continue
-                    cr.execute("""SELECT
-                                MAX(COALESCE(SUBSTRING(name from 'stock_move/%s_([0-9]*)'), '0')::INTEGER) + 1
-                                FROM ir_model_data imd
-                                WHERE external_referential_id = %s
-                                AND model = 'stock.move'
-                                AND module ilike 'extref%%'""" % (dispatch.name, dispatch.warehouse_id.referential_id.id,))
-                    number = cr.fetchall()
-                    if number and number[0][0]:
-                        sm_seq = number[0][0]
+            address_groups = {}
+            for move in dispatch.stock_moves: # Group moves by the customer delivery address
+                address_groups.setdefault(move.address_id.id, []).append(move)
+
+            for address_id, moves in address_groups.iteritems():
+                move_ids = []
+                for move in moves:
+                    rec_check_ids = data_pool.search(cr, uid, [('model', '=', 'stock.move'), ('res_id', '=', move.id), ('module', 'ilike', 'extref'), ('external_referential_id', '=', dispatch.warehouse_id.referential_id.id)])
+                    
+                    if rec_check_ids:
+                        rec_checks = data_pool.browse(cr, uid, rec_check_ids, context=context)
+                        rec_check_ids = []
+                        for rec_check in rec_checks:
+                            try:
+                                dispatch_name, address_name, sm_seq = rec_check.name.split('/')[1].split('_')
+                                if dispatch_name == dispatch.name and address_name == '%d' % (address_id,):
+                                    rec_check_ids.append(rec_check.id)
+                            except Exception, e:
+                                # Something is wrong with this referential, delete it and create a new one
+                                data_pool.unlink(cr, uid, rec_checks.id, context=context)
+                                rec_check_ids = []
+                            else:
+                                wms_sm_sequence[move.id] = sm_seq
+                                if move.state == 'cancel' or move.dispatch_id.id != dispatch.id:
+                                    continue
+                                move_ids.append(move.id)
+                                data_pool.write(cr, uid, rec_check.id, {}, context=context)
                     else:
-                        sm_seq = 1
-                    
-                    move_pool.create_external_id_vals(cr, uid, move.id, "%s_%d" % (dispatch.name, sm_seq), dispatch.warehouse_id.referential_id.id, context=context)
-                    
-                    wms_sm_sequence[move.id] = sm_seq
-                    move_ids.append(move.id)
-            
-            final_move_ids.extend(move_ids)
-            
+                        if move.state == 'cancel':
+                            continue
+                        cr.execute("""SELECT
+                                    MAX(COALESCE(SUBSTRING(name from 'stock_move/%s_%d_([0-9]*)'), '0')::INTEGER) + 1
+                                    FROM ir_model_data imd
+                                    WHERE external_referential_id = %s
+                                    AND model = 'stock.move'
+                                    AND module ilike 'extref%%'""" % (dispatch.name, address_id, dispatch.warehouse_id.referential_id.id,))
+                        number = cr.fetchall()
+                        if number and number[0][0]:
+                            sm_seq = number[0][0]
+                        else:
+                            sm_seq = 1
+                        
+                        move_pool.create_external_id_vals(cr, uid, move.id, "%s_%d_%d" % (dispatch.name, address_id, sm_seq), dispatch.warehouse_id.referential_id.id, context=context)
+                        
+                        wms_sm_sequence[move.id] = sm_seq
+                        move_ids.append(move.id)
+                final_move_ids.extend(move_ids)
+        
         if final_move_ids:
             ctx = context.copy()
             ctx.update({'wms_sm_sequence': wms_sm_sequence})
@@ -320,7 +323,7 @@ class stock_dispatch(osv.osv):
         if context == None:
             context = {}
 
-        export_dispatch_id = []
+        export_dispatch_ids = []
         
         for dispatch in self.browse(cr, uid, ids):
             if not dispatch.warehouse_id or not dispatch.warehouse_id.referential_id:
@@ -330,7 +333,7 @@ class stock_dispatch(osv.osv):
                 ext_id = self.oeid_to_extid(cr, uid, dispatch.id, dispatch.warehouse_id.referential_id.id, context=context)
                 if not ext_id: # We should only export new dispatches
                     self.create_external_id_vals(cr, uid, dispatch.id, dispatch.id, dispatch.warehouse_id.referential_id.id, context=context)
-                    export_dispatch_id.append(dispatch.id)
+                    export_dispatch_ids.append(dispatch.id)
                 else: # Exported already, skip
                     continue
             
@@ -338,7 +341,7 @@ class stock_dispatch(osv.osv):
                 raise
                 pass
         
-        self.wms_export_all(cr, uid, export_dispatch_id, context=context)
+        self.wms_export_all(cr, uid, export_dispatch_ids, context=context)
             
         return True
 

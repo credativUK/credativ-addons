@@ -288,6 +288,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                 conn.call(mapping.external_create_method, records=export_data)
                 conn.finalize_export(context=context)
             except ExternalReferentialError, X:
+                cr.rollback()
                 for res_id in X.res_ids:
                     report_line_obj.log_failed(cr, uid, X.model_name, 'export', referential_id, res_id=res_id, defaults={}, context=context)
                 self.pool.get('external.log').end_transfer(cr, uid, context.get('external_log_id', None), context=context)
