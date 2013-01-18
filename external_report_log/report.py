@@ -137,12 +137,34 @@ external_referential()
 class external_report_lines(osv.osv):
     _inherit = 'external.report.line'
 
+    def _get_resource_name(self, cr, uid, ids, field_names, args, context=None):
+        if not ids: return {}
+        res = {}
+        if context is None:
+            context = {}
+        for line in self.browse(cr, uid, ids, context=context):
+            if line.res_id != 0:
+                record = False
+                model_pool = False
+                if line.res_model:
+                    model_pool = self.pool.get(line.res_model)
+                if model_pool:
+                    record = model_pool.read(cr, uid, line.res_id, ['name'], context=context)
+                if record:
+                    res[line.id] = record['name']
+                else:
+                    res[line.id] = '<NOT FOUND>'
+            else:
+                res[line.id] = '<DEFAULT>'
+        return res
+
     _columns = {
         'state': fields.selection([('exported','Exported'),
                                    ('updated', 'Updated'),
                                    ('failed','Failed'),
                                    ('confirmed','Confirmed'),
-                                   ('rejected','Rejected')], readonly=True),
+                                   ('rejected','Rejected')], readonly=True, string='State'),
+        'res_name': fields.function(_get_resource_name, type='char', size=128, string='Resource Name'),
         'external_log_id': fields.many2one('external.log', 'External log', readonly=True),
         'message': fields.text('Error message', readonly=True)
         }

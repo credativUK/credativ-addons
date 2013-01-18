@@ -32,6 +32,24 @@
                         <separator string="Regular actions" colspan="4" />
                         <button name="export_products" string="1 - Export Products" colspan="2" type="object" />
                     </page>
+                    <!-- FIXME This tree is copied from
+                         external_report_log's view because
+                         wms_external_referential_form_view does not
+                         inherit from external_referential_form_view
+                         -->
+                    <page string="History and confirmations">
+                        <field name="external_log_ids">
+                            <tree string="Execution reports">
+                                <field name="name" />
+                                <field name="model_id" />
+                                <field name="create_uid" />
+                                <field name="start_time" />
+                                <field name="end_time" />
+                                <field name="status" />
+                                <button name="import_confirmation" string="Get confirmation" icon="gtk-go-forward" type="object" colspan="2" attrs="{'invisible': [('status','in',['in-progress','transfer-failed','imported-failed','exported-fail','complete-rejections','complete-complete'])]}" />
+                            </tree>
+                        </field>
+                    </page>
                 </notebook>
             </group>
             <field name="mapping_ids" widget="one2many_list" nolabel="1">
