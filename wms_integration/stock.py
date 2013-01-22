@@ -359,7 +359,6 @@ class stock_warehouse(osv.osv):
         'mapping_purchase_orders_import_id': fields.many2one('external.mapping', string='Override Purchase Orders Import Mapping'),
         'mapping_dispatch_orders_import_id': fields.many2one('external.mapping', string='Override Dispatch Import Mapping'),
     }
-    _override_mappings = ['mapping_purchase_orders_id', 'mapping_dispatch_orders_id']
     
     def get_exportable_pos(self, cr, uid, ids, referential_id, context=None):
         if not ids:
@@ -393,7 +392,7 @@ class stock_warehouse(osv.osv):
         po_ids = self.pool.get('purchase.order').search(cr, uid, [('id', 'in', [x[0] for x in po_ids]),], context=context)
         return po_ids
 
-    def import_export_confirmations(self, cr, uid, ids, model_name, success_fun, external_log_id, context=None):
+    def import_export_confirmations(self, cr, uid, ids, model_name, success_fun, ovr_mapping=None, external_log_id=None, context=None):
         '''
         This method implements the import of the data confirming the
         receipt of exported records.
@@ -402,7 +401,8 @@ class stock_warehouse(osv.osv):
         was made.
 
         @external_log_id (int): ID of an external_log whose child
-        export records will be polled for confirmation
+        export records will be polled for confirmation; if None, the
+        most recent log for the model will be used.
 
         @success_fun (function): is a Boolean function of two
         arguments, the exported record and the corresponding
@@ -415,6 +415,7 @@ class stock_warehouse(osv.osv):
 
         model_pool = self.pool.get('ir.model')
         mapping_pool = self.pool.get('external.mapping')
+        report_log_pool = self.pool.get('external.log')
 
         for warehouse in self.browse(cr, uid, ids):
             if not warehouse.referential_id:
@@ -422,8 +423,7 @@ class stock_warehouse(osv.osv):
 
             # get the mapping; either from one of the override
             # mappings, or from the given model
-            mapping_ids = [getattr(warehouse, ovr_mapping) for ovr_mapping in self._override_mappings]
-            if not mapping_ids:
+            if not ovr_mapping:
                 model_ids = model_pool.search(cr, uid, [('model','=',model_name)])
                 if len(model_ids) > 1:
                     raise osv.except_osv(_('Integrity error'), _('Model name "%s" is ambiguous.' % (model_name,)))
@@ -433,18 +433,34 @@ class stock_warehouse(osv.osv):
                 mapping_ids = mapping_pool.search(cr, uid, [('referential_id','=',warehouse.referential_id.id),
                                                             ('model_id','=',model_id),
                                                             ('purpose','=','data')])
+                mappings = mapping_pool.browse(cr, uid, mapping_ids)
+            else:
+                mappings = [getattr(warehouse, ovr_mapping)]
 
-            if not mapping_ids:
+            if not any(mappings):
                 raise osv.except_osv(_('Configuration error'),
-                                     _('No mappings found for the referential "%s" of type "%s"' %\
-                                           (warehouse.referential_id.name, warehouse.referential_id.type_id.name)))
+                                     _('No "%s" mappings found for the referential "%s" of type "%s"' %\
+                                           (ovr_mapping or model_name, warehouse.referential_id.name, warehouse.referential_id.type_id.name)))
 
             res = {}
 
-            for mapping in mapping_pool.browse(cr, uid, mapping_ids):
+            for mapping in mappings:
+                # if not supplied, get the most recent external.log
+                # for this model
+                if not external_log_id:
+                    log_id = report_log_pool.search(cr, uid, [('model_id','=',mapping.model_id.id),
+                                                              ('referential_id','=',warehouse.referential_id.id),
+                                                              ('status','in',('imported-success','exported-success'))],
+                                                    limit=1, order='start_time desc', context=context)
+                    if not log_id:
+                        _logger.info('No export waiting for confirmation for %s mappings; model: %s; referential: %s' %\
+                                         (mapping.description or '', mapping.model_id.model, warehouse.referential_id.name))
+                        continue
+
                 referential = extref_pool.browse(cr, uid, warehouse.referential_id.id, context=context)
-                exported_ids = referential._get_exported_ids_by_log(cr, uid, warehouse.referential_id.id, mapping.model_id.model, external_log_id, context=context)
-                res[mapping.id] = extref_pool._verify_export(cr, uid, mapping, exported_ids, success_fun, context=context)
+                exported_ids = referential._get_exported_ids_by_log(cr, uid, warehouse.referential_id.id, mapping.model_id.model, external_log_id or log_id, context=context)
+                if exported_ids:
+                    res[mapping.id] = extref_pool._verify_export(cr, uid, mapping, exported_ids, success_fun, context=context)
 
         return res
 
@@ -503,14 +519,18 @@ class stock_warehouse(osv.osv):
 
     def import_purchase_order_export_confirmation(self, cr, uid, ids, context=None):
         '''
-        This method imports the confirmation of receipt of export data.
+        This method imports the confirmation of receipt of exported purchase order data.
         '''
         if context == None:
             context = {}
 
         # The success_func for the verification has no data to work
         # with, so we'll just return True
-        return self.import_export_confirmations(cr, uid, ids, model_name='stock.move', success_fun=lambda exp, conf: True, context=context)
+        return self.import_export_confirmations(cr, uid, ids,
+                                                model_name='stock.move',
+                                                success_fun=lambda exp, conf: True,
+                                                ovr_mapping='mapping_purchase_orders_id',
+                                                context=context)
 
     def get_exportable_dispatches(self, cr, uid, ids, referential_id, context=None):
         if not ids:
@@ -535,6 +555,21 @@ class stock_warehouse(osv.osv):
                 dispatch_obj.wms_export_orders(cr, uid, dispatch_ids, warehouse.referential_id.id, context=context)
         
         return True
+
+    def import_dispatch_order_export_confirmation(self, cr, uid, ids, context=None):
+        '''
+        This method imports the confirmation of receipt of exported dispatches data.
+        '''
+        if context == None:
+            context = {}
+
+        # The success_func for the verification has no data to work
+        # with, so we'll just return True
+        return self.import_export_confirmations(cr, uid, ids,
+                                                model_name='stock.move',
+                                                success_fun=lambda exp, conf: True,
+                                                ovr_mapping='mapping_dispatch_orders_id',
+                                                context=context)
 
 
 stock_warehouse()

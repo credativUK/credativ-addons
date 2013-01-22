@@ -35,6 +35,7 @@ class external_log(osv.osv):
     _columns = {
         'name': fields.char('Execution reference', type='char', size=15, required=True),
         'referential_id': fields.many2one('external.referential', 'External referential', required=True, readonly=True),
+        'mapping_id': fields.many2one('external.mapping', 'External mapping', required=True, readonly=True),
         'retry_of': fields.many2one('external.log', 'Retry of', readonly=True),
         'start_time': fields.datetime('Start time', required=True, readonly=True),
         'end_time': fields.datetime('End time', readonly=True),
@@ -71,14 +72,35 @@ class external_log(osv.osv):
         if context is None:
             context = {}
 
+        extref_pool = self.pool.get('external.referential')
+        referential = extref_pool.browse(self, cr, uid, referential_id)
+
+        # get the model from the given name
         try:
             model_id = self.pool.get('ir.model').search(cr, uid, [('model','=',model_name)], context=context)[0]
         except:
             raise osv.except_osv(_('Configuration error'), _('Could not find model: "%s"' % (model_name,)))
 
+        # try and work out what mapping is going to be used
+
+        # FIXME In principle, more than one mapping could be used; we
+        # are currently assuming that just one will be used
+        mapping_ids = context.get('external_mapping_ids', False)
+        if not mapping_ids:
+            mapping_ids = self.pool.get('external.mapping').search(cr, uid, [('referential_id','=',referential_id),
+                                                                             ('model_id','=',model_name)], context=context)
+        if not mapping_ids:
+            raise osv.except_osv(_('Configuration error'),
+                                 _('No mappings found for the referential "%s" of type "%s"' %\
+                                       (referential.name, referential.type_id.name)))
+        if len(mapping_ids) > 1:
+            _logger.warn('Found multiple candidate mappings for referential "%s", model "%s"' %\
+                             (referential.name, referential.type_id.name, model_name))
+
         try:
             log_cr = pooler.get_db(cr.dbname).cursor()
             log_id = self.create(log_cr, uid, {'referential_id': referential_id,
+                                               'mapping_id': mapping_ids[0],
                                                'retry_of': context.get('retry_of_execution', None),
                                                'start_time': datetime.datetime.now(),
                                                'status': 'in-progress',
@@ -120,6 +142,27 @@ class external_log(osv.osv):
             log_cr.commit()
         finally:
             log_cr.close()
+
+    def import_confirmation(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+
+        if isinstance(ids, (list, tuple)):
+            ids = ids[0]
+
+        extref_pool = self.pool.get('external.referential')
+
+        log = self.browse(cr, uid, ids, context=context)
+        if not log:
+            # FIXME
+            return
+
+        referential = extref_pool.browse(cr, uid, log.referential_id.id, context=context)
+        exported_ids = extref_pool._get_exported_ids_by_log(cr, uid, log.referential_id.id, log.model_id.model, ids, context=context)
+        if exported_ids:
+            return extref_pool._verify_export(cr, uid, log.mapping_id, exported_ids, success_fun=lambda *a: True, context=context)
+        else:
+            _logger.warn('Found no exported records for log %s to confirm' % (log.name,))
 
 external_log()
 
