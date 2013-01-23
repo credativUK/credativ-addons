@@ -345,6 +345,35 @@ class stock_dispatch(osv.osv):
             
         return True
 
+    def wms_import_moves(self, cr, uid, ids, move_lines, context=None):
+        sm_obj = self.pool.get('stock.move')
+        wkf_service = netsvc.LocalService('workflow')
+        
+        stock_moves = sm_obj.browse(cr, uid, move_lines.keys(), context=context)
+        dispatch_dict = {}
+        
+        for stock_move in stock_moves:
+            if not stock_move.dispatch_id:
+                _logger.warn('Stock move %d dispatched but not part of a dispatch.' % (stock_move.id, move.state,))
+                sm_obj.action_done(cr, uid, stock_move.id, context=context)
+            else:
+                dispatch_dict.setdefault(stock_move.dispatch_id, []).append(stock_move)
+        
+        for dispatch, moves in dispatch_dict.iteritems():
+            dispatch_moves = set([x.id for x in dispatch.stock_moves])
+            done_moves = set([x.id for x in moves])
+            not_done_moves = list(dispatch_moves.difference(done_moves))
+            
+            sm_obj.action_done(cr, uid, list(done_moves), context=context)
+            
+            if not_done_moves:
+                _logger.error('Stock moves %s were part of dispatch %s but not completed, Unable to complete dispatch.' % (not_done_moves, dispatch.name,))
+            else:
+                wkf_service.trg_validate(uid, 'stock.dispatch', dispatch.id, 'done', cr)
+                _logger.info('Dispatch %s complted.' % (dispatch.name,))
+        
+        return
+
 stock_dispatch()
 
 class stock_warehouse(osv.osv):
@@ -571,5 +600,35 @@ class stock_warehouse(osv.osv):
                                                 ovr_mapping='mapping_dispatch_orders_id',
                                                 context=context)
 
+    def import_dispatch_receipts(self, cr, uid, ids, context=None):
+        if context == None:
+            context = {}
+        if not isinstance(ids, list):
+            ids = [ids]
+        sd_obj = self.pool.get('stock.dispatch')
+        sm_obj = self.pool.get('stock.move')
+        
+        for warehouse in self.browse(cr, uid, ids):
+            if not warehouse.referential_id or not warehouse.mapping_dispatch_orders_import_id:
+                continue
+            
+            # Find SD files to import
+            sd_import = self.pool.get('external.referential')._import(cr, uid, warehouse.mapping_dispatch_orders_import_id, context=context)
+            sm_lines = []
+            [sm_lines.extend(x) for x in sd_import]
+            
+            imported_sm = {}
+            # Map each stock move to the corresponding id through ir_model_data
+            for sm_line in sm_lines:
+                external_name = "%s_%s" % (sm_line['ref'], sm_line['lineref'])
+                erp_id = sm_obj.extid_to_oeid(cr, uid, external_name, warehouse.referential_id.id, context=context)
+                if erp_id:
+                    imported_sm[erp_id] = sm_line
+                    _logger.info('Imported Dispatch stock move %s mapped to OpenERP ID %d' % (external_name, erp_id))
+                else:
+                    _logger.warn('Imported Dispatch stock move %s does not exist in OpenERP' % (external_name,))
+            sd_obj.wms_import_moves(cr, uid, [], imported_sm, context=context)
+        # TODO: Archive files after import
+        return True
 
 stock_warehouse()
