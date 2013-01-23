@@ -446,10 +446,10 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             context = {}
 
         # import the confirmation records
-        conn = self.external_connection(cr, uid, export_mapping.referential_id, DEBUG, context=context)
+        conn = self.external_connection(cr, uid, export_mapping.referential_id.id, DEBUG, context=context)
 
         mapping_obj = self.pool.get('external.mapping')
-        verification_mapping = mapping_obj.browse(cr, uid, export_mapping.external_verification_mapping.id, context=context)
+        verification_mapping = export_mapping.external_verification_mapping or export_mapping
 
         # prepare the import file name
         now = datetime.datetime.now()
@@ -461,16 +461,17 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         importables = conn.find_importables(dirs, re.compile(basename), context=context)
 
         if len(importables) > 1:
-            raise osv.except_osv(_('Import error'), _('The pattern "%s" matched multiple importables on the external system: %s\nWill not continue with import.' % (basename, importables)))
+            _logger.warn('Found multiple files for import, importing the first from: %s' % (importables,))
         elif len(importables) == 0:
-            raise osv.except_osv(_('Import error'), _('The pattern "%s" matched no importables on the external system. Cannot continue with import.' % (basename, importables)))
+            _logger.info('Found no files for import.')
+            return {}
 
         remote_csv_fn = importables[0]
         if DEBUG:
             _logger.debug('CSV import: selected importable URI: %s' % (remote_csv_fn,))
 
         verification_columns = mapping_obj.get_ext_column_headers(cr, uid, verification_mapping.id)
-        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], export_mapping.referential_id, export_mapping.model_id.model, context=context)
+        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], export_mapping.referential_id.id, export_mapping.model_id.model, context=context)
         context['external_log_id'] = external_log_id
         conn.init_import(remote_csv_fn=remote_csv_fn,
                          oe_model_name=export_mapping.model_id.model,
@@ -480,13 +481,13 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         verification = conn.call(verification_mapping.external_list_method)
         conn.finalize_import(context=context)
 
-        res = {'mismatch': [], 'missing': [], 'unexpected': []}
+        res = {'mismatch': [], 'missing': [], 'unexpected': [], 'imported': [], 'fname': remote_csv_fn}
 
         # test the confirmation records against the exported records
         obj = self.pool.get(export_mapping.model_id.model)
         exported = dict([(r['id'], r) for r in obj.read(cr, uid, exported_ids)])
-        ir_model_data_obj = self.pool.get(export_mapping.model_id.model)
-        ir_model_data_exported_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',export_mapping.referential_id),
+        ir_model_data_obj = self.pool.get('ir.model.data')
+        ir_model_data_exported_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',export_mapping.referential_id.id),
                                                                         ('model','=',export_mapping.model_id.model),
                                                                         ('res_id','in',exported_ids)], context=context)
         res_ids = dict([(r['name'].strip(export_mapping.model_id.model.replace('.', '_') + '/'), r['res_id']) for r in ir_model_data_obj.read(cr, uid, ir_model_data_exported_ids, fields=['res_id','name'])])
@@ -499,7 +500,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                     res['mismatch'].append({'exported': exp_res, 'received': conf_res})
                 else:
                     # TODO Mark the record as export confirmed
-                    pass
+                    res['imported'].append({'exported': exp_res, 'received': conf_res})
             else:
                 res['unexpected'].append({'exported': None, 'received': conf_res})
 
@@ -517,14 +518,24 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             'mismatch':   ('exported', 'CSV export: Resource with ID "%s" failed the verification test.'),
             'missing':    ('exported', 'CSV export: Resource with ID "%s" was exported, but does not appear in confirmation receipt.'),
             'unexpected': ('received', 'CSV export: Resource with ID "%s" appears in confirmation receipt, but was not exported.')}
-        for error, records in res:
+        for error, records in res.iteritems():
+            if error in ['imported', 'fname']:
+                continue
             for r in records:
                 (rec_type, msg) = error_types[error]
                 msg = msg % r[rec_type]
                 _logger.error(msg)
-                report_line_obj.log_failed(cr, uid, export_mapping.model_id.model, 'verify', export_mapping.referential_id.id, res_id=r[rec_type]['res_id'], data_record=r[rec_type], context=context)
+                if r[rec_type].get('res_id'):
+                    report_line_obj.log_failed(cr, uid, export_mapping.model_id.model, 'verify', export_mapping.referential_id.id, res_id=r[rec_type]['res_id'], data_record=r[rec_type], context=context)
 
         self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
+        
+        fpath, fname = os.path.split(remote_csv_fn)
+        remote_csv_fn_rn = os.path.join(fpath, 'Archive', fname)
+        
+        _logger.info("Archiving imported advice file %s as %s" % (remote_csv_fn, remote_csv_fn_rn))
+        conn.rename_file(remote_csv_fn, remote_csv_fn_rn, context=context)
+        conn.finalize_rename(context=context)
 
         return res
 

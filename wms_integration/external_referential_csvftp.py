@@ -125,6 +125,7 @@ class Connection(object):
         self.logger = logger or _logger
         self.reporter = reporter
         self._saved_ctx = {}
+        self._rename = []
 
         class CustomWriterDialect(csv.Dialect):
             delimiter = csv_writer_opts.get('delimier',',')
@@ -612,3 +613,31 @@ class Connection(object):
         if failed:
             raise ExternalReferentialError('Method "delete" failed for IDs: %s' % (failed,), self._oe_model_name, failed)
 
+    def rename_file(self, source, destination, context=None):
+        if source and destination and source != destination:
+            self._rename.append([source, destination])
+    
+    def finalize_rename(self, context=None):
+        if not context:
+            context = {}
+        self._saved_ctx = context
+        
+        for (source, destination) in self._rename:
+            try:
+                if self.debug:
+                    self.logger.debug('CSV export: About to execute FTP command: RENAME %s %s' % (source, destination))
+                self._ftp_client.rename(source, destination)
+            except IOError, X:
+                msg = 'CSV export: Could not rename %s to %s : [Errno %d] %s' %\
+                    (source, destination, X.errno, X.strerror)
+                self.logger.error(msg)
+                if self.reporter:
+                    self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'rename', self.referential_id, exc=X, msg=msg, context=context)
+            except ftplib.all_errors, X:
+                msg = 'CSV export: Could not rename %s to %s : [Errno %d] %s' %\
+                    (source, destination, X.errno, X.strerror)
+                self.logger.error(msg)
+                if self.reporter:
+                    self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'rename', self.referential_id, exc=X, msg=msg, context=context)
+        
+        self._rename = []

@@ -28,6 +28,12 @@ _logger = logging.getLogger(__name__)
 class purchase_order(osv.osv):
     _inherit = "purchase.order"
 
+    def _prepare_external_id_vals(self, cr, uid, res_id, ext_id, external_referential_id, context=None):
+        ir_model_data_vals = super(purchase_order, self)._prepare_external_id_vals(cr, uid, res_id, ext_id, external_referential_id, context=context)
+        if context.get('external_log_id'):
+            ir_model_data_vals.update({'external_log_id': context['external_log_id']})
+        return ir_model_data_vals
+
     _columns = {
         'warehouse_id': fields.many2one('stock.warehouse', 'Warehouse', required=True, states={'confirmed':[('readonly',True)], 'approved':[('readonly',True)],'done':[('readonly',True)]}),
     }
@@ -131,12 +137,17 @@ class purchase_order(osv.osv):
         if context == None:
             context = {}
         data_obj = self.pool.get('ir.model.data')
+        
+        pos = self.browse(cr, uid, ids)
+        ctx = context.copy()
+        if pos and pos[0].warehouse_id.mapping_purchase_orders_id:
+            ctx.update({'external_mapping_ids': [pos[0].warehouse_id.mapping_purchase_orders_id.id,]})
 
-        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], referential_id, 'stock.move', context=context)
+        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], referential_id, 'purchase.order', context=ctx)
         #external_log = self.pool.get('external.log').browse(cr, uid, external_log_id, context=context)
         context['external_log_id'] = external_log_id
 
-        for po in self.browse(cr, uid, ids):
+        for po in pos:
             if not po.warehouse_id or not po.warehouse_id.referential_id:
                 continue
             
@@ -158,7 +169,7 @@ class purchase_order(osv.osv):
                     
                     self.wms_export_one(cr, uid, po.id, context=context)
                     
-                    self.create_external_id_vals(cr, uid, po.id, po.id, po.warehouse_id.referential_id.id, context=context)
+                    self.create_external_id_vals(cr, uid, po.id, po.name.split('-edit')[0], po.warehouse_id.referential_id.id, context=context)
                 else: # Exported already, check if we have been edited
                     rec_check_ids = data_obj.search(cr, uid, [('model', '=', self._name), ('res_id', '=', po.id), ('module', 'ilike', 'extref'), ('external_referential_id', '=', po.warehouse_id.referential_id.id)])
                     if rec_check_ids:
@@ -172,9 +183,9 @@ class purchase_order(osv.osv):
                     self.wms_export_one(cr, uid, po.id, context=context)
                     
                     if rec_check_ids: # Update the ir.model.data entry
-                        data_obj.write(cr, uid, [rec_check_ids[0],], {}, context=context)
+                        data_obj.write(cr, uid, [rec_check_ids[0],], {'external_log_id': context['external_log_id']}, context=context)
                     else: # Create the ir.model.data entry. This is because we got the ext_id from a previous PO through an edit and we need to create a new ir.model.data entry
-                        self.create_external_id_vals(cr, uid, po.id, po.id, po.warehouse_id.referential_id.id, context=context)
+                        self.create_external_id_vals(cr, uid, po.id, po.name.split('-edit')[0], po.warehouse_id.referential_id.id, context=context)
             
             except Exception, e:
                 raise
@@ -474,22 +485,22 @@ class stock_warehouse(osv.osv):
             res = {}
 
             for mapping in mappings:
+                mapping = mapping.external_verification_mapping
                 # if not supplied, get the most recent external.log
                 # for this model
+                referential = extref_pool.browse(cr, uid, warehouse.referential_id.id, context=context)
                 if not external_log_id:
                     log_id = report_log_pool.search(cr, uid, [('model_id','=',mapping.model_id.id),
                                                               ('referential_id','=',warehouse.referential_id.id),
                                                               ('status','in',('imported-success','exported-success'))],
                                                     limit=1, order='start_time desc', context=context)
-                    if not log_id:
-                        _logger.info('No export waiting for confirmation for %s mappings; model: %s; referential: %s' %\
-                                         (mapping.description or '', mapping.model_id.model, warehouse.referential_id.name))
-                        continue
-
-                referential = extref_pool.browse(cr, uid, warehouse.referential_id.id, context=context)
-                exported_ids = referential._get_exported_ids_by_log(cr, uid, warehouse.referential_id.id, mapping.model_id.model, external_log_id or log_id, context=context)
-                if exported_ids:
-                    res[mapping.id] = extref_pool._verify_export(cr, uid, mapping, exported_ids, success_fun, context=context)
+                    if log_id:
+                        exported_ids = extref_pool._get_exported_ids_by_log(cr, uid, warehouse.referential_id.id, mapping.model_id.model, external_log_id or log_id[0], context=context)
+                    else:
+                        exported_ids = []
+                else:
+                    exported_ids = extref_pool._get_exported_ids_by_log(cr, uid, warehouse.referential_id.id, mapping.model_id.model, external_log_id or log_id[0], context=context)
+                res[mapping.id] = extref_pool._verify_export(cr, uid, mapping, exported_ids, success_fun, context=context)
 
         return res
 
@@ -556,7 +567,7 @@ class stock_warehouse(osv.osv):
         # The success_func for the verification has no data to work
         # with, so we'll just return True
         return self.import_export_confirmations(cr, uid, ids,
-                                                model_name='stock.move',
+                                                model_name='purchase.order',
                                                 success_fun=lambda exp, conf: True,
                                                 ovr_mapping='mapping_purchase_orders_id',
                                                 context=context)
