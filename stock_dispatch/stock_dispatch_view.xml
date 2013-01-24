@@ -70,7 +70,9 @@
                 <form string="Dispatch">
                     <group colspan="4">
                         <field name="name"/>
+                        <field name="warehouse_id"/>
                         <field name="carrier_id" domain="[('category_id', 'child_of', [%(res_partner_category_dispatch)d])]"/>
+                        <newline/>
                         <field name="dispatch_date" on_change="on_change_dispatch_date(dispatch_date)"/>
                         <field name="cutoff_date"/>
                         <field name="date"/>

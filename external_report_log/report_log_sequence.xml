@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<openerp>
+    <data>
+        <record model="ir.sequence.type" id="report_log_seq_type">
+            <field name="name">External referential execution ID</field>
+            <field name="code">extref_exec_id</field>
+        </record>
+
+        <record model="ir.sequence" id="report_log_seq">
+            <field name="name">External referential execution ID</field>
+            <field name="code">extref_exec_id</field>
+            <field name="prefix">ER</field>
+            <field name="padding">5</field>
+        </record>
+    </data>
+</openerp>

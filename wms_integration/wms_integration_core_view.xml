@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+    <record id="wms_external_referential_form_view" model="ir.ui.view">
+    <field name="name">wms_external_referential_form_view</field>
+    <field name="model">external.referential</field>
+    <field name="type">form</field>
+    <field name="arch" type="xml">
+        <form>
+        <group col="4" colspan="4">
+                <field name="name" attrs="{'readonly':[('create_date','!=',False)]}"/>
+                <field name="create_date" invisible="True"/>
+                <notebook colspan="4">
+                    <page string="General">
+                        <field name="type_id" />
+                        <field name="location" />
+                        <field name="active" select="2"/>
+                    </page>
+                    <page string="Authentication">
+                        <field name="apiusername" />
+                        <field name="apipass" />
+                    </page>
+                </notebook>
+            </group>
+            <group col="4" colspan="4">
+                <separator string="Core Components" colspan="4" />
+                <notebook colspan="4">
+                    <page string="Referential Actions">
+                        <separator string="Compulsory" colspan="4" />
+                        <button name="refresh_mapping" string="1 - Reload Referential Mapping Templates" colspan="2" type="object" />
+                        <button name="core_sync" string="2 - Synchronize Referential Settings" colspan="2" type="object" attrs="{'readonly':[('mapping_ids','=',[])]}"/>
+                        <separator string="Regular actions" colspan="4" />
+                        <button name="export_products" string="1 - Export Products" colspan="2" type="object" />
+                    </page>
+                    <!-- FIXME This tree is copied from
+                         external_report_log's view because
+                         wms_external_referential_form_view does not
+                         inherit from external_referential_form_view
+                         -->
+                    <page string="History and confirmations">
+                        <field name="external_log_ids">
+                            <tree string="Execution reports">
+                                <field name="name" />
+                                <field name="model_id" />
+                                <field name="create_uid" />
+                                <field name="start_time" />
+                                <field name="end_time" />
+                                <field name="status" />
+                                <button name="import_confirmation" string="Get confirmation" icon="gtk-go-forward" type="object" colspan="2" attrs="{'invisible': [('status','in',['in-progress','transfer-failed','imported-failed','exported-fail','complete-rejections','complete-complete'])]}" />
+                            </tree>
+                        </field>
+                    </page>
+                </notebook>
+            </group>
+            <field name="mapping_ids" widget="one2many_list" nolabel="1">
+                <tree string="Object Mappings">
+                    <field name="description" />
+                    <field name="model_id" />
+                    <field name="purpose" />
+                </tree>
+                <form string="Object Mappings">
+                    <field name="model_id" on_change="model_id_change(model_id)" />
+                    <field name="related_model_ids" invisible="1" />
+                    <group col="3" colspan="4">
+                        <field name="description" />
+                        <field name="purpose" />
+                        <field name="external_export_uri" />
+                        <field name="external_import_uri" />
+                        <field name="external_verification_mapping" />
+                    </group>
+                    <group col="4" colspan="4">
+                        <field name="external_list_method" />
+                        <field name="external_get_method" />
+                        <field name="external_update_method" />
+                        <field name="external_create_method" />
+                        <field name="external_delete_method" />
+                        <field name="external_key_name" />
+                    </group>
+                    <field colspan="4" name="mapping_ids" widget="one2many_list" nolabel="1" context="{'model_id':model_id}">
+                        <tree string="Field Mappings">
+                            <field name="sequence" />
+                            <field name="field_id" />
+                            <field name="external_field" />
+                            <field name="type" />
+                            <field name="external_type" />
+                        </tree>
+                        <form string="Field Mapping">
+                            <field name="field_id" domain="[('model_id','=',parent.model_id)]" />
+                            <field name="sequence" />
+                            <field name="external_field" />
+                            <field name="type" />
+                            <field name="evaluation_type" />
+                            <field name="external_type" />
+                            <field name="child_mapping_id" colspan="4" attrs="{'invisible':[('evaluation_type','!=','sub-mapping')]}"/>
+                            <group string="function" attrs="{'invisible':[('evaluation_type','!=','function')]}" colspan="4">
+                                <newline />
+                                <field name="in_function" colspan="4"/>
+                                <newline />
+                                <field name="out_function" colspan="4"/>
+                            </group>
+                        </form>
+                    </field>
+                </form>
+            </field>
+        </form>
+        </field>
+    </record>
+
+    <record id="wms_integration_instances_tree_view" model="ir.ui.view">
+        <field name="name">WMS Integration Instances List</field>
+        <field name="model">external.referential</field>
+            <field name="inherit_id" ref="base_external_referentials.external_referential_tree_view" />
+        <field name="type">tree</field>
+        <field name="arch" type="xml">
+                <xpath expr="/tree" position="replace">
+            <tree>
+                <field name="name" select="1" />
+                <field name="location" select="1" />
+            </tree>
+                </xpath>
+        </field>
+    </record>
+
+    <record id="act_wms_integration_instances_tree" model="ir.actions.act_window">
+        <field name="name">WMS Integration Instances</field>
+        <field name="res_model">external.referential</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="view_type">form</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="wms_integration_instances_tree_view" />
+        <field name="domain">[('type_id.name','=','External WMS Integration')]</field>
+    </record>
+
+
+    <record id="action_wms_integration_tree_view" model="ir.actions.act_window.view">
+        <field eval="10" name="sequence"/>
+        <field name="view_mode">tree</field>
+        <field name="view_id" ref="wms_integration_instances_tree_view"/>
+        <field name="act_window_id" ref="act_wms_integration_instances_tree"/>
+    </record>
+    <record id="action_wms_integration_form_view" model="ir.actions.act_window.view">
+        <field eval="20" name="sequence"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="wms_external_referential_form_view"/>
+        <field name="act_window_id" ref="act_wms_integration_instances_tree"/>
+    </record>
+
+    <record id="action_external_wms_external_report_line" model="ir.actions.act_window">
+        <field name="name">External Report Lines</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">external.report.line</field>
+        <field name="view_type">form</field>
+        <field name="domain">[('referential_id.type_id.name', 'like', 'External WMS Integration')]</field>
+        <field name="view_id" ref="base_external_referentials.external_report_line_tree_view"/>
+        <field name="search_view_id" ref="base_external_referentials.external_report_line_search_view"/>
+    </record>
+    
+    <menuitem id="menu_wms_integration" parent="stock.menu_stock_root" name="External WMS" />
+    <menuitem id="menu_wms_integration_external_referentials" parent="menu_wms_integration" name="External Referentials" action="act_wms_integration_instances_tree" />
+    <menuitem id="menu_wms_reporting_report_line" name="External Report Lines" parent="menu_wms_integration" action="action_external_wms_external_report_line" sequence="30"/>
+        
+    </data>
+</openerp>

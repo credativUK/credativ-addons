@@ -42,6 +42,7 @@ class stock_dispatch(osv.osv):
         'state': fields.selection([('draft', 'Draft'), ('waiting', 'Waiting Another Move'), ('confirmed', 'Confirmed'), ('assigned', 'Available'), ('done', 'Done'), ('cancel', 'Cancelled')], 'Status', readonly=True, select=True),
         'dispatch_date': fields.date('Planned Dispatch Date', required=True, readonly=True, states={'draft':[('readonly',False)]}),
         'cutoff_date': fields.datetime('Cutoff Date', required=True, readonly=True, states={'draft':[('readonly',False)]}),
+        'warehouse_id': fields.many2one('stock.warehouse', string='Warehouse', required=True, readonly=True, states={'draft':[('readonly',False)]}),
         }
 
     _sql_constraints = [
@@ -180,6 +181,12 @@ class stock_dispatch(osv.osv):
     def create(self, cr, uid, data, context=None):
         if not data.get('cutoff_date', False):
             data['cutoff_date'] = self.on_change_dispatch_date(cr, uid, 0, data.get('dispatch_date', datetime.datetime.utcnow().strftime('%Y-%m-%d')), context=context)['value']['cutoff_date']
+        if not data.get('warehouse_id', False) and data.get('stock_moves') and data['stock_moves'][0] and data['stock_moves'][0][2]:
+            sm = self.pool.get('stock.move').browse(cr, uid, data['stock_moves'][0][2][0], context)
+            location_id = sm.location_id.id
+            warehouse = self.pool.get('stock.warehouse').search(cr, uid, ['|', ('lot_input_id', '=', location_id), ('lot_stock_id', '=', location_id)])
+            if warehouse:
+                data['warehouse_id'] = warehouse[0]
         return super(stock_dispatch, self).create(cr, uid, data, context=context)
     
 stock_dispatch()

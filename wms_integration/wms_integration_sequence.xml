@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<openerp>
+    <data>
+        <record model="ir.sequence.type" id="wms_extref_exec_type">
+            <field name="name">WMS external referential execution ID</field>
+            <field name="code">wms_integration.extref_exec_id</field>
+        </record>
+
+        <record model="ir.sequence" id="wms_extref_exec_id">
+            <field name="name">WMS external referential execution ID</field>
+            <field name="code">wms_integration.extref_exec_id</field>
+            <field name="prefix">WMS</field>
+            <field name="padding">5</field>
+        </record>
+    </data>
+</openerp>
