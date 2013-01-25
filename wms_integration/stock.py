@@ -179,11 +179,13 @@ class purchase_order(osv.osv):
                         last_updated_time = cr.fetchall()[0][0] or False
                         if last_updated_time < last_exported_time: # Do not export again if it does not need to be
                             continue
+                    else:
+                        rec_check_ids = data_obj.search(cr, uid, [('model', '=', self._name), ('res_id', '=', po_edit.id), ('module', 'ilike', 'extref'), ('external_referential_id', '=', po.warehouse_id.referential_id.id)])
                     
                     self.wms_export_one(cr, uid, po.id, context=context)
                     
                     if rec_check_ids: # Update the ir.model.data entry
-                        data_obj.write(cr, uid, [rec_check_ids[0],], {'external_log_id': context['external_log_id']}, context=context)
+                        data_obj.write(cr, uid, [rec_check_ids[0],], {'external_log_id': context['external_log_id'], 'res_id': po.id}, context=context)
                     else: # Create the ir.model.data entry. This is because we got the ext_id from a previous PO through an edit and we need to create a new ir.model.data entry
                         self.create_external_id_vals(cr, uid, po.id, po.name.split('-edit')[0], po.warehouse_id.referential_id.id, context=context)
             

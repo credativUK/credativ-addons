@@ -99,31 +99,6 @@ class external_mapping(osv.osv):
         'purpose': lambda *a: 'data'
     }
 
-    def name_get(self, cr, uid, ids, context=None):
-        if context is None:
-            context = {}
-
-        if not len(ids):
-            return []
-
-        res = []
-        for mapping in self.browse(cr, uid, ids, context=context):
-            res.append((mapping.id, '%s: %s' % (mapping.description or '', mapping.model_id.model)))
-
-        return res or super(external_mapping, self).name_get(cr, uid, ids, context-context)
-
-    def name_search(self, cr, uid, name='', args=[], operator='ilike', context=None, limit=12):
-        if context is None:
-            context = {}
-
-        ids = []
-        if name:
-            ids = self.search(cr, uid, [('description',operator,name)] + args, context=context)
-        if not ids:
-            return super(external_mapping, self).name_search(cr, uid, name=name, args=args, operator=operator, limit=limit, context=context)
-
-        return self.name_get(cr, uid, ids, context=context)
-
 external_mapping()
 
 class external_mapping_line(osv.osv):
