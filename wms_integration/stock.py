@@ -502,6 +502,7 @@ class stock_warehouse(osv.osv):
                         exported_ids = []
                 else:
                     exported_ids = extref_pool._get_exported_ids_by_log(cr, uid, warehouse.referential_id.id, mapping.model_id.model, external_log_id or log_id[0], context=context)
+                context['external_log_id'] = external_log_id
                 res[mapping.id] = extref_pool._verify_export(cr, uid, mapping, exported_ids, success_fun, context=context)
 
         return res

@@ -73,7 +73,7 @@ class external_log(osv.osv):
             context = {}
 
         extref_pool = self.pool.get('external.referential')
-        referential = extref_pool.browse(self, cr, uid, referential_id)
+        referential = extref_pool.browse(cr, uid, referential_id)
 
         # get the model from the given name
         try:
@@ -95,7 +95,7 @@ class external_log(osv.osv):
                                        (referential.name, referential.type_id.name)))
         if len(mapping_ids) > 1:
             _logger.warn('Found multiple candidate mappings for referential "%s", model "%s"' %\
-                             (referential.name, referential.type_id.name, model_name))
+                             (referential.name, model_name))
 
         try:
             log_cr = pooler.get_db(cr.dbname).cursor()
@@ -285,8 +285,13 @@ class external_report_lines(osv.osv):
         return self._log(cr, uid, model, action, referential_id, 'updated', res_id=res_id, external_id=external_id, data_record=data_record, defaults=defaults, context=context)
 
     def log_failed(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, data_record=None, defaults=None, context=None):
-
         res = super(external_report_lines, self).log_failed(cr, uid, model, action, referential_id, res_id=res_id, external_id=external_id, data_record=data_record, defaults=defaults, context=context)
+        # update the fail log with additional fields
+        vals = {'state': 'failed'}
+        if context.get('external_log_id'):
+            vals['external_log_id'] = context.get('external_log_id')
+        if res:
+            self.write(cr, uid, res, vals)
         return res
 
     def log_success(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, context=None):
@@ -294,7 +299,8 @@ class external_report_lines(osv.osv):
         # probably don't actually want to do this
         #res = super(external_report_lines, self).log_success(cr, uid, model, action, referential_id, res_id, external_id, context)
         #return res
-        pass
+
+        return self._log(cr, uid, model, action, referential_id, 'confirmed', res_id=res_id, external_id=external_id, data_record=data_record, defaults=defaults, context=context)
 
     def log_rejected(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, context=None):
         return self._log(cr, uid, model, action, referential_id, 'rejected', res_id=res_id, external_id=external_id, context=context)

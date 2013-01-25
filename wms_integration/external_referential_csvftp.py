@@ -174,6 +174,7 @@ class Connection(object):
                 self._ftp_client.login(user=self.username, passwd=self.password)
                 if self.debug:
                     self.logger.info('FTP connection to %s:%d success: "%s"' % (self.host, self.port, self._ftp_client.getwelcome()))
+                    self.logger.debug('FTP working directory: %s' % (self._ftp_client.pwd(),))
                 return True
             except (socket.error, IOError), X:
                 except_msg = 'Attempt %d: Could not establish FTP connection to %s:%d: [Errno %d] %s' % (attempt, self.host, self.port, X.errno, X.strerror)
@@ -233,6 +234,7 @@ class Connection(object):
 
             self._import_cache = {}
             self._import_ready = True
+            return True
         except IOError, X:
             msg = 'CSV import: Could not retrieve %s (remote) into %s (local): [Errno %d] %s' %\
                 (remote_csv_fn, self._import_tmp.name, X.errno, X.strerror)
@@ -241,6 +243,7 @@ class Connection(object):
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=X, msg=msg, context=context)
             self._clean_up_import()
             self._import_ready = False
+            raise X
         except ftplib.all_errors, X:
             msg = 'CSV import: Could not retrieve %s (remote) into %s (local): %s' %\
                 (remote_csv_fn, self._import_tmp.name, X.message)
@@ -249,6 +252,7 @@ class Connection(object):
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=X, msg=msg, context=context)
             self._clean_up_import()
             self._import_ready = False
+            raise X
     
     def find_importables(self, dirs, matching=None, context=None):
         if not context:
@@ -257,6 +261,7 @@ class Connection(object):
 
         matching = matching or re.compile('.*')
         res = []
+        pwd = self._ftp_client.pwd()
         for d in dirs:
             try:
                 self._ftp_client.cwd(d)
@@ -271,6 +276,8 @@ class Connection(object):
                     self.logger.error(msg)
                     if self.reporter:
                         self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'import', self.referential_id, exc=X, msg=msg, context=context)
+        # reset current directory
+        self._ftp_client.cwd(pwd)
         return res
 
     def _clean_up_import(self):
@@ -350,6 +357,7 @@ class Connection(object):
 
             self._export_cache = {}
             self._export_ready = True
+            return True
         except IOError, X:
             msg = 'CSV export: Could not create local CSV cache file %s: [Errno %d] %s' %\
                 (self._export_tmp.name, X.errno, X.strerror)
@@ -634,8 +642,8 @@ class Connection(object):
                 if self.reporter:
                     self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'rename', self.referential_id, exc=X, msg=msg, context=context)
             except ftplib.all_errors, X:
-                msg = 'CSV export: Could not rename %s to %s : [Errno %d] %s' %\
-                    (source, destination, X.errno, X.strerror)
+                msg = 'CSV export: Could not rename %s to %s : %s' %\
+                    (source, destination, X.message)
                 self.logger.error(msg)
                 if self.reporter:
                     self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'rename', self.referential_id, exc=X, msg=msg, context=context)
