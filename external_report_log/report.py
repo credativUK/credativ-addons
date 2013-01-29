@@ -294,7 +294,7 @@ class external_report_lines(osv.osv):
             self.write(cr, uid, res, vals)
         return res
 
-    def log_success(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, context=None):
+    def log_success(self, cr, uid, model, action, referential_id, res_id=None, external_id=None,  data_record=None, defaults=None, context=None):
         # FIXME The super method actually removes the fail log, so we
         # probably don't actually want to do this
         #res = super(external_report_lines, self).log_success(cr, uid, model, action, referential_id, res_id, external_id, context)

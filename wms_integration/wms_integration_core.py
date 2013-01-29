@@ -522,9 +522,13 @@ class external_referential(wms_integration_osv.wms_integration_osv):
     def _import(self, cr, uid, import_mapping, context=None):
         if context is None:
             context = {}
-
+        
+        ctx = context.copy()
+        if import_mapping:
+            ctx.update({'external_mapping_ids': [import_mapping.id,]})
+        
         # import the confirmation records
-        conn = self.external_connection(cr, uid, import_mapping.referential_id.id, DEBUG, context=context)
+        conn = self.external_connection(cr, uid, import_mapping.referential_id.id, DEBUG, context=ctx)
 
         mapping_obj = self.pool.get('external.mapping')
 
@@ -535,14 +539,14 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         dirname, basename = os.path.split(import_mapping.external_import_uri.format(**import_uri_params))
         dirs = (dirname and [dirname]) or ['/']
-        importables = conn.find_importables(dirs, re.compile(basename), context=context)
+        importables = conn.find_importables(dirs, re.compile(basename), context=ctx)
         import_line = []
 
         if len(importables) == 0:
             raise osv.except_osv(_('Import error'), _('The pattern "%s" matched no importables on the external system. Cannot continue with import.' % (basename,)))
 
-        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], import_mapping.referential_id.id, import_mapping.model_id.model, context=context)
-        context['external_log_id'] = external_log_id
+        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], import_mapping.referential_id.id, import_mapping.model_id.model, context=ctx)
+        ctx['external_log_id'] = external_log_id
 
         for remote_csv_fn in importables:
             try:
@@ -554,14 +558,14 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                                  oe_model_name=import_mapping.model_id.model,
                                  external_key_name=import_mapping.external_key_name,
                                  column_headers=import_columns,
-                                 context=context)
+                                 context=ctx)
                 import_data = conn.call(import_mapping.external_list_method)
-                conn.finalize_import(context=context)
+                conn.finalize_import(context=ctx)
                 import_line.append(import_data)
             except Exception, X:
                 raise osv.except_osv(_('Import error'), str(X))
 
-        self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
+        self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=ctx)
 
         return import_line
 
