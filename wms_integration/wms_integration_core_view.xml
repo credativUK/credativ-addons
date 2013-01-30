@@ -67,6 +67,8 @@
                         <field name="external_export_uri" />
                         <field name="external_import_uri" />
                         <field name="external_verification_mapping" />
+                        <newline />
+                        <field name="success_fun" />
                     </group>
                     <group col="4" colspan="4">
                         <field name="external_list_method" />

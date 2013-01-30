@@ -72,6 +72,12 @@ class external_log(osv.osv):
         if context is None:
             context = {}
 
+        # ensure no incomplete transfers exist
+        if self.incomplete_transfers(cr, uid, ids, referential_id, model_name, context=context):
+            _logger.error('Will not export while incomplete transfers exist')
+            raise osv.except_osv(_('Export error'),
+                                 _('Will not export while incomplete transfers exist'))
+
         extref_pool = self.pool.get('external.referential')
         referential = extref_pool.browse(cr, uid, referential_id)
 
@@ -143,6 +149,29 @@ class external_log(osv.osv):
         finally:
             log_cr.close()
 
+    def completed(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+
+        if isinstance(ids, (list, tuple)):
+            ids = ids[0]
+
+        completed = False
+
+        try:
+            log_cr = pooler.get_db(cr.dbname).cursor()
+            log = self.browse(log_cr, uid, ids)
+
+            if not log:
+                raise ValueError('Cannot call end_transfer on non-existant log: %s' % (ids,))
+
+            # FIXME Needs to account for import and confirmation
+            # operations
+            completed = all([line.state in ['exported', 'updated'] for line in log.line_ids])
+        finally:
+            log_cr.close()
+        return completed
+
     def import_confirmation(self, cr, uid, ids, context=None):
         if context is None:
             context = {}
@@ -157,12 +186,39 @@ class external_log(osv.osv):
             # FIXME
             return
 
+        context['external_log_id'] = ids
         referential = extref_pool.browse(cr, uid, log.referential_id.id, context=context)
         exported_ids = extref_pool._get_exported_ids_by_log(cr, uid, log.referential_id.id, log.model_id.model, ids, context=context)
         if exported_ids:
-            return extref_pool._verify_export(cr, uid, log.mapping_id, exported_ids, success_fun=lambda *a: True, context=context)
+            return extref_pool._verify_export(cr, uid, log.mapping_id, exported_ids, context=context)
         else:
             _logger.warn('Found no exported records for log %s to confirm' % (log.name,))
+
+    def incomplete_transfers(self, cr, uid, ids, referential_id, model_name, context=None):
+        '''
+        This method returns any incomplete transfers for the given
+        referential and model.
+        '''
+
+        if context is None:
+            context = {}
+
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
+        extref_pool = self.pool.get('external.referential')
+        referential = extref_pool.browse(cr, uid, referential_id)
+
+        # get the model from the given name
+        try:
+            model_id = self.pool.get('ir.model').search(cr, uid, [('model','=',model_name)], context=context)[0]
+        except:
+            raise osv.except_osv(_('Configuration error'), _('Could not find model: "%s"' % (model_name,)))
+
+        return self.search(cr, uid, [('id','not in',ids),
+                                     ('referential_id','=',referential_id),
+                                     ('model_id','=',model_id),
+                                     ('status','in',['in-progress','imported-fail','imported-success','exported-fail','exported-success'])], context=context)
 
 external_log()
 

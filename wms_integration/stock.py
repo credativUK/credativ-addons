@@ -20,6 +20,7 @@
 ##############################################################################
 from osv import osv, fields
 from tools.translate import _
+import netsvc
 import logging
 from datetime import datetime
 
@@ -195,6 +196,9 @@ class purchase_order(osv.osv):
 
         self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
 
+        # schedule verification of the export
+        self.pool.get('external.referential')._schedule_verification(cr, uid, referential_id, context=context)
+
         return True
     
     def wms_import_moves(self, cr, uid, ids, move_lines, context=None):
@@ -329,6 +333,9 @@ class stock_dispatch(osv.osv):
             self.pool.get('external.referential')._export(cr, uid, dispatch.warehouse_id.referential_id.id, 'stock.move', final_move_ids, context=ctx)
 
             self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
+
+            # schedule verification of the export
+            self.pool.get('external.referential')._schedule_verification(cr, uid, dispatch.warehouse_id.referential_id.id, context=ctx)
         
         return
     
@@ -367,7 +374,7 @@ class stock_dispatch(osv.osv):
         
         for stock_move in stock_moves:
             if not stock_move.dispatch_id:
-                _logger.warn('Stock move %d dispatched but not part of a dispatch.' % (stock_move.id, move.state,))
+                _logger.warn('Stock move %d dispatched but not part of a dispatch.' % (stock_move.id, stock_move.state,))
                 sm_obj.action_done(cr, uid, stock_move.id, context=context)
             else:
                 dispatch_dict.setdefault(stock_move.dispatch_id, []).append(stock_move)
@@ -434,7 +441,7 @@ class stock_warehouse(osv.osv):
         po_ids = self.pool.get('purchase.order').search(cr, uid, [('id', 'in', [x[0] for x in po_ids]),], context=context)
         return po_ids
 
-    def import_export_confirmations(self, cr, uid, ids, model_name, success_fun, ovr_mapping=None, external_log_id=None, context=None):
+    def import_export_confirmations(self, cr, uid, ids, model_name, ovr_mapping=None, external_log_id=None, context=None):
         '''
         This method implements the import of the data confirming the
         receipt of exported records.
@@ -445,11 +452,6 @@ class stock_warehouse(osv.osv):
         @external_log_id (int): ID of an external_log whose child
         export records will be polled for confirmation; if None, the
         most recent log for the model will be used.
-
-        @success_fun (function): is a Boolean function of two
-        arguments, the exported record and the corresponding
-        confirmation record; it should return True if the export of
-        the record was successful, or False otherwise
         '''
         if context is None:
             context = {}
@@ -465,13 +467,14 @@ class stock_warehouse(osv.osv):
 
             # get the mapping; either from one of the override
             # mappings, or from the given model
+            model_ids = model_pool.search(cr, uid, [('model','=',model_name)])
+            if len(model_ids) > 1:
+                raise osv.except_osv(_('Integrity error'), _('Model name "%s" is ambiguous.' % (model_name,)))
+            if not model_ids:
+                raise osv.except_osv(_('Data error'), _('No such model: "%s"' % (model_name,)))
+            model_id = model_ids[0]
+
             if not ovr_mapping:
-                model_ids = model_pool.search(cr, uid, [('model','=',model_name)])
-                if len(model_ids) > 1:
-                    raise osv.except_osv(_('Integrity error'), _('Model name "%s" is ambiguous.' % (model_name,)))
-                if not model_ids:
-                    raise osv.except_osv(_('Data error'), _('No such model: "%s"' % (model_name,)))
-                model_id = model_ids[0]
                 mapping_ids = mapping_pool.search(cr, uid, [('referential_id','=',warehouse.referential_id.id),
                                                             ('model_id','=',model_id),
                                                             ('purpose','=','data')])
@@ -486,24 +489,27 @@ class stock_warehouse(osv.osv):
 
             res = {}
 
-            for mapping in mappings:
-                mapping = mapping.external_verification_mapping
+            for export_mapping in mappings:
                 # if not supplied, get the most recent external.log
                 # for this model
                 referential = extref_pool.browse(cr, uid, warehouse.referential_id.id, context=context)
                 if not external_log_id:
-                    log_id = report_log_pool.search(cr, uid, [('model_id','=',mapping.model_id.id),
+                    log_id = report_log_pool.search(cr, uid, [('model_id','=',model_id),
                                                               ('referential_id','=',warehouse.referential_id.id),
                                                               ('status','in',('imported-success','exported-success'))],
                                                     limit=1, order='start_time desc', context=context)
                     if log_id:
-                        exported_ids = extref_pool._get_exported_ids_by_log(cr, uid, warehouse.referential_id.id, mapping.model_id.model, external_log_id or log_id[0], context=context)
+                        exported_ids = extref_pool._get_exported_ids_by_log(cr, uid, warehouse.referential_id.id,
+                                                                            export_mapping.model_id.model, external_log_id or log_id[0], context=context)
                     else:
                         exported_ids = []
                 else:
-                    exported_ids = extref_pool._get_exported_ids_by_log(cr, uid, warehouse.referential_id.id, mapping.model_id.model, external_log_id or log_id[0], context=context)
-                context['external_log_id'] = external_log_id
-                res[mapping.id] = extref_pool._verify_export(cr, uid, mapping, exported_ids, success_fun, context=context)
+                    exported_ids = extref_pool._get_exported_ids_by_log(cr, uid, warehouse.referential_id.id,
+                                                                        export_mapping.model_id.model, external_log_id, context=context)
+
+                if exported_ids:
+                    context['external_log_id'] = external_log_id or log_id
+                    res[export_mapping.id] = extref_pool._verify_export(cr, uid, export_mapping, exported_ids, context=context)
 
         return res
 
@@ -567,11 +573,8 @@ class stock_warehouse(osv.osv):
         if context == None:
             context = {}
 
-        # The success_func for the verification has no data to work
-        # with, so we'll just return True
         return self.import_export_confirmations(cr, uid, ids,
                                                 model_name='purchase.order',
-                                                success_fun=lambda exp, conf: True,
                                                 ovr_mapping='mapping_purchase_orders_id',
                                                 context=context)
 
@@ -606,11 +609,8 @@ class stock_warehouse(osv.osv):
         if context == None:
             context = {}
 
-        # The success_func for the verification has no data to work
-        # with, so we'll just return True
         return self.import_export_confirmations(cr, uid, ids,
                                                 model_name='stock.move',
-                                                success_fun=lambda exp, conf: True,
                                                 ovr_mapping='mapping_dispatch_orders_id',
                                                 context=context)
 
