@@ -19,6 +19,8 @@
                                 <field name="end_time" />
                                 <field name="status" />
                                 <button name="import_confirmation" string="Get confirmation" icon="gtk-go-forward" type="object" colspan="2" attrs="{'invisible': [('status','in',['in-progress','transfer-failed','imported-failed','exported-fail','complete-rejections','complete-complete'])]}" />
+                                <button name="completed" string="Force confirmation" icon="gtk-save" type="object" colspan="2" attrs="{'invisible': [('status','in',['in-progress','transfer-failed','imported-failed','exported-fail','complete-rejections','complete-complete'])]}" />
+                                <button name="failed" string="Force rejection" icon="gtk-cancel" type="object" colspan="2" attrs="{'invisible': [('status','in',['transfer-failed','imported-failed','exported-fail','complete-rejections','complete-complete'])]}" />
                             </tree>
                         </field>
                     </page>

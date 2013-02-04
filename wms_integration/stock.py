@@ -196,9 +196,6 @@ class purchase_order(osv.osv):
 
         self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
 
-        # schedule verification of the export
-        self.pool.get('external.referential')._schedule_verification(cr, uid, referential_id, context=context)
-
         return True
     
     def wms_import_moves(self, cr, uid, ids, move_lines, context=None):
@@ -334,9 +331,6 @@ class stock_dispatch(osv.osv):
 
             self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
 
-            # schedule verification of the export
-            self.pool.get('external.referential')._schedule_verification(cr, uid, dispatch.warehouse_id.referential_id.id, context=ctx)
-        
         return
     
     def wms_export_orders(self, cr, uid, ids, referential_id, context=None):

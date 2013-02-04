@@ -225,7 +225,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         mapping_ids = context.get('external_mapping_ids', False)
         if not mapping_ids:
-            mapping_ids = self.pool.get('external.mapping').search(cr, uid, [('referential_id','=',referential_id),('model_id','=',model_name)])
+            mapping_ids = self.pool.get('external.mapping').search(cr, uid, [('referential_id','=',referential_id),('model_id','=',model_name),('purpose','=','data')])
         if not mapping_ids:
             raise osv.except_osv(_('Configuration error'), _('No mappings found for the referential "%s" of type "%s"' % (referential.name, referential.type_id.name)))
 
@@ -266,24 +266,19 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                     # add record to export list
                     export_data.append((obj_data['id'], data))
 
-                    # create ir_model_data record if necessary
-                    if obj_data['id'] not in update_res_ids:
-                        ir_model_data_rec = {
-                            'name': model_name.replace('.', '_') + '/' + data[mapping.external_key_name],
-                            'model': model_name,
-                            'external_log_id': context.get('external_log_id', None),
-                            'res_id': obj_data['id'],
-                            'external_referential_id': referential_id,
-                            'module': 'extref/' + referential.name}
-                        ir_model_data_rec_id = ir_model_data_obj.create(cr, uid, ir_model_data_rec)
-                        self._new_exported[mapping.id].append(ir_model_data_rec_id)
-                        report_line_obj.log_exported(cr, uid, model_name, 'export', referential_id, res_id=obj_data['id'], defaults={}, context=context)
-                        if DEBUG:
-                            _logger.debug('CSV export: %s #%s not previously exported; created new ir_model_data #%s' % (model_name, obj_data['id'], ir_model_data_rec_id))
-                    else:
-                        report_line_obj.log_updated(cr, uid, model_name, 'export', referential_id, res_id=obj_data['id'], defaults={}, context=context)
-                        if DEBUG:
-                            _logger.debug('CSV export: %s #%s previously exported' % (model_name, obj_data['id']))
+                    # create ir_model_data record as a pending entry pending verification
+                    ir_model_data_rec = {
+                        'name': model_name.replace('.', '_') + '/' + data[mapping.external_key_name],
+                        'model': model_name,
+                        'external_log_id': context.get('external_log_id', None),
+                        'res_id': obj_data['id'],
+                        'external_referential_id': referential_id,
+                        'module': 'pendref/' + referential.name}
+                    ir_model_data_rec_id = ir_model_data_obj.create(cr, uid, ir_model_data_rec)
+                    self._new_exported[mapping.id].append(ir_model_data_rec_id)
+                    report_line_obj.log_exported(cr, uid, model_name, 'export', referential_id, res_id=obj_data['id'], defaults={}, context=context)
+                    if DEBUG:
+                        _logger.debug('CSV export: %s #%s export and stored as pending extref #%s' % (model_name, obj_data['id'], ir_model_data_rec_id))
                 except Exception, X:
                     _logger.error(str(X))
                     report_line_obj.log_failed(cr, uid, model_name, 'export', referential_id, res_id=obj_data['id'], defaults={}, context=context)
@@ -366,7 +361,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         data_pool = self.pool.get('ir.model.data')
         ir_model_data_ids =\
             data_pool.search(cr, uid, [('model','=',model_name),
-                                       ('module','ilike','extref'),
+                                       ('module','ilike','pendref'),
                                        ('external_referential_id','=',referential_id),
                                        ('external_log_id','=',external_log_id)], context=context)
 
@@ -421,12 +416,17 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         '''
         if context is None:
             context = {}
+        context['use_external_log'] = True
 
         # import the confirmation records
         conn = self.external_connection(cr, uid, export_mapping.referential_id.id, DEBUG, context=context)
 
         mapping_obj = self.pool.get('external.mapping')
         verification_mapping = export_mapping.external_verification_mapping or export_mapping
+        
+        if not (verification_mapping and verification_mapping.external_import_uri):
+            # FIXME: Log a warning/error
+            return
 
         # FIXME We can't guarantee that the external resources found
         # for verification import actually correspond to whatever
@@ -476,25 +476,11 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                                                                         ('res_id','in',exported_ids)], context=context)
         res_ids = dict([(r['name'].strip(export_mapping.model_id.model.replace('.', '_') + '/'), r['res_id']) for r in ir_model_data_obj.read(cr, uid, ir_model_data_exported_ids, fields=['res_id','name'])])
 
-        for conf_res in verification:
-            res_id = res_ids.get(conf_res[verification_mapping.external_key_name], None)
-            exp_res = exported.get(res_id, None)
-            if res_id and exp_res:
-                space = {'self': self, 'export_mapping': export_mapping, 'verification_mapping': verification_mapping, 'import_uri': remote_csv_fn, 'exp_res': exp_res, 'conf_res': conf_res}
-                exec verification_mapping.success_fun in space
-                if not space.get('success'):
-                    res['mismatch'].append({'exported': exp_res, 'received': conf_res, 'res_id': res_id})
-                else:
-                    res['exported'].append({'exported': exp_res, 'received': conf_res, 'res_id': res_id})
-            else:
-                res['unexpected'].append({'exported': None, 'received': conf_res, 'res_id': res_id})
-
-        # check for any missing records (i.e. exported but not
-        # included in the confirmation receipt)
-        received_ids = [r[verification_mapping.external_key_name] for r in verification]
-        if set(exported_ids) > set(received_ids):
-            missing = list(set(exported_ids) - set(received_ids))
-            res['missing'] = [{'exported': {'res_id': exported[id]}, 'received': None} for id in missing]
+        space = {'self': self, 'export_mapping': export_mapping, 'verification_mapping': verification_mapping, 'import_uri': remote_csv_fn, 'success': False,
+                 'exp': exported, 'verification': verification, 'res_ids': res_ids, 'mismatch': [], 'exported': [], 'unexpected': [], 'missing': []}
+        exec verification_mapping.success_fun in space
+        res = {'exported': space['exported'], 'unexpected': space['unexpected'], 'missing': space['missing'], 'mismatch': space['mismatch']}
+        success = space['success']
 
         # Generate external_report_lines errors for all the erroneous
         # and confirmed records
@@ -517,17 +503,19 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                     if r.get('res_id'):
                         report_line_obj.log_success(cr, uid, export_mapping.model_id.model, 'verify', export_mapping.referential_id.id, res_id=r['res_id'], data_record=r[rec_type], context=context)
                 elif error in ['mismatch', 'missing', 'unexpected']:
-                    _logger.error(msg % r[rec_type].get(key_names[rec_type]))
+                    if r[rec_type].get(key_names[rec_type]):
+                        _logger.error(msg % r[rec_type].get(key_names[rec_type]))
                     if r.get('res_id'):
                         report_line_obj.log_failed(cr, uid, export_mapping.model_id.model, 'verify', export_mapping.referential_id.id, res_id=r['res_id'], data_record=r[rec_type], context=context)
-
-        # now that the transfer has been verified, remove the cron job
-        # that was executing it
-        if self.pool.get('external.log').completed(cr, uid, context.get('external_log_id'), context=context):
-            self._cancel_scheduled_verification(cr, uid, [], context=context)
+        
+        if success:
+            self.pool.get('external.log').completed(cr, uid, context.get('external_log_id'), context=context)
+        else:
+            self.pool.get('external.log').failed(cr, uid, context.get('external_log_id'), context=context)
 
         # move the confirmation file into the Archive directory
-        # FIXME This is Orium-specific
+        # FIXME This is specific, this should be put in a more specific module, or handled more generally.
+        cr.commit() # FIXME: Make sure this is not our main cusor, the parent function should pass a new cusor as cr
         fpath, fname = os.path.split(remote_csv_fn)
         remote_csv_fn_rn = os.path.join(fpath, 'Archive', fname)
         
@@ -536,70 +524,6 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         conn.finalize_rename(context=context)
 
         return res
-
-    def _schedule_verification(self, cr, uid, ids, interval_number=1, interval_type='hours', nextcall=None, context=None):
-        if context is None:
-            context = {}
-
-        if not context.get('external_log_id', None):
-            _logger.error('External referential execution ID was not passed to _schedule_verification in context')
-            return False
-
-        try:
-            _cr = pooler.get_db(cr.dbname).cursor()
-            cron_pool = self.pool.get('ir.cron')
-            log = self.pool.get('external.log').browse(_cr, uid, context['external_log_id'], context=context)
-            vals = {'name': 'verify_%s' % (log.name,),
-                    'active': True,
-                    'user_id': 1,
-                    'nextcall': nextcall or (datetime.datetime.now() + datetime.timedelta(**{interval_type: interval_number})).strftime(DEFAULT_SERVER_DATETIME_FORMAT),
-                    'interval_number': interval_number,
-                    'interval_type': interval_type,
-                    'numbercall': -1,
-                    'doall': False,
-                    'model': 'external.log',
-                    'function': 'import_confirmation',
-                    'args': '(%s,)' % (context['external_log_id'],)}
-            job = cron_pool.create(_cr, uid, vals, context=context)
-            if DEBUG:
-                _logger.debug('Created cron job "%s" #%d to verify export "%s"' % (vals['name'], log, log.name))
-        except:
-            _cr.rollback()
-            raise
-        else:
-            _cr.commit()
-        finally:
-            _cr.close()
-        return job
-
-    def _cancel_scheduled_verification(self, cr, uid, ids, context=None):
-        if context is None:
-            context = {}
-
-        if not context.get('external_log_id', None):
-            _logger.error('External referential execution ID was not passed to _schedule_verification in context')
-            return False
-
-        try:
-            _cr = pooler.get_db(cr.dbname).cursor()
-            cron_pool = self.pool.get('ir.cron')
-            job_ids = cron_pool.search(_cr, uid, [('args','=','(%s,)' % (context['external_log_id'],))], context=context)
-            if not job_ids:
-                return False
-            job = cron_pool.read(_cr, uid, job_ids, ['name'], context=context)[0]
-            success = cron_pool.unlink(_cr, uid, job_ids, context=context)
-            if DEBUG and success:
-                _logger.debug('Removed cron job "%s" #%s' % (job['name'], job_ids))
-            elif DEBUG and not success:
-                _logger.debug('Failed to remove cron job "%s" #%s' % (job['name'], job_ids))
-        except:
-            _cr.rollback()
-            raise
-        else:
-            _cr.commit()
-        finally:
-            _cr.close()
-        return True
 
     def _import(self, cr, uid, import_mapping, context=None):
         if context is None:
@@ -668,9 +592,6 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         context['external_log_id'] = external_log_id
         res = self._export(cr, uid, referential_id, 'product.product', context=context)
         self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
-
-        # schedule verification of the export
-        self._schedule_verification(cr, uid, referential_id, context=context)
 
         return res
 
