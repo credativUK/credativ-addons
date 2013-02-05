@@ -62,6 +62,7 @@ class external_log(osv.osv):
         ('in-progress', 'imported-success'),
         ('in-progress', 'exported-fail'),
         ('in-progress', 'exported-success'),
+        ('in-progress', 'complete-rejections'),
         ('imported-success', 'complete-rejections'),
         ('imported-success', 'complete-complete'),
         ('exported-success', 'complete-rejections'),
@@ -186,13 +187,12 @@ class external_log(osv.osv):
         if data_ids:
             for data in data_pool.browse(cr, uid, data_ids, context=context):
                 update_id = data_pool.search(cr, uid, [('name', '=', data.name),
-                                       ('res_id', '=', data.res_id),
                                        ('model','=',data.model),
                                        ('module','=','extref/%s' % (data.external_referential_id.name,)),
                                        ('external_referential_id','=',data.external_referential_id.id),
                                        ('external_log_id','=',False)], context=context)
                 if update_id: # Touch the write date
-                    data_pool.write(cr, uid, update_id, {}, context=context)
+                    data_pool.write(cr, uid, update_id, {'res_id': data.res_id,}, context=context)
                 else: # Create a new export record
                     ir_model_data_rec = {
                         'name': data.name,
@@ -237,7 +237,7 @@ class external_log(osv.osv):
         log = self.browse(cr, uid, ids, context=context)
         if not log:
             # FIXME
-            return
+            return {}
 
         context['external_log_id'] = ids
         referential = extref_pool.browse(cr, uid, log.referential_id.id, context=context)
@@ -254,7 +254,7 @@ class external_log(osv.osv):
                 log_cr.commit()
             finally:
                 log_cr.close()
-            return  res
+            return res
         else:
             _logger.warn('Found no exported records for log %s to confirm' % (log.name,))
 

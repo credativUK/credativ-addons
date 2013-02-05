@@ -23,6 +23,9 @@ from tools.translate import _
 import netsvc
 import logging
 from datetime import datetime
+import pooler
+import os
+DEBUG = True
 
 _logger = logging.getLogger(__name__)
 
@@ -39,14 +42,15 @@ class purchase_order(osv.osv):
         'warehouse_id': fields.many2one('stock.warehouse', 'Warehouse', required=True, states={'confirmed':[('readonly',True)], 'approved':[('readonly',True)],'done':[('readonly',True)]}),
     }
 
-    def wms_export_one(self, cr, uid, id, context=None):
+    def wms_export_one(self, cr, uid, ids, context=None):
         if context == None:
             context = {}
         move_pool = self.pool.get('stock.move')
         data_pool = self.pool.get('ir.model.data')
-        po = self.browse(cr, uid, id, context=context)
+        pos = self.browse(cr, uid, ids, context=context)
+        po = pos[0]
         
-        picking_ids = self.pool.get('stock.picking').search(cr, uid, [('purchase_id', '=', po.id)], context=context)
+        picking_ids = self.pool.get('stock.picking').search(cr, uid, [('purchase_id', 'in', [x.id for x in pos])], context=context)
         all_move_ids = self.pool.get('stock.move').search(cr, uid, [('picking_id', 'in', picking_ids)], context=context)
         
         wms_sm_sequence = {}
@@ -79,7 +83,15 @@ class purchase_order(osv.osv):
                     else:
                         wms_sm_mode[move.id] = 'update'
                     move_ids.append(move.id)
-                    data_pool.write(cr, uid, rec_check_ids[0], {}, context=context)
+                    rec_check = data_pool.browse(cr, uid, rec_check_ids[0], context=context)
+                    ir_model_data_rec = {
+                        'name': rec_check.name,
+                        'model': rec_check.model,
+                        'external_log_id': context.get('external_log_id', None),
+                        'res_id': rec_check.res_id,
+                        'external_referential_id': rec_check.external_referential_id.id,
+                        'module': 'pendref/' + rec_check.external_referential_id.name}
+                    data_pool.create(cr, uid, ir_model_data_rec)
             
             if not rec_check_ids:
                 # Find the next number in the sequence and create the ir_model_data entry for it
@@ -88,14 +100,22 @@ class purchase_order(osv.osv):
                             FROM ir_model_data imd
                             WHERE external_referential_id = %s
                             AND model = 'stock.move'
-                            AND module ilike 'extref%%'""" % (po.name.split('-edit')[0], po.warehouse_id.referential_id.id,))
+                            AND (module ilike 'extref%%'
+                            OR module ilike 'pendref%%')""" % (po.name.split('-edit')[0], po.warehouse_id.referential_id.id,))
                 number = cr.fetchall()
                 if number and number[0][0]:
                     sm_seq = number[0][0]
                 else:
                     sm_seq = 1
                 
-                move_pool.create_external_id_vals(cr, uid, move.id, "%s_%d" % (po.name.split('-edit')[0], sm_seq), po.warehouse_id.referential_id.id, context=context)
+                ir_model_data_rec = {
+                    'name': "stock_move/%s_%d" % (po.name.split('-edit')[0], sm_seq),
+                    'model': 'stock.move',
+                    'external_log_id': context.get('external_log_id', None),
+                    'res_id': move.id,
+                    'external_referential_id': po.warehouse_id.referential_id.id,
+                    'module': 'pendref/' + po.warehouse_id.referential_id.name}
+                data_pool.create(cr, uid, ir_model_data_rec)
                 
                 wms_sm_sequence[move.id] = sm_seq
                 wms_sm_mode[move.id] = 'create'
@@ -107,6 +127,8 @@ class purchase_order(osv.osv):
             if po.warehouse_id.mapping_purchase_orders_id:
                 ctx.update({'external_mapping_ids': [po.warehouse_id.mapping_purchase_orders_id.id,]})
             self.pool.get('external.referential')._export(cr, uid, po.warehouse_id.referential_id.id, 'stock.move', move_ids, context=ctx)
+        else:
+            raise # If we have no move_ids to export we need to abort the transaction so we do not get stuck waiting for an import
         
         return
 
@@ -137,7 +159,7 @@ class purchase_order(osv.osv):
     def wms_export_orders(self, cr, uid, ids, referential_id, context=None):
         if context == None:
             context = {}
-        data_obj = self.pool.get('ir.model.data')
+        data_pool = self.pool.get('ir.model.data')
         
         pos = self.browse(cr, uid, ids)
         ctx = context.copy()
@@ -150,49 +172,73 @@ class purchase_order(osv.osv):
 
         for po in pos:
             if not po.warehouse_id or not po.warehouse_id.referential_id:
+                # FIXME: We should log a warning here
                 continue
             
-            try:
-                ext_id = self.oeid_to_extid(cr, uid, po.id, po.warehouse_id.referential_id.id, context=context)
-                
-                po_edit = po # Functionality to support edited POs from the order_edit module
-                while not ext_id and '-edit' in po_edit.name and po_edit.origin:
-                    po_edit_id = self.search(cr, uid, [('name', '=', po_edit.origin)], context=context)
-                    if not po_edit_id:
-                        break
-                    po_edit = self.browse(cr, uid, po_edit_id, context=context)
-                    if not po_edit or not po_edit[0] or not po_edit[0].warehouse_id or not po_edit[0].warehouse_id.referential_id:
-                        break
-                    po_edit = po_edit[0]
-                    ext_id = self.oeid_to_extid(cr, uid, po_edit.id, po.warehouse_id.referential_id.id, context=context)
-                
-                if not ext_id: # We have not already been exported, export as new
-                    
-                    self.wms_export_one(cr, uid, po.id, context=context)
-                    
-                    self.create_external_id_vals(cr, uid, po.id, po.name.split('-edit')[0], po.warehouse_id.referential_id.id, context=context)
-                else: # Exported already, check if we have been edited
-                    rec_check_ids = data_obj.search(cr, uid, [('model', '=', self._name), ('res_id', '=', po.id), ('module', 'ilike', 'extref'), ('external_referential_id', '=', po.warehouse_id.referential_id.id)])
-                    if rec_check_ids:
-                        cr.execute("""select coalesce(write_date, create_date) from ir_model_data where id = %s""", (rec_check_ids[0],))
-                        last_exported_time = cr.fetchall()[0][0] or False
-                        cr.execute("""select coalesce(write_date, create_date) from purchase_order where id = %s""", (po.id,))
-                        last_updated_time = cr.fetchall()[0][0] or False
-                        if last_updated_time < last_exported_time: # Do not export again if it does not need to be
-                            continue
-                    else:
-                        rec_check_ids = data_obj.search(cr, uid, [('model', '=', self._name), ('res_id', '=', po_edit.id), ('module', 'ilike', 'extref'), ('external_referential_id', '=', po.warehouse_id.referential_id.id)])
-                    
-                    self.wms_export_one(cr, uid, po.id, context=context)
-                    
-                    if rec_check_ids: # Update the ir.model.data entry
-                        data_obj.write(cr, uid, [rec_check_ids[0],], {'external_log_id': context['external_log_id'], 'res_id': po.id}, context=context)
-                    else: # Create the ir.model.data entry. This is because we got the ext_id from a previous PO through an edit and we need to create a new ir.model.data entry
-                        self.create_external_id_vals(cr, uid, po.id, po.name.split('-edit')[0], po.warehouse_id.referential_id.id, context=context)
+            ext_id = self.oeid_to_extid(cr, uid, po.id, po.warehouse_id.referential_id.id, context=context)
             
-            except Exception, e:
-                raise
-                pass
+            po_edit = po # Functionality to support edited POs from the order_edit module
+            while not ext_id and '-edit' in po_edit.name and po_edit.origin:
+                po_edit_id = self.search(cr, uid, [('name', '=', po_edit.origin)], context=context)
+                if not po_edit_id:
+                    break
+                po_edit = self.browse(cr, uid, po_edit_id, context=context)
+                if not po_edit or not po_edit[0] or not po_edit[0].warehouse_id or not po_edit[0].warehouse_id.referential_id:
+                    break
+                po_edit = po_edit[0]
+                ext_id = self.oeid_to_extid(cr, uid, po_edit.id, po.warehouse_id.referential_id.id, context=context)
+            
+            if not ext_id: # We have not already been exported, export as new
+                self.wms_export_one(cr, uid, [po.id,], context=context)
+                ir_model_data_rec = {
+                    'name': 'purchase_order/' + po.name.split('-edit')[0],
+                    'model': 'purchase.order',
+                    'external_log_id': context.get('external_log_id', None),
+                    'res_id': po.id,
+                    'external_referential_id': po.warehouse_id.referential_id.id,
+                    'module': 'pendref/' + po.warehouse_id.referential_id.name}
+                data_pool.create(cr, uid, ir_model_data_rec, context=context)
+            else: # Exported already, check if we have been edited
+                rec_check_ids = data_pool.search(cr, uid, [('model', '=', self._name), ('res_id', '=', po.id), ('module', 'ilike', 'extref'), ('external_referential_id', '=', po.warehouse_id.referential_id.id)])
+                if rec_check_ids:
+                    cr.execute("""select coalesce(write_date, create_date) from ir_model_data where id = %s""", (rec_check_ids[0],))
+                    last_exported_time = cr.fetchall()[0][0] or False
+                    cr.execute("""select coalesce(write_date, create_date) from purchase_order where id = %s""", (po.id,))
+                    last_updated_time = cr.fetchall()[0][0] or False
+                    if last_updated_time < last_exported_time: # Do not export again if it does not need to be
+                        continue
+                else:
+                    rec_check_ids = data_pool.search(cr, uid, [('model', '=', self._name), ('res_id', '=', po_edit.id), ('module', 'ilike', 'extref'), ('external_referential_id', '=', po.warehouse_id.referential_id.id)])
+                
+                if po_edit.id != po.id:
+                    self.wms_export_one(cr, uid, [po.id, po_edit.id,], context=context)
+                else:
+                    self.wms_export_one(cr, uid, [po.id,], context=context)
+                
+                if rec_check_ids: # Update the ir.model.data entry
+                    rec_check = data_pool.browse(cr, uid, rec_check_ids[0], context=context)
+                    ir_model_data_rec = {
+                        'name': rec_check.name,
+                        'model': rec_check.model,
+                        'external_log_id': context.get('external_log_id', None),
+                        'res_id': rec_check.res_id,
+                        'external_referential_id': rec_check.external_referential_id.id,
+                        'module': 'pendref/' + rec_check.external_referential_id.name}
+                    data_pool.create(cr, uid, ir_model_data_rec, context=context)
+                    
+                else: # Create the ir.model.data entry. This is because we got the ext_id from a previous PO through an edit and we need to create a new ir.model.data entry
+                    ir_model_data_rec = {
+                        'name': 'purchase_order/' + po.name.split('-edit')[0],
+                        'model': 'purchase.order',
+                        'external_log_id': context.get('external_log_id', None),
+                        'res_id': po.id,
+                        'external_referential_id': po.warehouse_id.referential_id.id,
+                        'module': 'pendref/' + po.warehouse_id.referential_id.name}
+                    data_pool.create(cr, uid, ir_model_data_rec, context=context)
+            
+            break # FIXME: We will only do a single export for now, then wait until we get the confirmation
+        else:
+            raise osv.except_osv('Cannot export POs', 'No POs found for export')
 
         self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
 
@@ -426,86 +472,16 @@ class stock_warehouse(osv.osv):
                     LEFT OUTER JOIN ir_model_data imd ON imd.model = 'purchase.order'
                         AND imd.res_id = po.id
                         AND imd.external_referential_id = %s
+                    LEFT OUTER JOIN purchase_order poe ON poe.origin = po.name
                     WHERE po.warehouse_id IN %s
                     AND sp.state = 'cancel'
                     AND po.state = 'cancel'
+                    AND poe.id IS NULL
                     AND COALESCE(imd.write_date, imd.create_date) < COALESCE(po.write_date, po.create_date)
                     GROUP BY po.id""", (referential_id, tuple(ids,),))
         po_ids = cr.fetchall()
         po_ids = self.pool.get('purchase.order').search(cr, uid, [('id', 'in', [x[0] for x in po_ids]),], context=context)
         return po_ids
-
-    def import_export_confirmations(self, cr, uid, ids, model_name, ovr_mapping=None, external_log_id=None, context=None):
-        '''
-        This method implements the import of the data confirming the
-        receipt of exported records.
-
-        @model_name (str): is the name of model from which the export
-        was made.
-
-        @external_log_id (int): ID of an external_log whose child
-        export records will be polled for confirmation; if None, the
-        most recent log for the model will be used.
-        '''
-        if context is None:
-            context = {}
-        extref_pool = self.pool.get('external.referential')
-
-        model_pool = self.pool.get('ir.model')
-        mapping_pool = self.pool.get('external.mapping')
-        report_log_pool = self.pool.get('external.log')
-
-        for warehouse in self.browse(cr, uid, ids):
-            if not warehouse.referential_id:
-                continue
-
-            # get the mapping; either from one of the override
-            # mappings, or from the given model
-            model_ids = model_pool.search(cr, uid, [('model','=',model_name)])
-            if len(model_ids) > 1:
-                raise osv.except_osv(_('Integrity error'), _('Model name "%s" is ambiguous.' % (model_name,)))
-            if not model_ids:
-                raise osv.except_osv(_('Data error'), _('No such model: "%s"' % (model_name,)))
-            model_id = model_ids[0]
-
-            if not ovr_mapping:
-                mapping_ids = mapping_pool.search(cr, uid, [('referential_id','=',warehouse.referential_id.id),
-                                                            ('model_id','=',model_id),
-                                                            ('purpose','=','data')])
-                mappings = mapping_pool.browse(cr, uid, mapping_ids)
-            else:
-                mappings = [getattr(warehouse, ovr_mapping)]
-
-            if not any(mappings):
-                raise osv.except_osv(_('Configuration error'),
-                                     _('No "%s" mappings found for the referential "%s" of type "%s"' %\
-                                           (ovr_mapping or model_name, warehouse.referential_id.name, warehouse.referential_id.type_id.name)))
-
-            res = {}
-
-            for export_mapping in mappings:
-                # if not supplied, get the most recent external.log
-                # for this model
-                referential = extref_pool.browse(cr, uid, warehouse.referential_id.id, context=context)
-                if not external_log_id:
-                    log_id = report_log_pool.search(cr, uid, [('model_id','=',model_id),
-                                                              ('referential_id','=',warehouse.referential_id.id),
-                                                              ('status','in',('imported-success','exported-success'))],
-                                                    limit=1, order='start_time desc', context=context)
-                    if log_id:
-                        exported_ids = extref_pool._get_exported_ids_by_log(cr, uid, warehouse.referential_id.id,
-                                                                            export_mapping.model_id.model, external_log_id or log_id[0], context=context)
-                    else:
-                        exported_ids = []
-                else:
-                    exported_ids = extref_pool._get_exported_ids_by_log(cr, uid, warehouse.referential_id.id,
-                                                                        export_mapping.model_id.model, external_log_id, context=context)
-
-                if exported_ids:
-                    context['external_log_id'] = external_log_id or log_id
-                    res[export_mapping.id] = extref_pool._verify_export(cr, uid, export_mapping, exported_ids, context=context)
-
-        return res
 
     def export_purchase_orders(self, cr, uid, ids, context=None):
         if context == None:
@@ -518,12 +494,10 @@ class stock_warehouse(osv.osv):
             if not warehouse.referential_id:
                 continue
             # Find POs to delete
-            po_ids = self.get_deleted_pos(cr, uid, [warehouse.id,], warehouse.referential_id.id, context=context)
-            if po_ids:
-                po_obj.wms_delete_orders(cr, uid, po_ids, warehouse.referential_id.id, context=context)
-
-            # Find POs to create/update
-            po_ids = self.get_exportable_pos(cr, uid, [warehouse.id,], warehouse.referential_id.id, context=context)
+            del_po_ids = self.get_deleted_pos(cr, uid, [warehouse.id,], warehouse.referential_id.id, context=context)
+            # Find POs to create/update/delete
+            new_po_ids = self.get_exportable_pos(cr, uid, [warehouse.id,], warehouse.referential_id.id, context=context)
+            po_ids = list(set(del_po_ids + new_po_ids))
             if po_ids:
                 po_obj.wms_export_orders(cr, uid, po_ids, warehouse.referential_id.id, context=context)
         
@@ -542,7 +516,7 @@ class stock_warehouse(osv.osv):
                 continue
             
             # Find PO files to import
-            po_import = self.pool.get('external.referential')._import(cr, uid, warehouse.mapping_purchase_orders_import_id, context=context)
+            po_import, fn = self.pool.get('external.referential')._import(cr, uid, warehouse.mapping_purchase_orders_import_id, context=context)
             sm_lines = []
             [sm_lines.extend(x) for x in po_import]
             
@@ -556,21 +530,26 @@ class stock_warehouse(osv.osv):
                     _logger.info('Imported PO stock move %s mapped to OpenERP ID %d' % (external_name, erp_id))
                 else:
                     _logger.warn('Imported PO stock move %s does not exist in OpenERP' % (external_name,))
-            po_obj.wms_import_moves(cr, uid, [], imported_sm, context=context)
-        # TODO: Archive files after import
+            
+            _cr = pooler.get_db(cr.dbname).cursor()
+            try:
+                po_obj.wms_import_moves(_cr, uid, [], imported_sm, context=context) # This can tollerate importing the same file twice, it will not process anything on the second pass since SMs are in the wrong state
+                _cr.commit()
+                if fn:
+                    conn = self.pool.get('external.referential').external_connection(_cr, uid, warehouse.mapping_purchase_orders_import_id.referential_id.id, DEBUG, context=context)
+                    fpath, fname = os.path.split(fn)
+                    remote_csv_fn_rn = os.path.join(fpath, 'Archive', fname)
+                    _logger.info("Archiving imported advice file %s as %s" % (fn, remote_csv_fn_rn))
+                    conn.rename_file(fn, remote_csv_fn_rn, context=context)
+                    conn.finalize_rename(context=context)
+                    _cr.commit()
+            except:
+                _cr.rollback()
+                raise
+            finally:
+                _cr.close()
+            
         return True
-
-    def import_purchase_order_export_confirmation(self, cr, uid, ids, context=None):
-        '''
-        This method imports the confirmation of receipt of exported purchase order data.
-        '''
-        if context == None:
-            context = {}
-
-        return self.import_export_confirmations(cr, uid, ids,
-                                                model_name='purchase.order',
-                                                ovr_mapping='mapping_purchase_orders_id',
-                                                context=context)
 
     def get_exportable_dispatches(self, cr, uid, ids, referential_id, context=None):
         if not ids:
@@ -595,18 +574,6 @@ class stock_warehouse(osv.osv):
                 dispatch_obj.wms_export_orders(cr, uid, dispatch_ids, warehouse.referential_id.id, context=context)
         
         return True
-
-    def import_dispatch_order_export_confirmation(self, cr, uid, ids, context=None):
-        '''
-        This method imports the confirmation of receipt of exported dispatches data.
-        '''
-        if context == None:
-            context = {}
-
-        return self.import_export_confirmations(cr, uid, ids,
-                                                model_name='stock.move',
-                                                ovr_mapping='mapping_dispatch_orders_id',
-                                                context=context)
 
     def import_dispatch_receipts(self, cr, uid, ids, context=None):
         if context == None:

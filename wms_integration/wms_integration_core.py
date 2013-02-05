@@ -266,15 +266,24 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                     # add record to export list
                     export_data.append((obj_data['id'], data))
 
-                    # create ir_model_data record as a pending entry pending verification
-                    ir_model_data_rec = {
-                        'name': model_name.replace('.', '_') + '/' + data[mapping.external_key_name],
-                        'model': model_name,
-                        'external_log_id': context.get('external_log_id', None),
-                        'res_id': obj_data['id'],
-                        'external_referential_id': referential_id,
-                        'module': 'pendref/' + referential.name}
-                    ir_model_data_rec_id = ir_model_data_obj.create(cr, uid, ir_model_data_rec)
+                    # create ir_model_data record as a pending entry pending verification if a previous function has not already done this
+                    ir_model_data_ids = ir_model_data_obj.search(cr, uid, [('name','=',model_name.replace('.', '_') + '/' + data[mapping.external_key_name]),
+                                                               ('model','=',model_name),
+                                                               ('external_log_id','=',context.get('external_log_id', None)),
+                                                               ('res_id', '=', obj_data['id']),
+                                                               ('external_referential_id', '=', referential_id),
+                                                               ('module', '=', 'pendref/' + referential.name)], context=context)
+                    if ir_model_data_ids:
+                        ir_model_data_rec_id = ir_model_data_ids[0]
+                    else:
+                        ir_model_data_rec = {
+                            'name': model_name.replace('.', '_') + '/' + data[mapping.external_key_name],
+                            'model': model_name,
+                            'external_log_id': context.get('external_log_id', None),
+                            'res_id': obj_data['id'],
+                            'external_referential_id': referential_id,
+                            'module': 'pendref/' + referential.name}
+                        ir_model_data_rec_id = ir_model_data_obj.create(cr, uid, ir_model_data_rec)
                     self._new_exported[mapping.id].append(ir_model_data_rec_id)
                     report_line_obj.log_exported(cr, uid, model_name, 'export', referential_id, res_id=obj_data['id'], defaults={}, context=context)
                     if DEBUG:
@@ -287,14 +296,14 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                 conn.call(mapping.external_create_method, records=export_data)
                 conn.finalize_export(context=context)
             except ExternalReferentialError, X:
-                cr.rollback()
                 for res_id in X.res_ids:
                     report_line_obj.log_failed(cr, uid, X.model_name, 'export', referential_id, res_id=res_id, defaults={}, context=context)
-                self.pool.get('external.log').end_transfer(cr, uid, context.get('external_log_id', None), context=context)
+                #self.pool.get('external.log').end_transfer(cr, uid, context.get('external_log_id', None), context=context)
+                raise
             except Exception, X:
-                self._undo_export(cr, uid, referential_id, model_name, context=context)
-                self.pool.get('external.log').end_transfer(cr, uid, context.get('external_log_id', None), force_status='transfer-failed', context=context)
+                #self.pool.get('external.log').end_transfer(cr, uid, context.get('external_log_id', None), force_status='transfer-failed', context=context)
                 _logger.error(X.message)
+                raise
 
             res[mapping.id] = True
 
@@ -303,53 +312,6 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         self._new_exported = {}
 
         return all(res.values())
-
-    def _undo_export(self, cr, uid, referential_id, model_name, res_ids=None, context=None):
-        '''
-        On a failure that prevents data from being transferred to the
-        remote system, this method should be called to unmark any
-        exported records.
-        '''
-        if context is None:
-            context = {}
-
-        if not hasattr(self, '_new_exported'):
-            return
-
-        res_ids = res_ids or None
-
-        # remove resources from ir_model_data
-        data_pool = self.pool.get('ir.model.data')
-        for mapping_id, exported in self._new_exported.items():
-            if res_ids:
-                exported = list(set(exported) & set(res_ids))
-            data_pool.unlink(cr, uid, exported, context=context)
-            if DEBUG:
-                _logger.debug('CSV export: Export failed, so removing ir_model_data records: %s' % (exported,))
-
-        # remove state in ('exported','updated','confirmed') resources
-        # from external_report_line
-        if 'external_log_id' in context and isinstance(context['external_log_id'], (int, long)):
-            report_line_pool = self.pool.get('external.report.line')
-            try:
-                # create a temporary cursor to remove the redundant
-                # report lines; this overcomes the default isolation
-                # level
-                _cr = pooler.get_db(cr.dbname).cursor()
-                report_line_ids = report_line_pool.search(_cr, uid, [('state','in',['exported','updated','confirmed']),
-                                                                     ('external_log_id','=',context['external_log_id'])], context=context)
-                report_line_pool.unlink(_cr, uid, report_line_ids, context=context)
-                if DEBUG:
-                    _logger.debug('CSV export: Export failed, so removing external_report_line records: %s' % (report_line_ids,))
-            except:
-                _cr.rollback()
-                raise
-            else:
-                _cr.commit()
-            finally:
-                _cr.close()
-
-        self._new_exported = {}
 
     def _get_exported_ids_by_log(self, cr, uid, referential_id, model_name, external_log_id, context=None):
         if context is None:
@@ -426,7 +388,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         
         if not (verification_mapping and verification_mapping.external_import_uri):
             # FIXME: Log a warning/error
-            return
+            return {}
 
         # FIXME We can't guarantee that the external resources found
         # for verification import actually correspond to whatever
@@ -444,7 +406,8 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         importables = conn.find_importables(dirs, re.compile(basename), context=context)
 
         if len(importables) > 1:
-            _logger.warn('Found multiple files for import, importing the first from: %s' % (importables,))
+            _logger.error('Found multiple files for import, aborting import: %s\nImport only supports a single confirmation at a time.' % (importables,))
+            return {}
         elif len(importables) == 0:
             _logger.info('Found no files for import.')
             return {}
@@ -515,13 +478,13 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         # move the confirmation file into the Archive directory
         # FIXME This is specific, this should be put in a more specific module, or handled more generally.
-        cr.commit() # FIXME: Make sure this is not our main cusor, the parent function should pass a new cusor as cr
         fpath, fname = os.path.split(remote_csv_fn)
         remote_csv_fn_rn = os.path.join(fpath, 'Archive', fname)
         
         _logger.info("Archiving imported advice file %s as %s" % (remote_csv_fn, remote_csv_fn_rn))
         conn.rename_file(remote_csv_fn, remote_csv_fn_rn, context=context)
         conn.finalize_rename(context=context)
+        cr.commit() # FIXME: Make sure this is not our main cusor, the parent function should pass a new cusor as cr
 
         return res
 
@@ -547,33 +510,37 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         dirs = (dirname and [dirname]) or ['/']
         importables = conn.find_importables(dirs, re.compile(basename), context=ctx)
         import_line = []
-
-        if len(importables) == 0:
-            raise osv.except_osv(_('Import error'), _('The pattern "%s" matched no importables on the external system. Cannot continue with import.' % (basename,)))
+        
+        if len(importables) > 1:
+            _logger.warn('Found multiple files for import, importing the first from: %s' % (importables,))
+        elif len(importables) == 0:
+            _logger.info('Found no files for import.')
+            return [], False
 
         external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], import_mapping.referential_id.id, import_mapping.model_id.model, context=ctx)
         ctx['external_log_id'] = external_log_id
 
-        for remote_csv_fn in importables:
-            try:
-                if DEBUG:
-                    _logger.debug('CSV import: selected importable URI: %s' % (remote_csv_fn,))
+        remote_csv_fn = importables[0]
+        try:
+            if DEBUG:
+                _logger.debug('CSV import: selected importable URI: %s' % (remote_csv_fn,))
 
-                import_columns = mapping_obj.get_ext_column_headers(cr, uid, import_mapping.id)
-                conn.init_import(remote_csv_fn=remote_csv_fn,
-                                 oe_model_name=import_mapping.model_id.model,
-                                 external_key_name=import_mapping.external_key_name,
-                                 column_headers=import_columns,
-                                 context=ctx)
-                import_data = conn.call(import_mapping.external_list_method)
-                conn.finalize_import(context=ctx)
-                import_line.append(import_data)
-            except Exception, X:
-                raise osv.except_osv(_('Import error'), str(X))
+            import_columns = mapping_obj.get_ext_column_headers(cr, uid, import_mapping.id)
+            conn.init_import(remote_csv_fn=remote_csv_fn,
+                                oe_model_name=import_mapping.model_id.model,
+                                external_key_name=import_mapping.external_key_name,
+                                column_headers=import_columns,
+                                context=ctx)
+            import_data = conn.call(import_mapping.external_list_method)
+            conn.finalize_import(context=ctx)
+            import_line.append(import_data)
+        except Exception, X:
+            raise osv.except_osv(_('Import error'), str(X))
 
-        self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=ctx)
+        self.pool.get('external.log').end_transfer(cr, uid, external_log_id, force_status='imported-success', context=ctx)
+        self.pool.get('external.log').end_transfer(cr, uid, external_log_id, force_status='complete-complete', context=ctx)
 
-        return import_line
+        return import_line, remote_csv_fn
 
     def export_products(self, cr, uid, id, context=None):
         if context == None:
