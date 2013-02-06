@@ -572,7 +572,7 @@ class stock_warehouse(osv.osv):
                 if fn:
                     conn = self.pool.get('external.referential').external_connection(_cr, uid, warehouse.mapping_purchase_orders_import_id.referential_id.id, DEBUG, context=context)
                     fpath, fname = os.path.split(fn)
-                    remote_csv_fn_rn = os.path.join(fpath, 'Archive', fname)
+                    remote_csv_fn_rn = os.path.join(fpath, 'Archives', fname)
                     _logger.info("Archiving imported advice file %s as %s" % (fn, remote_csv_fn_rn))
                     conn.rename_file(fn, remote_csv_fn_rn, context=context)
                     conn.finalize_rename(context=context)
@@ -646,7 +646,7 @@ class stock_warehouse(osv.osv):
                 if fn:
                     conn = self.pool.get('external.referential').external_connection(_cr, uid, warehouse.mapping_dispatch_orders_import_id.referential_id.id, DEBUG, context=context)
                     fpath, fname = os.path.split(fn)
-                    remote_csv_fn_rn = os.path.join(fpath, 'Archive', fname)
+                    remote_csv_fn_rn = os.path.join(fpath, 'Archives', fname)
                     _logger.info("Archiving imported advice file %s as %s" % (fn, remote_csv_fn_rn))
                     conn.rename_file(fn, remote_csv_fn_rn, context=context)
                     conn.finalize_rename(context=context)

@@ -476,10 +476,10 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         else:
             self.pool.get('external.log').failed(cr, uid, context.get('external_log_id'), context=context)
 
-        # move the confirmation file into the Archive directory
+        # move the confirmation file into the Archives directory
         # FIXME This is specific, this should be put in a more specific module, or handled more generally.
         fpath, fname = os.path.split(remote_csv_fn)
-        remote_csv_fn_rn = os.path.join(fpath, 'Archive', fname)
+        remote_csv_fn_rn = os.path.join(fpath, 'Archives', fname)
         
         _logger.info("Archiving imported advice file %s as %s" % (remote_csv_fn, remote_csv_fn_rn))
         conn.rename_file(remote_csv_fn, remote_csv_fn_rn, context=context)
