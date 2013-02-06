@@ -71,6 +71,7 @@ class purchase_order(osv.osv):
                 rec_check = data_pool.browse(cr, uid, rec_check_ids[0], context=context)
                 try:
                     po_name, sm_seq = rec_check.name.split('/')[1].split('_')
+                    sm_seq = int(sm_seq)
                     assert po_name == po.name.split('-edit')[0]
                 except Exception, e:
                     # Something is wrong with this referential, delete it and create a new one
@@ -330,18 +331,26 @@ class stock_dispatch(osv.osv):
                         for rec_check in rec_checks:
                             try:
                                 dispatch_name, address_name, sm_seq = rec_check.name.split('/')[1].split('_')
+                                sm_seq = int(sm_seq)
                                 if dispatch_name == dispatch.name and address_name == '%d' % (address_id,):
                                     rec_check_ids.append(rec_check.id)
                             except Exception, e:
                                 # Something is wrong with this referential, delete it and create a new one
-                                data_pool.unlink(cr, uid, rec_checks.id, context=context)
+                                data_pool.unlink(cr, uid, rec_check.id, context=context)
                                 rec_check_ids = []
                             else:
                                 wms_sm_sequence[move.id] = sm_seq
                                 if move.state == 'cancel' or move.dispatch_id.id != dispatch.id:
                                     continue
                                 move_ids.append(move.id)
-                                data_pool.write(cr, uid, rec_check.id, {}, context=context)
+                                ir_model_data_rec = {
+                                    'name': rec_check.name,
+                                    'model': rec_check.model,
+                                    'external_log_id': context.get('external_log_id', None),
+                                    'res_id': rec_check.res_id,
+                                    'external_referential_id': rec_check.external_referential_id.id,
+                                    'module': 'pendref/' + rec_check.external_referential_id.name}
+                                data_pool.create(cr, uid, ir_model_data_rec)
                     else:
                         if move.state == 'cancel':
                             continue
@@ -350,14 +359,22 @@ class stock_dispatch(osv.osv):
                                     FROM ir_model_data imd
                                     WHERE external_referential_id = %s
                                     AND model = 'stock.move'
-                                    AND module ilike 'extref%%'""" % (dispatch.name, address_id, dispatch.warehouse_id.referential_id.id,))
+                                    AND (module ilike 'extref%%'
+                                    OR module ilike 'pendref%%')""" % (dispatch.name, address_id, dispatch.warehouse_id.referential_id.id,))
                         number = cr.fetchall()
                         if number and number[0][0]:
                             sm_seq = number[0][0]
                         else:
                             sm_seq = 1
                         
-                        move_pool.create_external_id_vals(cr, uid, move.id, "%s_%d_%d" % (dispatch.name, address_id, sm_seq), dispatch.warehouse_id.referential_id.id, context=context)
+                        ir_model_data_rec = {
+                            'name': "stock_move/%s_%d_%d" % (dispatch.name, address_id, sm_seq),
+                            'model': 'stock.move',
+                            'external_log_id': context.get('external_log_id', None),
+                            'res_id': move.id,
+                            'external_referential_id': dispatch.warehouse_id.referential_id.id,
+                            'module': 'pendref/' + dispatch.warehouse_id.referential_id.name}
+                        data_pool.create(cr, uid, ir_model_data_rec)
                         
                         wms_sm_sequence[move.id] = sm_seq
                         move_ids.append(move.id)
@@ -369,21 +386,19 @@ class stock_dispatch(osv.osv):
             if dispatch.warehouse_id.mapping_dispatch_orders_id:
                 ctx.update({'external_mapping_ids': [dispatch.warehouse_id.mapping_dispatch_orders_id.id,]})
 
-            external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], dispatch.warehouse_id.referential_id.id, 'stock.move', context=context)
-            #external_log = self.pool.get('external.log').browse(cr, uid, external_log_id, context=context)
-            ctx['external_log_id'] = external_log_id
-
             self.pool.get('external.referential')._export(cr, uid, dispatch.warehouse_id.referential_id.id, 'stock.move', final_move_ids, context=ctx)
-
-            self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
+        else:
+            raise # FIXME: Something went very wrong here
 
         return
     
     def wms_export_orders(self, cr, uid, ids, referential_id, context=None):
         if context == None:
             context = {}
+        data_pool = self.pool.get('ir.model.data')
 
         export_dispatch_ids = []
+        external_log_id = False
         
         for dispatch in self.browse(cr, uid, ids):
             if not dispatch.warehouse_id or not dispatch.warehouse_id.referential_id:
@@ -392,7 +407,17 @@ class stock_dispatch(osv.osv):
             try:
                 ext_id = self.oeid_to_extid(cr, uid, dispatch.id, dispatch.warehouse_id.referential_id.id, context=context)
                 if not ext_id: # We should only export new dispatches
-                    self.create_external_id_vals(cr, uid, dispatch.id, dispatch.id, dispatch.warehouse_id.referential_id.id, context=context)
+                    if not external_log_id:
+                        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], referential_id, 'stock.dispatch', context=context) # FIXME: Move these around each dispatch object so we can export many
+                        context['external_log_id'] = external_log_id
+                    ir_model_data_rec = {
+                        'name': 'stock_dispatch/' + dispatch.name,
+                        'model': 'stock.dispatch',
+                        'external_log_id': external_log_id,
+                        'res_id': dispatch.id,
+                        'external_referential_id': dispatch.warehouse_id.referential_id.id,
+                        'module': 'pendref/' + dispatch.warehouse_id.referential_id.name}
+                    data_pool.create(cr, uid, ir_model_data_rec, context=context)
                     export_dispatch_ids.append(dispatch.id)
                 else: # Exported already, skip
                     continue
@@ -400,22 +425,28 @@ class stock_dispatch(osv.osv):
             except Exception, e:
                 raise
                 pass
-        
-        self.wms_export_all(cr, uid, export_dispatch_ids, context=context)
+
+        if export_dispatch_ids:
+            self.wms_export_all(cr, uid, export_dispatch_ids, context=context)
+            self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
             
         return True
 
     def wms_import_moves(self, cr, uid, ids, move_lines, context=None):
+        if not context:
+            context = {}
+        ctx = context.copy()
         sm_obj = self.pool.get('stock.move')
         wkf_service = netsvc.LocalService('workflow')
         
-        stock_moves = sm_obj.browse(cr, uid, move_lines.keys(), context=context)
+        stock_moves = sm_obj.browse(cr, uid, move_lines.keys(), context=ctx)
         dispatch_dict = {}
         
         for stock_move in stock_moves:
             if not stock_move.dispatch_id:
                 _logger.warn('Stock move %d dispatched but not part of a dispatch.' % (stock_move.id, stock_move.state,))
-                sm_obj.action_done(cr, uid, stock_move.id, context=context)
+                ctx['from_dispatch'] = False
+                sm_obj.action_done(cr, uid, stock_move.id, context=ctx)
             else:
                 dispatch_dict.setdefault(stock_move.dispatch_id, []).append(stock_move)
         
@@ -424,7 +455,8 @@ class stock_dispatch(osv.osv):
             done_moves = set([x.id for x in moves])
             not_done_moves = list(dispatch_moves.difference(done_moves))
             
-            sm_obj.action_done(cr, uid, list(done_moves), context=context)
+            ctx['from_dispatch'] = dispatch.id
+            sm_obj.action_done(cr, uid, list(done_moves), context=ctx)
             
             if not_done_moves:
                 _logger.error('Stock moves %s were part of dispatch %s but not completed, Unable to complete dispatch.' % (not_done_moves, dispatch.name,))
@@ -517,6 +549,8 @@ class stock_warehouse(osv.osv):
             
             # Find PO files to import
             po_import, fn = self.pool.get('external.referential')._import(cr, uid, warehouse.mapping_purchase_orders_import_id, context=context)
+            if not fn:
+                continue
             sm_lines = []
             [sm_lines.extend(x) for x in po_import]
             
@@ -588,7 +622,9 @@ class stock_warehouse(osv.osv):
                 continue
             
             # Find SD files to import
-            sd_import = self.pool.get('external.referential')._import(cr, uid, warehouse.mapping_dispatch_orders_import_id, context=context)
+            sd_import, fn = self.pool.get('external.referential')._import(cr, uid, warehouse.mapping_dispatch_orders_import_id, context=context)
+            if not fn:
+                continue
             sm_lines = []
             [sm_lines.extend(x) for x in sd_import]
             
@@ -602,8 +638,24 @@ class stock_warehouse(osv.osv):
                     _logger.info('Imported Dispatch stock move %s mapped to OpenERP ID %d' % (external_name, erp_id))
                 else:
                     _logger.warn('Imported Dispatch stock move %s does not exist in OpenERP' % (external_name,))
-            sd_obj.wms_import_moves(cr, uid, [], imported_sm, context=context)
-        # TODO: Archive files after import
+            
+            _cr = pooler.get_db(cr.dbname).cursor()
+            try:
+                sd_obj.wms_import_moves(cr, uid, [], imported_sm, context=context) # This can tollerate importing the same file twice, it will not process anything on the second pass since SMs are in the wrong state
+                _cr.commit()
+                if fn:
+                    conn = self.pool.get('external.referential').external_connection(_cr, uid, warehouse.mapping_dispatch_orders_import_id.referential_id.id, DEBUG, context=context)
+                    fpath, fname = os.path.split(fn)
+                    remote_csv_fn_rn = os.path.join(fpath, 'Archive', fname)
+                    _logger.info("Archiving imported advice file %s as %s" % (fn, remote_csv_fn_rn))
+                    conn.rename_file(fn, remote_csv_fn_rn, context=context)
+                    conn.finalize_rename(context=context)
+                    _cr.commit()
+            except:
+                _cr.rollback()
+                raise
+            finally:
+                _cr.close()
         return True
 
 stock_warehouse()
