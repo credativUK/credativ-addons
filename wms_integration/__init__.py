@@ -20,4 +20,6 @@
 ##############################################################################
 
 import wms_integration_core
+import purchase
+import stock_dispatch
 import stock
