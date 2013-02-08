@@ -37,8 +37,10 @@ class stock_dispatch(osv.osv):
             context = {}
         move_pool = self.pool.get('stock.move')
         data_pool = self.pool.get('ir.model.data')
+        extlog_pool = self.pool.get('external.log')
         
         final_move_ids = []
+        external_log_ids = []
         wms_sm_sequence = {}
         
         for dispatch in self.browse(cr, uid, ids, context=context):
@@ -47,39 +49,26 @@ class stock_dispatch(osv.osv):
                 address_groups.setdefault(move.address_id.id, []).append(move)
 
             for address_id, moves in address_groups.iteritems():
+                filtered_moves = []
                 move_ids = []
                 for move in moves:
                     rec_check_ids = data_pool.search(cr, uid, [('model', '=', 'stock.move'), ('res_id', '=', move.id), ('module', 'ilike', 'extref'), ('external_referential_id', '=', dispatch.warehouse_id.referential_id.id)])
-                    
-                    if rec_check_ids:
-                        rec_checks = data_pool.browse(cr, uid, rec_check_ids, context=context)
-                        rec_check_ids = []
-                        for rec_check in rec_checks:
-                            try:
-                                dispatch_name, address_name, sm_seq = rec_check.name.split('/')[1].split('_')
-                                sm_seq = int(sm_seq)
-                                if dispatch_name == dispatch.name and address_name == '%d' % (address_id,):
-                                    rec_check_ids.append(rec_check.id)
-                            except Exception, e:
-                                # Something is wrong with this referential, delete it and create a new one
-                                data_pool.unlink(cr, uid, rec_check.id, context=context)
-                                rec_check_ids = []
-                            else:
-                                wms_sm_sequence[move.id] = sm_seq
-                                if move.state == 'cancel' or move.dispatch_id.id != dispatch.id:
-                                    continue
-                                move_ids.append(move.id)
-                                ir_model_data_rec = {
-                                    'name': rec_check.name,
-                                    'model': rec_check.model,
-                                    'external_log_id': context.get('external_log_id', None),
-                                    'res_id': rec_check.res_id,
-                                    'external_referential_id': rec_check.external_referential_id.id,
-                                    'module': 'pendref/' + rec_check.external_referential_id.name}
-                                data_pool.create(cr, uid, ir_model_data_rec)
-                    else:
-                        if move.state == 'cancel':
+                    if move.state != 'cancel' and not rec_check_ids: # We are already exported, ignore this stock move
+                        filtered_moves.append(move)
+                
+                if filtered_moves:
+                    try: # If these are already pending export, skip them
+                        external_log_id = extlog_pool.start_transfer(cr, uid, [], dispatch.warehouse_id.referential_id.id, 'stock.dispatch', 'SD_%s_%d' % (dispatch.name, address_id,), context=context)
+                    except osv.except_osv, e:
+                        if e.value == u'Will not export while incomplete transfers exist':
                             continue
+                        else:
+                            raise
+                    except:
+                        raise
+                    external_log_ids.append(external_log_id)
+                    
+                    for move in filtered_moves:
                         cr.execute("""SELECT
                                     MAX(COALESCE(SUBSTRING(name from 'stock_move/%s_%d_([0-9]*)'), '0')::INTEGER) + 1
                                     FROM ir_model_data imd
@@ -96,7 +85,7 @@ class stock_dispatch(osv.osv):
                         ir_model_data_rec = {
                             'name': "stock_move/%s_%d_%d" % (dispatch.name, address_id, sm_seq),
                             'model': 'stock.move',
-                            'external_log_id': context.get('external_log_id', None),
+                            'external_log_id': external_log_id,
                             'res_id': move.id,
                             'external_referential_id': dispatch.warehouse_id.referential_id.id,
                             'module': 'pendref/' + dispatch.warehouse_id.referential_id.name}
@@ -104,15 +93,22 @@ class stock_dispatch(osv.osv):
                         
                         wms_sm_sequence[move.id] = sm_seq
                         move_ids.append(move.id)
-                final_move_ids.extend(move_ids)
+                
+                if move_ids:
+                    final_move_ids.extend(move_ids)
         
         if final_move_ids:
             ctx = context.copy()
             ctx.update({'wms_sm_sequence': wms_sm_sequence})
             if dispatch.warehouse_id.mapping_dispatch_orders_id:
                 ctx.update({'external_mapping_ids': [dispatch.warehouse_id.mapping_dispatch_orders_id.id,]})
-
+            
+            ctx['external_log_id'] = external_log_ids[0]
             self.pool.get('external.referential')._export(cr, uid, dispatch.warehouse_id.referential_id.id, 'stock.move', final_move_ids, context=ctx)
+            
+            for external_log_id in external_log_ids:
+                extlog_pool.end_transfer(cr, uid, external_log_id, context=context)
+        
         else:
             raise # FIXME: Something went very wrong here
 
@@ -121,40 +117,8 @@ class stock_dispatch(osv.osv):
     def wms_export_orders(self, cr, uid, ids, referential_id, context=None):
         if context == None:
             context = {}
-        data_pool = self.pool.get('ir.model.data')
-
-        export_dispatch_ids = []
-        external_log_id = False
-        
-        for dispatch in self.browse(cr, uid, ids):
-            if not dispatch.warehouse_id or not dispatch.warehouse_id.referential_id:
-                continue
-            
-            try:
-                ext_id = self.oeid_to_extid(cr, uid, dispatch.id, dispatch.warehouse_id.referential_id.id, context=context)
-                if not ext_id: # We should only export new dispatches
-                    if not external_log_id:
-                        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], referential_id, 'stock.dispatch', context=context) # FIXME: Move these around each dispatch object so we can export many
-                        context['external_log_id'] = external_log_id
-                    ir_model_data_rec = {
-                        'name': 'stock_dispatch/' + dispatch.name,
-                        'model': 'stock.dispatch',
-                        'external_log_id': external_log_id,
-                        'res_id': dispatch.id,
-                        'external_referential_id': dispatch.warehouse_id.referential_id.id,
-                        'module': 'pendref/' + dispatch.warehouse_id.referential_id.name}
-                    data_pool.create(cr, uid, ir_model_data_rec, context=context)
-                    export_dispatch_ids.append(dispatch.id)
-                else: # Exported already, skip
-                    continue
-            
-            except Exception, e:
-                raise
-                pass
-
-        if export_dispatch_ids:
-            self.wms_export_all(cr, uid, export_dispatch_ids, context=context)
-            self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)
+        if ids:
+            self.wms_export_all(cr, uid, ids, context=context)
             
         return True
 

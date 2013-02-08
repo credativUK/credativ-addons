@@ -269,7 +269,6 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                     # create ir_model_data record as a pending entry pending verification if a previous function has not already done this
                     ir_model_data_ids = ir_model_data_obj.search(cr, uid, [('name','=',model_name.replace('.', '_') + '/' + data[mapping.external_key_name]),
                                                                ('model','=',model_name),
-                                                               ('external_log_id','=',context.get('external_log_id', None)),
                                                                ('res_id', '=', obj_data['id']),
                                                                ('external_referential_id', '=', referential_id),
                                                                ('module', '=', 'pendref/' + referential.name)], context=context)
@@ -384,7 +383,10 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         conn = self.external_connection(cr, uid, export_mapping.referential_id.id, DEBUG, context=context)
 
         mapping_obj = self.pool.get('external.mapping')
+        log_obj = self.pool.get('external.log')
         verification_mapping = export_mapping.external_verification_mapping or export_mapping
+        
+        log = log_obj.browse(cr, uid, context.get('external_log_id'), context=context)
         
         if not (verification_mapping and verification_mapping.external_import_uri):
             # FIXME: Log a warning/error
@@ -405,86 +407,109 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         dirs = (dirname and [dirname]) or ['/']
         importables = conn.find_importables(dirs, re.compile(basename), context=context)
 
-        if len(importables) > 1:
-            _logger.error('Found multiple files for import, aborting import: %s\nImport only supports a single confirmation at a time.' % (importables,))
-            return {}
-        elif len(importables) == 0:
+        if len(importables) == 0:
             _logger.info('Found no files for import.')
             return {}
-
-        remote_csv_fn = importables[0]
-        if DEBUG:
-            _logger.debug('CSV import: selected importable URI: %s' % (remote_csv_fn,))
-
-        verification_columns = mapping_obj.get_ext_column_headers(cr, uid, verification_mapping.id)
-        try:
-            conn.init_import(remote_csv_fn=remote_csv_fn,
-                             oe_model_name=export_mapping.model_id.model,
-                             external_key_name=verification_mapping.external_key_name,
-                             column_headers=verification_columns,
-                             context=context)
-            verification = conn.call(verification_mapping.external_list_method)
-            conn.finalize_import(context=context)
-        except Exception, X:
-            raise osv.except_osv(_('Import error'), str(X))
-
-        res = {'mismatch': [], 'missing': [], 'unexpected': [], 'exported': [], 'fname': remote_csv_fn}
-
-        # test the confirmation records against the exported records
-        obj = self.pool.get(export_mapping.model_id.model)
-        exported = dict([(r['id'], r) for r in obj.read(cr, uid, exported_ids)])
-        ir_model_data_obj = self.pool.get('ir.model.data')
-        ir_model_data_exported_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',export_mapping.referential_id.id),
-                                                                        ('model','=',export_mapping.model_id.model),
-                                                                        ('res_id','in',exported_ids)], context=context)
-        res_ids = dict([(r['name'].strip(export_mapping.model_id.model.replace('.', '_') + '/'), r['res_id']) for r in ir_model_data_obj.read(cr, uid, ir_model_data_exported_ids, fields=['res_id','name'])])
-
-        space = {'self': self, 'export_mapping': export_mapping, 'verification_mapping': verification_mapping, 'import_uri': remote_csv_fn, 'success': False,
-                 'exp': exported, 'verification': verification, 'res_ids': res_ids, 'mismatch': [], 'exported': [], 'unexpected': [], 'missing': []}
-        exec verification_mapping.success_fun in space
-        res = {'exported': space['exported'], 'unexpected': space['unexpected'], 'missing': space['missing'], 'mismatch': space['mismatch']}
-        success = space['success']
-
-        # Generate external_report_lines errors for all the erroneous
-        # and confirmed records
-        report_line_obj = self.pool.get('external.report.line')
-        error_types = {
-            'exported':   ('exported', 'CSV export: Resource with ID "%s" confirmed exported.'),
-            'mismatch':   ('exported', 'CSV export: Resource with ID "%s" failed the verification test.'),
-            'missing':    ('exported', 'CSV export: Resource with ID "%s" was exported, but does not appear in confirmation receipt.'),
-            'unexpected': ('received', 'CSV export: Resource with ID "%s" appears in confirmation receipt, but was not exported.')}
-        key_names = {
-            'exported': export_mapping.external_key_name,
-            'received': verification_mapping.external_key_name}
-        for error, records in res.iteritems():
-            if error == 'fname':
-                continue
-
-            (rec_type, msg) = error_types[error]
-            for r in records:
-                if error in ['exported']:
-                    if r.get('res_id'):
-                        report_line_obj.log_success(cr, uid, export_mapping.model_id.model, 'verify', export_mapping.referential_id.id, res_id=r['res_id'], data_record=r[rec_type], context=context)
-                elif error in ['mismatch', 'missing', 'unexpected']:
-                    if r[rec_type].get(key_names[rec_type]):
-                        _logger.error(msg % r[rec_type].get(key_names[rec_type]))
-                    if r.get('res_id'):
-                        report_line_obj.log_failed(cr, uid, export_mapping.model_id.model, 'verify', export_mapping.referential_id.id, res_id=r['res_id'], data_record=r[rec_type], context=context)
         
-        if success:
-            self.pool.get('external.log').completed(cr, uid, context.get('external_log_id'), context=context)
-        else:
-            self.pool.get('external.log').failed(cr, uid, context.get('external_log_id'), context=context)
+        for remote_csv_fn in importables: # Try and import each file
+            if DEBUG:
+                _logger.debug('CSV import: selected importable URI: %s' % (remote_csv_fn,))
 
-        # move the confirmation file into the Archives directory
-        # FIXME This is specific, this should be put in a more specific module, or handled more generally.
-        fpath, fname = os.path.split(remote_csv_fn)
-        remote_csv_fn_rn = os.path.join(fpath, 'Archives', fname)
-        
-        _logger.info("Archiving imported advice file %s as %s" % (remote_csv_fn, remote_csv_fn_rn))
-        conn.rename_file(remote_csv_fn, remote_csv_fn_rn, context=context)
-        conn.finalize_rename(context=context)
-        cr.commit() # FIXME: Make sure this is not our main cusor, the parent function should pass a new cusor as cr
+            verification_columns = mapping_obj.get_ext_column_headers(cr, uid, verification_mapping.id)
+            try:
+                conn.init_import(remote_csv_fn=remote_csv_fn,
+                                oe_model_name=export_mapping.model_id.model,
+                                external_key_name=verification_mapping.external_key_name,
+                                column_headers=verification_columns,
+                                context=context)
+                verification = conn.call(verification_mapping.external_list_method)
+                conn.finalize_import(context=context)
+            except Exception, X:
+                raise osv.except_osv(_('Import error'), str(X))
+
+            res = {'mismatch': [], 'missing': [], 'unexpected': [], 'exported': [], 'fname': remote_csv_fn}
+
+            # test the confirmation records against the exported records
+            obj = self.pool.get(export_mapping.model_id.model)
+            exported = dict([(r['id'], r) for r in obj.read(cr, uid, exported_ids)])
+            ir_model_data_obj = self.pool.get('ir.model.data')
+            ir_model_data_exported_ids = ir_model_data_obj.search(cr, uid, [('external_referential_id','=',export_mapping.referential_id.id),
+                                                                            ('model','=',export_mapping.model_id.model),
+                                                                            ('res_id','in',exported_ids)], context=context)
+            res_ids = dict([(r['name'].strip(export_mapping.model_id.model.replace('.', '_') + '/'), r['res_id']) for r in ir_model_data_obj.read(cr, uid, ir_model_data_exported_ids, fields=['res_id','name'])])
+            
+            # remote_csv_fn = filename
+            # success = True if the log should be approved, False if the log should be rejected
+            # mismatch = List of records in the file which are invalid
+            # exported = List of records in the file which are correct
+            # unexpected = List of records in the file which are export but in a different log
+            # missing = List of records in the file which are not exported but are in this confirmation
+            # res_name = The reference of the log we are trying to import
+            # other_res_name = References of ALL logs (including this one) which appear in this file - We will check if these are still open and if so leave the file in place
+            
+            space = {'self': self, 'export_mapping': export_mapping, 'verification_mapping': verification_mapping, 'import_uri': remote_csv_fn, 'success': False,
+                    'exp': exported, 'verification': verification, 'res_ids': res_ids, 'mismatch': [], 'exported': [], 'unexpected': [], 'missing': [], 'res_name': log.res_name, 'all_res_name': []}
+            exec verification_mapping.success_fun in space
+            res = {'exported': space['exported'], 'unexpected': space['unexpected'], 'missing': space['missing'], 'mismatch': space['mismatch']}
+            all_res_name = space['all_res_name']
+            
+            if log.res_name in all_res_name: # This confirmation/failure is for us
+                success = space['success']
+
+                # Generate external_report_lines errors for all the erroneous
+                # and confirmed records
+                report_line_obj = self.pool.get('external.report.line')
+                error_types = {
+                    'exported':   ('exported', 'CSV export: Resource with ID "%s" confirmed exported.'),
+                    'mismatch':   ('exported', 'CSV export: Resource with ID "%s" failed the verification test.'),
+                    'missing':    ('exported', 'CSV export: Resource with ID "%s" was exported, but does not appear in confirmation receipt.'),
+                    'unexpected': ('received', 'CSV export: Resource with ID "%s" appears in confirmation receipt, but was not exported.')}
+                key_names = {
+                    'exported': export_mapping.external_key_name,
+                    'received': verification_mapping.external_key_name}
+                for error, records in res.iteritems():
+                    if error == 'fname':
+                        continue
+
+                    (rec_type, msg) = error_types[error]
+                    for r in records:
+                        if error in ['exported']:
+                            if r.get('res_id'):
+                                report_line_obj.log_success(cr, uid, export_mapping.model_id.model, 'verify', export_mapping.referential_id.id, res_id=r['res_id'], data_record=r[rec_type], context=context)
+                        elif error in ['mismatch', 'missing', 'unexpected']:
+                            if r[rec_type].get(key_names[rec_type]):
+                                _logger.error(msg % r[rec_type].get(key_names[rec_type]))
+                            if r.get('res_id'):
+                                report_line_obj.log_failed(cr, uid, export_mapping.model_id.model, 'verify', export_mapping.referential_id.id, res_id=r['res_id'], data_record=r[rec_type], context=context)
+                
+                if success:
+                    log_obj.completed(cr, uid, log.id, context=context)
+                else:
+                    log_obj.failed(cr, uid, log.id, context=context)
+            else:
+                _logger.info("Advice file %s not related to current log %d, skipping" % (remote_csv_fn, log.id))
+            
+            # Check if all of the other logs with this res name are completed, if not do not move the file
+            # A confirmation/reject with a res name that cannot be resolved to a log will be considered complete
+            # Note: We will even do this if the message is not for us incase the message is for a log which doesnt exist, it would block the queue
+            
+            all_log_ids = log_obj.search(cr, uid, [('referential_id','=',log.referential_id.id),
+                                     ('model_id','=',log.model_id.id),
+                                     ('res_name','in',all_res_name),
+                                     ('status','in',['in-progress','imported-fail','imported-success','exported-fail','exported-success'])], context=context)
+            
+            if not all_log_ids:
+                # move the confirmation file into the Archives directory
+                # FIXME This is specific, this should be put in a more specific module, or handled more generally.
+                fpath, fname = os.path.split(remote_csv_fn)
+                remote_csv_fn_rn = os.path.join(fpath, 'Archives', fname)
+                
+                _logger.info("Archiving imported advice file %s as %s" % (remote_csv_fn, remote_csv_fn_rn))
+                conn.rename_file(remote_csv_fn, remote_csv_fn_rn, context=context)
+                conn.finalize_rename(context=context)
+            else:
+                _logger.info("Advice file %s imported for current log %d, but still requires actions on %s" % (remote_csv_fn, log.id, all_log_ids))
+            cr.commit() # FIXME: Make sure this is not our main cusor, the parent function should pass a new cusor as cr
 
         return res
 
@@ -517,7 +542,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             _logger.info('Found no files for import.')
             return [], False
 
-        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], import_mapping.referential_id.id, import_mapping.model_id.model, context=ctx)
+        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], import_mapping.referential_id.id, import_mapping.model_id.model, False, context=ctx)
         ctx['external_log_id'] = external_log_id
 
         remote_csv_fn = importables[0]
@@ -555,7 +580,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         referential_id = self._ensure_single_referential(cr, uid, id, context=context)
         referential = self._ensure_wms_integration_referential(cr, uid, referential_id, context=context)
 
-        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], referential_id, 'product.product', context=context)
+        external_log_id = self.pool.get('external.log').start_transfer(cr, uid, [], referential_id, 'product.product', 'PM', context=context)
         context['external_log_id'] = external_log_id
         res = self._export(cr, uid, referential_id, 'product.product', context=context)
         self.pool.get('external.log').end_transfer(cr, uid, external_log_id, context=context)

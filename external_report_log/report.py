@@ -49,7 +49,8 @@ class external_log(osv.osv):
                                     ('complete-complete', 'Complete')], string='Status', required=True, readonly=True),
         'model_id': fields.many2one('ir.model', 'Model', readonly=True),
         'create_uid': fields.many2one('res.users', 'User', readonly=True),
-        'line_ids': fields.one2many('external.report.line', 'external_log_id', 'Report lines')
+        'line_ids': fields.one2many('external.report.line', 'external_log_id', 'Report lines'),
+        'res_name': fields.char('Resource reference', type='char', size=32),
         }
 
     _defaults = {
@@ -69,12 +70,12 @@ class external_log(osv.osv):
         ('exported-success', 'complete-complete')
         ]
 
-    def start_transfer(self, cr, uid, ids, referential_id, model_name, context=None):
+    def start_transfer(self, cr, uid, ids, referential_id, model_name, res_name, context=None):
         if context is None:
             context = {}
 
         # ensure no incomplete transfers exist
-        if self.incomplete_transfers(cr, uid, ids, referential_id, model_name, context=context):
+        if self.incomplete_transfers(cr, uid, ids, referential_id, model_name, res_name, context=context):
             _logger.error('Will not export while incomplete transfers exist')
             raise osv.except_osv(_('Export error'),
                                  _('Will not export while incomplete transfers exist'))
@@ -125,6 +126,7 @@ class external_log(osv.osv):
                                     'retry_of': context.get('retry_of_execution', False),
                                     'start_time': datetime.datetime.now(),
                                     'status': 'in-progress',
+                                    'res_name': res_name,
                                     'model_id': model_id}, context=context)
 
         return log_id
@@ -258,7 +260,7 @@ class external_log(osv.osv):
         else:
             _logger.warn('Found no exported records for log %s to confirm' % (log.name,))
 
-    def incomplete_transfers(self, cr, uid, ids, referential_id, model_name, context=None):
+    def incomplete_transfers(self, cr, uid, ids, referential_id, model_name, res_name, context=None):
         '''
         This method returns any incomplete transfers for the given
         referential and model.
@@ -282,6 +284,7 @@ class external_log(osv.osv):
         return self.search(cr, uid, [('id','not in',ids),
                                      ('referential_id','=',referential_id),
                                      ('model_id','=',model_id),
+                                     ('res_name','=',res_name),
                                      ('status','in',['in-progress','imported-fail','imported-success','exported-fail','exported-success'])], context=context)
 
 external_log()
