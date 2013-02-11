@@ -286,6 +286,12 @@ class external_log(osv.osv):
                                      ('model_id','=',model_id),
                                      ('res_name','=',res_name),
                                      ('status','in',['in-progress','imported-fail','imported-success','exported-fail','exported-success'])], context=context)
+    
+    def run_import_confirmation_scheduler(self, cr, uid, context=None):
+        external_log_ids = self.search(cr, uid, [('status','in',['in-progress','imported-fail','imported-success','exported-fail','exported-success'])], context=context)
+        for external_log in self.browse(cr, uid, external_log_ids, context=context):
+            external_log.import_confirmation(context=context)
+        return True
 
 external_log()
 

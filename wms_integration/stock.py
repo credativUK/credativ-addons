@@ -147,13 +147,18 @@ class stock_warehouse(osv.osv):
         return True
 
     def get_exportable_dispatches(self, cr, uid, ids, referential_id, context=None):
+        if context == None:
+            context = {}
         if not ids:
             return []
-        sd_ids = self.pool.get('stock.dispatch').search(cr, uid, [('state', 'in', ('confirmed', 'assigned')), ('warehouse_id', 'in', ids),], context=context)
+        
+        params = [('state', 'in', ('confirmed', 'assigned')), ('warehouse_id', 'in', ids),]
+        params.extend(context.get('search_export_dispatch_orders', []))
+        
+        sd_ids = self.pool.get('stock.dispatch').search(cr, uid, params, context=context)
         return sd_ids
 
     def export_dispatch_orders(self, cr, uid, ids, context=None):
-        # TODO: We need to find what dispatches to export based on time, ie Cross-Dock only, Inventory only
         if context == None:
             context = {}
         if not isinstance(ids, list):
@@ -217,6 +222,34 @@ class stock_warehouse(osv.osv):
                 raise
             finally:
                 _cr.close()
+        return True
+
+    def run_export_purchase_orders_scheduler(self, cr, uid, context=None):
+        warehouse_ids = self.search(cr, uid, [], context=context)
+        for warehouse in self.browse(cr, uid, warehouse_ids, context=context):
+            if warehouse.referential_id:
+                warehouse.export_purchase_orders(context=context)
+        return True
+
+    def run_export_dispatch_orders_scheduler(self, cr, uid, context=None):
+        warehouse_ids = self.search(cr, uid, [], context=context)
+        for warehouse in self.browse(cr, uid, warehouse_ids, context=context):
+            if warehouse.referential_id:
+                warehouse.export_dispatch_orders(context=context)
+        return True
+
+    def run_import_purchase_order_receipts_scheduler(self, cr, uid, context=None):
+        warehouse_ids = self.search(cr, uid, [], context=context)
+        for warehouse in self.browse(cr, uid, warehouse_ids, context=context):
+            if warehouse.referential_id:
+                warehouse.import_purchase_order_receipts(context=context)
+        return True
+
+    def run_import_dispatch_receipts_scheduler(self, cr, uid, context=None):
+        warehouse_ids = self.search(cr, uid, [], context=context)
+        for warehouse in self.browse(cr, uid, warehouse_ids, context=context):
+            if warehouse.referential_id:
+                warehouse.import_dispatch_receipts(context=context)
         return True
 
 stock_warehouse()

@@ -587,4 +587,11 @@ class external_referential(wms_integration_osv.wms_integration_osv):
 
         return res
 
+    def run_export_products_scheduler(self, cr, uid, context=None):
+        external_ref_ids = self.search(cr, uid, [], context=context)
+        for external_ref in self.browse(cr, uid, external_ref_ids, context=context):
+            if external_ref._ensure_wms_integration_referential(context=context):
+                external_ref.export_products(context=context)
+        return True
+
 external_referential()
