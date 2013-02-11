@@ -447,7 +447,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
             # res_name = The reference of the log we are trying to import
             # other_res_name = References of ALL logs (including this one) which appear in this file - We will check if these are still open and if so leave the file in place
             
-            space = {'self': self, 'export_mapping': export_mapping, 'verification_mapping': verification_mapping, 'import_uri': remote_csv_fn, 'success': False,
+            space = {'self': self, 'cr': cr, 'uid': uid, 'export_mapping': export_mapping, 'verification_mapping': verification_mapping, 'import_uri': remote_csv_fn, 'success': False, 'ext_log': log,
                     'exp': exported, 'verification': verification, 'res_ids': res_ids, 'mismatch': [], 'exported': [], 'unexpected': [], 'missing': [], 'res_name': log.res_name, 'all_res_name': []}
             exec verification_mapping.success_fun in space
             res = {'exported': space['exported'], 'unexpected': space['unexpected'], 'missing': space['missing'], 'mismatch': space['mismatch']}

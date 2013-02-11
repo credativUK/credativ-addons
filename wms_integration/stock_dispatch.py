@@ -68,6 +68,15 @@ class stock_dispatch(osv.osv):
                         raise
                     external_log_ids.append(external_log_id)
                     
+                    ir_model_data_rec = {
+                        'name': 'stock_dispatch/' + 'SD_%s_%d' % (dispatch.name, address_id,),
+                        'model': 'stock.dispatch',
+                        'external_log_id': external_log_id,
+                        'res_id': dispatch.id,
+                        'external_referential_id': dispatch.warehouse_id.referential_id.id,
+                        'module': 'pendref/' + dispatch.warehouse_id.referential_id.name}
+                    data_pool.create(cr, uid, ir_model_data_rec, context=context)
+                    
                     for move in filtered_moves:
                         cr.execute("""SELECT
                                     MAX(COALESCE(SUBSTRING(name from 'stock_move/%s_%d_([0-9]*)'), '0')::INTEGER) + 1
@@ -89,7 +98,7 @@ class stock_dispatch(osv.osv):
                             'res_id': move.id,
                             'external_referential_id': dispatch.warehouse_id.referential_id.id,
                             'module': 'pendref/' + dispatch.warehouse_id.referential_id.name}
-                        data_pool.create(cr, uid, ir_model_data_rec)
+                        data_pool.create(cr, uid, ir_model_data_rec, context=context)
                         
                         wms_sm_sequence[move.id] = sm_seq
                         move_ids.append(move.id)
