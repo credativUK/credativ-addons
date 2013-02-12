@@ -13,12 +13,15 @@
                         <field name="external_log_ids">
                             <tree string="Execution reports">
                                 <field name="name" />
+                                <field name="res_name" />
                                 <field name="model_id" />
                                 <field name="create_uid" />
                                 <field name="start_time" />
                                 <field name="end_time" />
                                 <field name="status" />
                                 <button name="import_confirmation" string="Get confirmation" icon="gtk-go-forward" type="object" colspan="2" attrs="{'invisible': [('status','in',['in-progress','transfer-failed','imported-failed','exported-fail','complete-rejections','complete-complete'])]}" />
+                                <button name="completed" string="Force confirmation" icon="gtk-save" type="object" colspan="2" attrs="{'invisible': [('status','in',['in-progress','transfer-failed','imported-failed','exported-fail','complete-rejections','complete-complete'])]}" />
+                                <button name="failed" string="Force rejection" icon="gtk-cancel" type="object" colspan="2" attrs="{'invisible': [('status','in',['transfer-failed','imported-failed','exported-fail','complete-rejections','complete-complete'])]}" />
                             </tree>
                         </field>
                     </page>

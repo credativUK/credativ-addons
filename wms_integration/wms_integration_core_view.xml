@@ -38,15 +38,19 @@
                          inherit from external_referential_form_view
                          -->
                     <page string="History and confirmations">
-                        <field name="external_log_ids">
-                            <tree string="Execution reports">
+                        <separator string="Execution Reports" colspan="4"/>
+                        <field name="external_log_ids" nolabel="1">
+                            <tree string="Execution Reports">
                                 <field name="name" />
+                                <field name="res_name" />
                                 <field name="model_id" />
                                 <field name="create_uid" />
                                 <field name="start_time" />
                                 <field name="end_time" />
                                 <field name="status" />
                                 <button name="import_confirmation" string="Get confirmation" icon="gtk-go-forward" type="object" colspan="2" attrs="{'invisible': [('status','in',['in-progress','transfer-failed','imported-failed','exported-fail','complete-rejections','complete-complete'])]}" />
+                                <button name="completed" string="Force confirmation" icon="gtk-save" type="object" colspan="2" attrs="{'invisible': [('status','in',['in-progress','transfer-failed','imported-failed','exported-fail','complete-rejections','complete-complete'])]}" />
+                                <button name="failed" string="Force rejection" icon="gtk-cancel" type="object" colspan="2" attrs="{'invisible': [('status','in',['transfer-failed','imported-failed','exported-fail','complete-rejections','complete-complete'])]}" />
                             </tree>
                         </field>
                     </page>
@@ -67,6 +71,8 @@
                         <field name="external_export_uri" />
                         <field name="external_import_uri" />
                         <field name="external_verification_mapping" />
+                        <newline />
+                        <field name="success_fun" />
                     </group>
                     <group col="4" colspan="4">
                         <field name="external_list_method" />
