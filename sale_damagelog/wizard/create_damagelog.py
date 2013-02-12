@@ -26,6 +26,20 @@ import time
 from osv import osv, fields
 from tools.translate import _
 
+def make_category_selection():
+    return \
+        fields.selection([('pre_delay','Pre-dispatch / Delay'),
+                          ('pre_cancel', 'Pre-dispatch / General cancellation'),
+                          ('del_cancel', 'Delivery / Cancellation'),
+                          ('del_undel', 'Delivery / Item undelivered due to size'),
+                          ('pd_quality', 'Post-delivery / Manufacturing issue'),
+                          ('pd_damage', 'Post-delivery / Delivery damage (product)'),
+                          ('pd_mess', 'Post-delivery / Delivery service - Poor'),
+                          ('pd_return', 'Post-delivery / General return'),
+                          ('fraud', 'Fraud & Chargebacks'),
+                          ('voucher', 'Vouchers not applied/Double order'),
+                          ('other', 'IT/Test orders/Other')], 'Category', required=True)
+
 class damagelog_osv(object):
     def create_damagelog(self, cr, uid, ids, context=None):
         rec_id = context and context.get('active_id', False)
@@ -35,7 +49,7 @@ class damagelog_osv(object):
             if not move:
                 raise osv.except_osv(_('UserError'), _('A valid stock move must be selected'))
             product_supplier = move.product_id.seller_ids and move.product_id.seller_ids[0].name.id or False 
-            damagelog_id = self.pool.get('sale.damagelog').create(cr,uid,{'stock_move_id':data.stock_move_id.id,'product_qty':move.product_qty, 'product_uom':move.product_uom.id, 'product_supplier':product_supplier},context=context)
+            damagelog_id = self.pool.get('sale.damagelog').create(cr,uid,{'stock_move_id':data.stock_move_id.id,'product_qty':move.product_qty, 'product_uom':move.product_uom.id, 'product_supplier':product_supplier, 'category':data.category},context=context)
         return {
                 'name': 'Issue Log',
                 'view_type': 'form',
@@ -52,6 +66,7 @@ class sale_create_damagelog_from_product(damagelog_osv, osv.osv_memory):
     _columns = {
         'stock_move_id' : fields.many2one('stock.move', 'Stock Move', domain=[('product_id','=','product_id')], required=True),
         'product_id' : fields.many2one('product.product', 'Product'),
+        'category': make_category_selection(),
     }
 
     def default_get(self, cr, uid, fields, context):
@@ -67,6 +82,7 @@ class sale_create_damagelog_from_outgoing(damagelog_osv, osv.osv_memory):
     _columns = {
         'stock_move_id' : fields.many2one('stock.move', 'Stock Move', domain=[('picking_id','=','picking_id')], required=True),
         'picking_id' : fields.many2one('stock.picking', 'Picking'),
+        'category': make_category_selection(),
     }
 
     def default_get(self, cr, uid, fields, context):
@@ -82,6 +98,7 @@ class sale_create_damagelog_from_saleorder(damagelog_osv, osv.osv_memory):
     _columns = {
         'stock_move_id' : fields.many2one('stock.move', 'Stock Move', domain=[('sale_line_id.order_id','=','sale_order_id')], required=True),
         'sale_order_id' : fields.many2one('sale.order', 'Sale Order'),
+        'category': make_category_selection(),
     }
 
     def default_get(self, cr, uid, fields, context):

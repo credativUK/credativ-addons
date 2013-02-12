@@ -57,14 +57,14 @@ class sale_comprequest(osv.osv):
             value['product_value'] = damagelog_rec.product_id.list_price
         return {'value':value}
     
-    def action_cancel(self, cr, uid, ids, *args):
-        self.write(cr, uid, ids, {'state': 'cancel', 'cancel_uid': uid, 'cancel_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=None)
+    def action_cancel(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, {'state': 'cancel', 'cancel_uid': uid, 'cancel_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=context)
 
-    def action_draft(self, cr, uid, ids, *args):
-        self.write(cr, uid, ids, {'state': 'draft'}, context=None)
+    def action_draft(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, {'state': 'draft'}, context=context)
 
-    def action_confirm(self, cr, uid, ids, *args):
-        comp_reqs = self.browse(cr, uid, ids, context=None)
+    def action_confirm(self, cr, uid, ids, context=None):
+        comp_reqs = self.browse(cr, uid, ids, context=context)
         raise_errors = []
         for comp_req in comp_reqs:
             if comp_req.refund_type in ('replace-same', 'replace-diff', 'redispatch') and not comp_req.repl_order_ref:
@@ -78,7 +78,7 @@ class sale_comprequest(osv.osv):
                 raise_errors.append(raise_text)
         if raise_errors:
             raise osv.except_osv('User Error', '\n\n'.join(raise_errors)) # raise_errors is a list of strings
-        self.write(cr, uid, ids, {'state': 'confirmed', 'confirm_uid': uid, 'confirm_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=None)
+        self.write(cr, uid, ids, {'state': 'confirmed', 'confirm_uid': uid, 'confirm_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=context)
 
 sale_comprequest()
 
