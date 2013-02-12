@@ -12,7 +12,6 @@
         <form string="Compensation Request">
           <group colspan="4">
             <field name="name" select="1"/>
-            <field name="damagelog_id" select="1" on_change="onchange_damagelog_id(damagelog_id)"/>
             <field name="create_date" select="1"/>
             <field name="create_uid" select="1"/>
             <field name="write_date" select="1"/>
@@ -26,10 +25,7 @@
                   <field name="sale_order_id" select="1"/>
                   <field name="date_order" select="1"/>
                   <newline/>
-                  <field name="product_id" select="1"/>
-                  <field name="product_sku" select="1"/>
-                  <field name="product_value" select="2"/>
-                  <field name="product_supplier" select="1"/>
+                  <field name="damagelog_ids" />
                 </group>
                 <group colspan="4">
                     <separator string="Notes"/>
@@ -49,9 +45,10 @@
             </notebook>
             <group col="5" colspan="4">
                 <field name="state" select="1"/>
-                <button name="action_confirm" states="draft" string="Confirm" icon="gtk-go-forward" type="object" groups="base.group_sale_manager"/>
+                <button name="action_process" states="draft" string="Process" icon="gtk-go-forward" type="object" groups="base.group_sale_manager"/>
+                <button name="action_confirm" states="processing" string="Confirm" icon="gtk-go-forward" type="object" groups="base.group_sale_manager"/>
                 <button name="action_cancel" states="draft,confirmed" string="Cancel" icon="gtk-cancel" type="object" groups="base.group_sale_manager"/>
-                <button name="action_draft" states="cancel" string="Set to Draft" icon="gtk-convert" type="object"/>
+                <button name="action_draft" states="processing,cancel" string="Set to Draft" icon="gtk-convert" type="object"/>
             </group>
           </group>
         </form>
@@ -69,9 +66,6 @@
           <field name="name"/>
           <field name="sale_order_id"/>
           <field name="partner_id"/>
-          <field name="product_sku"/>
-          <field name="product_id"/>
-          <field name="product_supplier"/>
           <field name="refund_type"/>
           <field name="refund_value"/>
           <field name="state"/>
@@ -93,15 +87,11 @@
         <search string="Search Compensation Requests">
           <group col="10" colspan="5">
             <field name="sale_order_id"/>
-            <field name="product_sku"/>
-            <field name="product_supplier"/>
             <field name="refund_type"/>
             <field name="state"/>
           </group>
           <newline/>
           <group expand="0" string="Group By..." colspan="4" col="4" groups="base.group_extended">
-            <filter string="Product" icon="terp-stock_effects-object-colorize" domain="[]" context="{'group_by':'product_id'}"/>
-            <filter string="Supplier" icon="terp-personal" domain="[]" context="{'group_by':'product_supplier'}"/>
             <filter string="Type" icon="terp-personal" domain="[]" context="{'group_by':'refund_type'}"/>
             <filter string="Status" icon="terp-personal" domain="[]" context="{'group_by':'state'}"/>
           </group>
@@ -133,10 +123,6 @@
 
    <menuitem action="action_sale_comprequest_tree" id="menu_sale_comprequest" parent="account.menu_finance"/>
 
-    <!-- Link from  Damage Log to Compensation Requests -->
-
-    <act_window domain="[('damagelog_id', '=', active_id)]" id="act_sale_damagelog_sale_comprequest" name="Compensation Requests" res_model="sale.comprequest" src_model="sale.damagelog"/>
-
     <!-- Comment Tree View -->
     <record id="view_sale_comprequest_comment_tree" model="ir.ui.view">
       <field name="name">sale.comprequest.comment.tree</field>
@@ -165,22 +151,94 @@
       </field>
     </record>
 
-    <record model="ir.ui.view" id="view_order_form_made_compreqs">
+    <!-- Order line selector -->
+
+    <record id="view_damagelog_from_order_lines" model="ir.ui.view">
+        <field name="name">sale.damagelog.from.order.lines.form</field>
+        <field name="model">sale.damagelog.from.order.lines</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Select Order Lines">
+                <group colspan="1" expand="1">
+                    <separator string="Sale Order Lines" colspan="4" />
+                    <field height="300" width="700" name="line_ids" nolabel="1" />
+                </group>
+                <group colspan="4" col="6">
+                    <label string="" colspan="2"/>
+                    <button icon="gtk-cancel" special="cancel" string="Cancel"/>
+                    <button icon="gtk-execute" string="Ok" name="add_lines" type="object"/>
+                </group>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_view_damagelog_from_order_lines" model="ir.actions.act_window">
+        <field name="name">Import Order Lines</field>
+        <field name="res_model">sale.damagelog.from.order.lines</field>
+        <field name="view_type">form</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="view_damagelog_from_order_lines"/>
+        <field name="target">new</field>
+        <field name="context">{'order_id': active_id}</field>
+    </record>
+
+    <!-- Sale order Compensation Request tab -->
+
+    <record model="ir.ui.view" id="view_order_form_compreqs">
         <field name="name">sale.order.form.compreqs</field>
         <field name="model">sale.order</field>
         <field name="type">form</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
             <data>
-                <xpath expr="/form/notebook/page[last()]" position="after">
+                <xpath expr="/form/notebook/page[@string='Sales Order']" position="after">
                     <page string="Compensation Requests">
                         <separator colspan="4" string="Compensation Requests"/>
-                        <field colspan="4" name="comp_reqs" nolabel="1"/>
+                        <field colspan="4" name="comp_reqs" nolabel="1" editable="bottom" />
+                        <!-- TODO Insert editable list of sale order lines here; each will have a category field -->
+                        <button name="%(action_view_damagelog_from_order_lines)d"
+                                string="Import Order Lines" type="action" icon="gtk-execute"
+                                attrs="{'invisible':[('state','=','confirm')]}"/>
+
+                        <field colspan="4" name="order_line" nolabel="1" editable="bottom" />
                     </page>
                 </xpath>
             </data>
         </field>
     </record>
+
+    <!-- Add the compensation field to sale order lines -->
+
+    <record id="sale_order_line_tree_compensation" model="ir.ui.view">
+        <field name="name">sale.order.line.tree.compensation</field>
+        <field name="model">sale.order.line</field>
+        <field name="inherit_id" ref="sale.view_order_line_tree" />
+        <field name="priority" eval="1" />
+        <field name="type">tree</field>
+        <field name="arch" type="xml">
+            <tree string="Sales Order Lines">
+                <field name="price_subtotal" position="after">
+                    <field name="compensation" />
+                </field>
+            </tree>
+        </field>
+    </record>
+
+<!--
+    <record id="sale_multichannel_order_line_tree_compensation" model="ir.ui.view">
+        <field name="name">sale.multichannel.order.line.tree.compensation</field>
+        <field name="model">sale.order.line</field>
+        <field name="inherit_id" ref="base_sale_multichannels.base_sale_multichannel_view_order_line_tree" />
+        <field name="type">tree</field>
+        <field name="arch" type="xml">
+            <tree string="Sales Order Lines">
+                <field name="price_subtotal" position="after">
+                    <field name="compensation" />
+                </field>
+            </tree>
+        </field>
+    </record>
+-->
 
     <act_window
         domain="[('sale_order_id', 'in', active_ids)]" 

@@ -6,7 +6,6 @@ class sale_comprequest(osv.osv):
 
     _columns = {
         'name' : fields.char('Name', size=128, required=True),
-        'damagelog_id': fields.many2one('sale.damagelog', 'Issue Log', required=True, readonly=True, states={'draft': [('readonly', False)]}),
         'create_date': fields.datetime('Date Created', readonly=True),
         'create_uid': fields.many2one('res.users', 'Created By', readonly=True),
         'write_date': fields.datetime('Last Updated', readonly=True),
@@ -15,12 +14,8 @@ class sale_comprequest(osv.osv):
         'cancel_uid': fields.many2one('res.users', 'Last Updated By', readonly=True),
         'confirm_date': fields.datetime('Last Updated', readonly=True),
         'confirm_uid': fields.many2one('res.users', 'Last Updated By', readonly=True),
-        'sale_order_id': fields.related('damagelog_id', 'stock_move_id', 'sale_line_id', 'order_id', type='many2one', relation='sale.order', string='Order Reference', readonly=True, store=True),
+        'sale_order_id': fields.many2one('sale.order', 'Order Reference', readonly=True, states={'draft': [('readonly', False)]}),
         'date_order': fields.related('sale_order_id', 'date_order', type='date', string='Order Date', readonly=True),
-        'product_id': fields.related('damagelog_id', 'stock_move_id', 'product_id', type='many2one', relation='product.product', string='Product', readonly=True),
-        'product_sku': fields.related('product_id', 'default_code', type='char', size=16, string='Product Code', readonly=True),
-        'product_value': fields.float('Product Value', readonly=True),
-        'product_supplier': fields.related('damagelog_id', 'product_supplier', type='many2one', relation='res.partner', string='Product Supplier', readonly=True),
         'partner_id': fields.related('sale_order_id', 'partner_id', type='many2one', relation='res.partner', string='Partner', readonly=True),
         'refund_type': fields.selection(
             [('refund', 'Refund'), ('voucher', 'Voucher'),
@@ -28,13 +23,31 @@ class sale_comprequest(osv.osv):
              ('replace-diff', 'Replacement - different'),
              ('redispatch', 'Redispatch')], 'Compensation Type', required=True, readonly=True, states={'draft': [('readonly', False)]}),
         'refund_value': fields.float('Compensation Value', readonly=True, states={'draft': [('readonly', False)]}),
-        'state': fields.selection([('draft', 'Draft'), ('confirmed', 'Confirmed'), ('cancel', 'Cancelled')], 'Compensation Status', required=True, readonly=True),
+        'state': fields.selection([('draft', 'Draft'), ('processing', 'Processing'), ('confirmed', 'Confirmed'), ('cancel', 'Cancelled')], 'Compensation Status', required=True, readonly=True),
         'voucher_code': fields.char('Voucher Code', size=200, readonly=True, states={'draft': [('readonly', False)]}),
-        'repl_order_ref': fields.many2one('sale.order', 'Replacement / Redispatch Order Reference', readonly=True, states={'draft': [('readonly', False)]}),
+        'repl_order_ref': fields.many2one('sale.order', 'Rpl/Red Order Ref', readonly=True, states={'draft': [('readonly', False)]}),
         'comment_ids': fields.one2many('sale.comprequest.comment', 'comprequest_id'),
         'notes': fields.text('Notes'),
+        'damagelog_ids': fields.one2many('sale.damagelog', 'comprequest_id', string='Issues', required=True, readonly=True, states={'draft': [('readonly', False)]}),
     }
-    
+
+    def _check_refund_amount(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+        if isinstance(ids, (list, tuple)):
+            ids = ids[0]
+
+        this = self.browse(cr, uid, ids, context=context)
+        other_comprequests = self.pool.get('sale.comprequest').search(cr, uid, [('sale_order_id','=',this.sale_order_id),
+                                                                                ('id','<>',ids),
+                                                                                ('refund_type','in',['refund','voucher'])], context=context)
+        refunded = sum([c.refund_value for c in self.pool.get('sale.comprequest').browse(cr, uid, other_comprequests, context=context)])
+        return this.refund_value < refunded
+
+    _constraints = [
+        (_check_refund_amount, 'This refund amount would make the total refunded greater than the order totel.', ['refund_value']),
+        ]
+
     _sql_constraints = [
         ('name_uniq', 'unique(name)', 'Compensation Request name must be unique !'),
     ]
@@ -57,14 +70,18 @@ class sale_comprequest(osv.osv):
             value['product_value'] = damagelog_rec.product_id.list_price
         return {'value':value}
     
-    def action_cancel(self, cr, uid, ids, *args):
-        self.write(cr, uid, ids, {'state': 'cancel', 'cancel_uid': uid, 'cancel_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=None)
+    def action_cancel(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, {'state': 'cancel', 'cancel_uid': uid, 'cancel_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=context)
 
-    def action_draft(self, cr, uid, ids, *args):
-        self.write(cr, uid, ids, {'state': 'draft'}, context=None)
+    def action_draft(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, {'state': 'draft'}, context=context)
+        # TODO Trigger email to reporting agent
 
-    def action_confirm(self, cr, uid, ids, *args):
-        comp_reqs = self.browse(cr, uid, ids, context=None)
+    def action_process(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, {'state': 'processing'}, context=context)
+
+    def action_confirm(self, cr, uid, ids, context=None):
+        comp_reqs = self.browse(cr, uid, ids, context=context)
         raise_errors = []
         for comp_req in comp_reqs:
             if comp_req.refund_type in ('replace-same', 'replace-diff', 'redispatch') and not comp_req.repl_order_ref:
@@ -78,7 +95,7 @@ class sale_comprequest(osv.osv):
                 raise_errors.append(raise_text)
         if raise_errors:
             raise osv.except_osv('User Error', '\n\n'.join(raise_errors)) # raise_errors is a list of strings
-        self.write(cr, uid, ids, {'state': 'confirmed', 'confirm_uid': uid, 'confirm_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=None)
+        self.write(cr, uid, ids, {'state': 'confirmed', 'confirm_uid': uid, 'confirm_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=context)
 
 sale_comprequest()
 
@@ -105,3 +122,61 @@ class sale_order(osv.osv):
         }
 
 sale_order()
+
+
+class sale_order_line(osv.osv):
+    _inherit = 'sale.order.line'
+
+    def _get_latest_compensation(self, cr, uid, ids, name, arg, context=None):
+        if context is None:
+            context = {}
+
+        res = {}
+        dl_pool = self.pool.get('sale.damagelog')
+        cr_pool = self.pool.get('sale.comprequest')
+
+        for id in ids:
+            # FIXME Why is this taking three steps?
+            damagelog_ids = dl_pool.search(cr, uid, [('sale_line_id','=',id)], context=context)
+            comprequest_ids = [r['comprequest_id'] for r in dl_pool.read(cr, uid, damagelog_ids, ['comprequest_id'])]
+            # FIXME This should probably show returns and replacements too
+            comprequest_id = cr_pool.search(cr, uid, [('id','in',comprequest_ids),
+                                                      ('state','<>','cancel'),
+                                                      ('refund_type','in',['refund','voucher'])],
+                                            limit=1, order='write_date', context=context)
+            if comprequest_id:
+                comprequest = cr_pool.browse(cr, uid, comprequest_id, context=context)
+                res[id] = '%s: %.2f (%s)' % (comprequest.refund_type, comprequest.refund_value, comprequest.state)
+            else:
+                res[id] = None
+
+        return res
+
+    _columns = {
+        'compensation': fields.function(_get_latest_compensation, string='Compensation'),
+        }
+
+sale_order_line()
+
+
+class sale_damagelog_from_order_lines(osv.osv_memory):
+    _name = 'sale.damagelog.from.order.lines'
+    _description = 'Select sale order lines to log issues against'
+    _columns = {
+        'line_ids': fields.one2many('sale.order.line', 'order_id', 'Order Lines'),
+        }
+
+    def add_lines(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+        order_id = context.get('order_id', False)
+        if not order_id:
+            return {'type': 'ir.actions.act_window_close'}
+        data =  self.read(cr, uid, ids, context=context)[0]
+        line_ids = data['line_ids']
+        if not line_ids:
+            return {'type': 'ir.actions.act_window_close'}
+
+        
+
+sale_damagelog_from_order_lines()

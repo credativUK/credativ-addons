@@ -27,10 +27,12 @@ class sale_damagelog(osv.osv):
     
     _columns = {
                 'name':fields.function(_get_name,method=True,type='char',string='Name',store=True),
+                'type':fields.selection([('whole-order','Whole order'), ('single-product', 'Single product')], string='Issue range', required=True),
                 'ticket_id':fields.char('Ticket ID',size=16),
-                'stock_move_id':fields.many2one('stock.move', 'Stock Move', required=True),
-                'sale_line_id':fields.related('stock_move_id','sale_line_id',type='many2one',relation='sale.order.line',string='Sale Order Line', readonly=True),
-                'sale_order_id':fields.related('sale_line_id', 'order_id', type='many2one', relation='sale.order',string='Order Reference', readonly=True),
+                'comprequest_id': fields.many2one('sale.comprequest', 'Compensation Request'),
+                'sale_order_id':fields.related('comprequest_id', 'sale_order_id', type='many2one', relation='sale.order',string='Order Reference', readonly=True),
+                'stock_move_id':fields.many2one('stock.move', 'Stock Move'),
+                'sale_line_id':fields.many2one('sale.order.line', 'Sale Order Line'),
                 'partner_id':fields.related('sale_order_id', 'partner_id', type='many2one', relation='res.partner',string='Customer', readonly=True, store=True),
                 'product_id':fields.related('stock_move_id', 'product_id', type='many2one', relation='product.product',string='Product', readonly=True, store=True),
                 'product_sku': fields.related('product_id', 'default_code',type='char',size=16, string='Product Code', readonly=True),
@@ -57,12 +59,12 @@ class sale_damagelog(osv.osv):
                 'product_supplier':fields.many2one('res.partner','Product Supplier'),
                 'product_qty':fields.float('Qty'),
                 'product_uom':fields.many2one('product.uom','UoM', required=True),
-                'comprequest_ids': fields.one2many('sale.comprequest', 'damagelog_id', 'Compensation Requests'), # is this really right?
                 }
     
     _defaults = {
                  'log_date':lambda *a : time.strftime('%Y-%m-%d %H:%M:%S'),
                  'log_uid': lambda self,cr,uid,ctx : uid,
+                 'type': lambda *a: 'single-product',
                  }
     
     _constraints = [
@@ -130,4 +132,3 @@ class crm_claim(osv.osv):
                 }
     
 crm_claim()
-

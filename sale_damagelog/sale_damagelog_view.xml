@@ -44,20 +44,6 @@
                             <page string="Claims Details">
                                 <field name="claim_ids" colspan="4" nolabel="1" context="{'default_partner_id':partner_id}"/>
                             </page>
-                            <page string="Compensation Requests">
-                                <field name="comprequest_ids" colspan="4" nolabel="1" context="{'default_damagelog_id':active_id}">
-                                    <tree string="Sale Compensation Requests">
-                                        <field name="name"/>
-                                        <field name="refund_type"/>
-                                        <field name="refund_value"/>
-                                        <field name="state"/>
-                                        <field name="notes"/>
-                                        <field name="repl_order_ref"/>
-                                        <field name="write_date"/>
-                                        <field name="write_uid"/>
-                                    </tree>
-                                </field>
-                            </page>
                             <page string="Other Info">
                                 <separator string="Log Details:" colspan="4"/>
                                 <field name="log_date" select="2"/>
@@ -110,6 +96,25 @@
                         <filter string="Supplier" icon="terp-personal" domain="[]" context="{'group_by':'product_supplier'}"/>
                     </group>
                 </search>
+            </field>
+        </record>
+
+        <record id="view_damagelog_from_sale_order_lines" model="ir.ui.view">
+            <field name="name">sale.damagelog.from.sale.order.lines.form</field>
+            <field name="model">sale.damagelog.from.sale.order.lines</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Select Order Lines">
+                    <group colspan="1" expand="1">
+                        <separator string="Sale Order Lines" colspan="4" />
+                        <field height="300" width="700" name="line_ids" nolabel="1" />
+                    </group>
+                    <group colspan="4" col="6">
+                        <label string="" colspan="2"/>
+                        <button icon="gtk-cancel" special="cancel" string="Cancel"/>
+                        <button icon="gtk-execute" string="Ok" name="add_lines" type="object"/>
+                    </group>
+                </form>
             </field>
         </record>
 
