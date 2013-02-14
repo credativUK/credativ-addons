@@ -412,7 +412,10 @@ class Connection(object):
                 # the data we imported with alterations? Let's assume
                 # it's everything with alterations for now
 
-                ids = sorted(list(set(self._import_cache.keys() + self._export_cache.keys())))
+                # We commonly use '_' seperated lists of keys to sort by, any number should be converted to an int here before sorting
+                # A_1, A_10, A_3 ... becomes A_1, A_2 ... A_10
+                all_keys = list(set(self._import_cache.keys() + self._export_cache.keys()))
+                ids = sorted(all_keys, key=lambda x:[y.isdigit() and int(y) or y for y in str(x).split('_')])
 
                 for id in ids:
                     try:
