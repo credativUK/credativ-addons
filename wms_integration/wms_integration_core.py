@@ -137,13 +137,17 @@ class external_referential(wms_integration_osv.wms_integration_osv):
     def _ensure_wms_integration_referential(self, cr, uid, id, context=None):
         if context is None:
             context = {}
-        # FIXME What's a better way of selecting the right external referential?
         if isinstance(id, int):
-            referential = self.browse(cr, uid, id, context=context)
+            id = [id,]
+        # FIXME What's a better way of selecting the right external referential?
+        if len(id) == 1:
+            referential = self.browse(cr, uid, id[0], context=context)
             if 'external wms' in referential.type_id.name.lower():
                 return referential
             else:
                 return False
+        else:
+            return False
 
     _columns = {
         'active': fields.boolean('Active'),
@@ -591,7 +595,18 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         external_ref_ids = self.search(cr, uid, [], context=context)
         for external_ref in self.browse(cr, uid, external_ref_ids, context=context):
             if external_ref._ensure_wms_integration_referential(context=context):
-                external_ref.export_products(context=context)
+                _cr = pooler.get_db(cr.dbname).cursor()
+                try:
+                    self.export_products(_cr, uid, external_ref.id, context=context)
+                except osv.except_osv, e:
+                    if e.value == u'Will not export while incomplete transfers exist':
+                        _logger.info('Cannot export products, incomplete transfers exist.')
+                        _cr.rollback()
+                    else:
+                        raise
+                finally:
+                    _cr.commit()
+                    _cr.close()
         return True
 
 external_referential()

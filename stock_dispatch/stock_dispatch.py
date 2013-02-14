@@ -50,7 +50,7 @@ class stock_dispatch(osv.osv):
         ('cutoff_before_dispatch', 'CHECK (cutoff_date<dispatch_date)',  'The cutoff date must occur before the dispatch'),
     ]
 
-    _order = 'name desc'
+    _order = 'dispatch_date desc'
 
     def _default_cutoff_date(self, cr, uid, context):
         return self.on_change_dispatch_date(cr, uid, 0, datetime.datetime.utcnow().strftime('%Y-%m-%d'), context=context)['value']['cutoff_date']
