@@ -50,7 +50,7 @@
             <field name="view_mode">tree,form</field>
         </record>
 
-        <menuitem id="product_price_history" name="Price History" parent="product.menu_products" action="product_price_history_action"/>
+        <menuitem id="product_price_history" name="Price History" parent="base.menu_product" action="product_price_history_action"/>
 
     </data>
 </openerp>
