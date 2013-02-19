@@ -40,13 +40,14 @@ class product_template(osv.osv):
             prod_template = self.browse(cr, uid, id)
 
             history_values = {}
-            if 'list_price' in values or 'standard_price' in values:
+            if ('list_price' in values and prod_template.list_price != values['list_price']) or \
+               ('standard_price' in values and prod_template.standard_price != values['standard_price']):
                 history_values['list_price'] = prod_template.list_price
                 history_values['standard_price'] = prod_template.standard_price
                 history_values['product_id'] =  prod_template.id
                 history_values['date_to'] =  time.strftime('%Y-%m-%d %H:%M:%S')
 
-                self.pool.get('product.price.history').create(cr, uid, history_values)
+                self.pool.get('product.price.history').create(cr, uid, history_values, context=context)
 
         return super(product_template, self).write(cr, uid, ids, values, context=context)
 

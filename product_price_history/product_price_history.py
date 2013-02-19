@@ -35,8 +35,8 @@ class product_price_history(osv.osv):
     _columns = {
         'date_to': fields.datetime('Date To', readonly=True, required=True),
         'product_id':  fields.many2one('product.template', 'Product', readonly=True, required=True),
-        'list_price': fields.float('Sale Price', digits_compute=dp.get_precision('Sale Price'), readonly=True),
-        'standard_price': fields.float('Cost Price', digits_compute=dp.get_precision('Account'), readonly=True),
+        'list_price': fields.float('Previous Sale Price', digits_compute=dp.get_precision('Sale Price'), readonly=True),
+        'standard_price': fields.float('Previous Cost Price', digits_compute=dp.get_precision('Account'), readonly=True),
     }
 
 product_price_history()
