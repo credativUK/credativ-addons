@@ -34,7 +34,6 @@ audittrail_rule()
 class audittrail_objects_proxy2(audittrail.audittrail_objects_proxy):
     """ Uses Object proxy for auditing changes on object of subscribed Rules"""
     
-    
     def process_data(self, cr, uid, pool, res_ids, model, method, old_values={}, new_values={}, field_list=[]):
         """
         This function processes and iterates recursively to log the difference between the old
@@ -87,8 +86,9 @@ class audittrail_objects_proxy2(audittrail.audittrail_objects_proxy):
                         'method' : vals['method'],
                         'object' : pool.get(model.model).browse(cr, uid, resource_id),
                         'user': pool.get('res.users').browse(cr, uid, uid).name,
-                        'resource_read': old_values and old_values.values()[0]['text'] or new_values.values()[0]['text']
-                    }  
+                        'resource_read': old_values and old_values.values()[0]['text'] or new_values.values()[0]['text'],
+                        'lines': lines[(model_id, resource_id)],
+                    }
                     audit_rule = pool.get('audittrail.rule').search(cr, uid, [('object_id', '=', model_id), ('server_action', '!=', False)])
                     if audit_rule:
                         server_action = pool.get('audittrail.rule').browse(cr, uid, audit_rule[0]).server_action
