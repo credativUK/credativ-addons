@@ -419,9 +419,18 @@ class external_report_lines(osv.osv):
         # FIXME The super method actually removes the fail log, so we
         # probably don't actually want to do this
         #res = super(external_report_lines, self).log_success(cr, uid, model, action, referential_id, res_id, external_id, context)
-        #return res
-
-        return self._log(cr, uid, model, action, referential_id, 'confirmed', res_id=res_id, external_id=external_id, data_record=data_record, defaults=defaults, context=context)
+        res = False
+        log_cr = pooler.get_db(cr.dbname).cursor()
+        try:
+            res = self._log(log_cr, uid, model, action, referential_id, 'confirmed', res_id=res_id, external_id=external_id, data_record=data_record, defaults=defaults, context=context)
+        except:
+            log_cr.rollback()
+            raise
+        else:
+            log_cr.commit()
+        finally:
+            log_cr.close()
+        return res
 
     def log_rejected(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, context=None):
         return self._log(cr, uid, model, action, referential_id, 'rejected', res_id=res_id, external_id=external_id, context=context)
