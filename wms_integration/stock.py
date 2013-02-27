@@ -228,6 +228,7 @@ class stock_warehouse(osv.osv):
         warehouse_ids = self.search(cr, uid, [], context=context)
         for warehouse in self.browse(cr, uid, warehouse_ids, context=context):
             if warehouse.referential_id:
+                _logger.info("Running PO export scheduler for Warehouse %d" % (warehouse.id))
                 warehouse.export_purchase_orders(context=context)
         return True
 
@@ -235,6 +236,7 @@ class stock_warehouse(osv.osv):
         warehouse_ids = self.search(cr, uid, [], context=context)
         for warehouse in self.browse(cr, uid, warehouse_ids, context=context):
             if warehouse.referential_id:
+                _logger.info("Running Dispatch export scheduler for Warehouse %d" % (warehouse.id))
                 warehouse.export_dispatch_orders(context=context)
         return True
 
@@ -242,6 +244,7 @@ class stock_warehouse(osv.osv):
         warehouse_ids = self.search(cr, uid, [], context=context)
         for warehouse in self.browse(cr, uid, warehouse_ids, context=context):
             if warehouse.referential_id:
+                _logger.info("Running PO import scheduler for Warehouse %d" % (warehouse.id))
                 warehouse.import_purchase_order_receipts(context=context)
         return True
 
@@ -249,6 +252,7 @@ class stock_warehouse(osv.osv):
         warehouse_ids = self.search(cr, uid, [], context=context)
         for warehouse in self.browse(cr, uid, warehouse_ids, context=context):
             if warehouse.referential_id:
+                _logger.info("Running Dispatch import scheduler for Warehouse %d" % (warehouse.id))
                 warehouse.import_dispatch_receipts(context=context)
         return True
 
