@@ -445,6 +445,7 @@ class Connection(object):
             if self.reporter:
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg, context=self._saved_ctx)
             self._clean_up_export()
+            raise X
 
     def _clean_up_export(self):
         try:
