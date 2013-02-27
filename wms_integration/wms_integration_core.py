@@ -264,7 +264,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                     if data[mapping.external_key_name].strip() == '':
                         msg = 'CSV export: %s #%s has no %s value; will not export' % (model_name, obj_data['id'], mapping.external_key_name)
                         _logger.error(msg)
-                        report_line_obj.log_failed(cr, uid, model_name, 'export', referential_id, res_id=obj_data['id'], defaults={}, context=context)
+                        # report_line_obj.log_failed(cr, uid, model_name, 'export', referential_id, res_id=obj_data['id'], defaults={}, context=context)
                         continue
 
                     # add record to export list
