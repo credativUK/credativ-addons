@@ -384,9 +384,13 @@ class Connection(object):
             self._write_export_cache()
             if self.debug:
                 self.logger.debug('CSV export: About to execute FTP command: STOR %s; sending %s' % (self._export_remote_fn, self._export_tmp_fn))
-            self._ftp_client.storbinary('STOR %s' % (self._export_remote_fn,), open(self._export_tmp_fn, 'rU'))
+            result = self._ftp_client.storbinary('STOR %s' % (self._export_remote_fn,), open(self._export_tmp_fn, 'rU'))
+            if self.debug:
+                self.logger.debug('CSV export: Command returned: %s' % (result))
             self._clean_up_export()
         except IOError, X:
+            if self.debug:
+                self.logger.debug('CSV export: Got IOError')
             msg = 'CSV export: Could not send %s (local) to %s (remote): [Errno %d] %s' %\
                 (self._export_tmp_fn, self._export_remote_fn, X.errno, X.strerror)
             self.logger.error(msg)
@@ -395,6 +399,8 @@ class Connection(object):
             self._clean_up_export()
             raise X
         except ftplib.all_errors, X:
+            if self.debug:
+                self.logger.debug('CSV export: Got FTP Error')
             msg = 'CSV export: Could not send %s (local) to %s (remote): %s' %\
                 (self._export_tmp_fn, self._export_remote_fn, X.message)
             self.logger.error(msg)
