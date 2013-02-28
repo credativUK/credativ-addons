@@ -109,7 +109,14 @@ class stock_warehouse(osv.osv):
                 continue
             
             # Find PO files to import
-            po_import, fn = self.pool.get('external.referential')._import(cr, uid, warehouse.mapping_purchase_orders_import_id, context=context)
+            _cr = pooler.get_db(cr.dbname).cursor()
+            try:
+                po_import, fn = self.pool.get('external.referential')._import(_cr, uid, warehouse.mapping_purchase_orders_import_id, context=context)
+            except:
+                _cr.rollback()
+                raise
+            finally:
+                _cr.close()
             if not fn:
                 continue
             sm_lines = []
@@ -188,7 +195,14 @@ class stock_warehouse(osv.osv):
                 continue
             
             # Find SD files to import
-            sd_import, fn = self.pool.get('external.referential')._import(cr, uid, warehouse.mapping_dispatch_orders_import_id, context=context)
+            _cr = pooler.get_db(cr.dbname).cursor()
+            try:
+                sd_import, fn = self.pool.get('external.referential')._import(_cr, uid, warehouse.mapping_dispatch_orders_import_id, context=context)
+            except:
+                _cr.rollback()
+                raise
+            finally:
+                _cr.close()
             if not fn:
                 continue
             sm_lines = []
