@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2012 credativ Ltd (<http://credativ.co.uk>).
+#    Copyright (C) 2013 credativ Ltd (<http://credativ.co.uk>).
 #    All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -20,21 +20,26 @@
 #
 ##############################################################################
 {
-    'name': 'Sale Issue Log',
+    'name': 'Sale Order Claim',
     'version': '1.0',
     'category': 'Generic Modules/Sales & Purchases',
-    'description': """This Module allows you to manage the log for products with issues.""",
+    'description': """This module customises crm.claim for sale orders.
+
+The sale.order.claim model allows claims to be raised against a sale order, providing a variety of categories of claim. The sale.order.issue model allows problems to be registered against specific parts of a sale order which, again, can be of a variety of different categories. The issues are created as lines of the claim so that a single claim comprises multiple issues. Claims may also, however, have no issue lines and be just against the whole order (e.g. change of mind).
+
+The module extends crm.claim providing a new crm.claim.line model (which is the super-model of sale.order.issue). It also provides a number of new states in which claims may be.
+""",
     'author': 'credativ Ltd',
     'website' : 'http://credativ.co.uk',
     'depends': ['sale','crm','crm_claim','account'],
     'init_xml': [],
     'update_xml': [
         'security/ir.model.access.csv',
-        'sale_damagelog_view.xml',
-        'wizard/create_damagelog.xml',
-        'sale_comprequest_view.xml',
-        'sale_comprequest_sequence.xml',
-        'wizard/wizard_compensation_request.xml',
+        'sale_order_issue_view.xml',
+        'wizard/create_order_issue.xml',
+        'sale_order_claim_view.xml',
+        'sale_order_claim_sequence.xml',
+        'wizard/wizard_order_claim.xml',
     ],
     'demo_xml': [],
     'installable': True,

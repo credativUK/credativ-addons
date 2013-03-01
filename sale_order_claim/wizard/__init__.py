@@ -1,6 +1,4 @@
 # -*- encoding: utf-8 -*-
-import wizard
-import sale_damagelog
-import sale_comprequest
-
+import create_order_issue
+import wizard_order_claim
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
