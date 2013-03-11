@@ -21,7 +21,7 @@
 ##############################################################################
 {
     'name': 'Sale Order Claim',
-    'version': '1.0',
+    'version': '0.1',
     'category': 'Generic Modules/Sales & Purchases',
     'description': """This module customises crm.claim for sale orders.
 

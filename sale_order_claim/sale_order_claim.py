@@ -1,182 +1,233 @@
-from osv import osv,fields
-import time
+# -*- encoding: utf-8 -*-
+##############################################################################
+#
+#    OpenERP, Open Source Management Solution
+#    Copyright (C) 2013 credativ Ltd (<http://credativ.co.uk>).
+#    All Rights Reserved
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+##############################################################################
 
-class sale_comprequest(osv.osv):
-    _name = 'sale.comprequest'
+from osv import osv, fields
+
+def _sale_order_links_get(self, cr, uid, context=None):
+    obj = self.pool.get('res.request.link')
+    ids = obj.search(cr, uid, [('object','=','sale.order')])
+    res = obj.read(cr, uid, ids, ['object', 'name'], context)
+    return [(r['object'], r['name']) for r in res]
+
+class sale_order_claim(osv.osv):
+    '''
+    Sale order claim. This model specialises crm.claim for making
+    claims against sale orders. It assumes that the crm.claim.ref
+    fields points to a sale.order resource and transfers this property
+    into its own sale_order_line field.
+    '''
+    _inherit = 'crm.claim'
+    _name = 'crm.claim'
+    _description = 'Claim against a sale order'
+
+    def _get_order_id(self, cr, uid, ids, field_name, arg, context=None):
+        return dict([(claim.id, int(claim.ref[claim.ref.find(',') + 1:]))
+                     for claim in self.browse(cr, uid, ids, context=context)
+                     if claim.ref[:claim.ref.find(',') == 'sale.order']])
 
     _columns = {
-        'name' : fields.char('Name', size=128, required=True),
-        'create_date': fields.datetime('Date Created', readonly=True),
-        'create_uid': fields.many2one('res.users', 'Created By', readonly=True),
-        'write_date': fields.datetime('Last Updated', readonly=True),
-        'write_uid': fields.many2one('res.users', 'Last Updated By', readonly=True),
-        'cancel_date': fields.datetime('Last Updated', readonly=True),
-        'cancel_uid': fields.many2one('res.users', 'Last Updated By', readonly=True),
-        'confirm_date': fields.datetime('Last Updated', readonly=True),
-        'confirm_uid': fields.many2one('res.users', 'Last Updated By', readonly=True),
-        'sale_order_id': fields.many2one('sale.order', 'Order Reference', readonly=True, states={'draft': [('readonly', False)]}),
-        'date_order': fields.related('sale_order_id', 'date_order', type='date', string='Order Date', readonly=True),
-        'partner_id': fields.related('sale_order_id', 'partner_id', type='many2one', relation='res.partner', string='Partner', readonly=True),
-        'refund_type': fields.selection(
-            [('refund', 'Refund'), ('voucher', 'Voucher'),
-             ('replace-same', 'Replacement - same'),
-             ('replace-diff', 'Replacement - different'),
-             ('redispatch', 'Redispatch')], 'Compensation Type', required=True, readonly=True, states={'draft': [('readonly', False)]}),
-        'refund_value': fields.float('Compensation Value', readonly=True, states={'draft': [('readonly', False)]}),
-        'state': fields.selection([('draft', 'Draft'), ('processing', 'Processing'), ('confirmed', 'Confirmed'), ('cancel', 'Cancelled')], 'Compensation Status', required=True, readonly=True),
-        'voucher_code': fields.char('Voucher Code', size=200, readonly=True, states={'draft': [('readonly', False)]}),
-        'repl_order_ref': fields.many2one('sale.order', 'Rpl/Red Order Ref', readonly=True, states={'draft': [('readonly', False)]}),
-        'comment_ids': fields.one2many('sale.comprequest.comment', 'comprequest_id'),
-        'notes': fields.text('Notes'),
-        'damagelog_ids': fields.one2many('sale.damagelog', 'comprequest_id', string='Issues', required=True, readonly=True, states={'draft': [('readonly', False)]}),
-    }
+        'sale_order_id': fields.function(
+            _get_order_id,
+            method=True,
+            type='many2one',
+            relation='sale.order',
+            readonly=True,
+            required=True,
+            string='Sale order',
+            store={'crm.claim': (lambda self, cr, uid, ids, ctx: ids, ['ref'], 10)}),
+        'order_ref': fields.related(
+            'sale_order_id',
+            'name',
+            type='char',
+            readonly=True),
+        'shop_id': fields.related(
+            'sale_order_id',
+            'shop_id',
+            type='many2one',
+            readonly=True),
+        'origin': fields.related(
+            'sale_order_id',
+            'origin',
+            type='char',
+            readonly=True),
+        'client_order_ref': fields.related(
+            'sale_order_id',
+            'client_order_ref',
+            type='char',
+            readonly=True),
+        'order_state': fields.related(
+            'sale_order_id',
+            'state',
+            type='selection',
+            readonly=True),
+        'date_order': fields.related(
+            'sale_order_id',
+            'date_order',
+            type='date',
+            string='Order date',
+            readonly=True),
+        'user_id': fields.related(
+            'sale_order_id',
+            'user_id',
+            type='many2one',
+            string='Merchandiser'),
+        'partner_id': fields.related(
+            'sale_order_id',
+            'partner_id',
+            type='many2one',
+            relation='res.partner',
+            string='Customer',
+            readonly=True),
+        'partner_shipping_id': fields.related(
+            'sale_order_id',
+            'partner_shipping_id',
+            type='many2one',
+            readonly=True),
+        'shipped': fields.related(
+            'sale_order_id',
+            'shipped',
+            type='boolean',
+            readonly=True),
+        'invoiced': fields.related(
+            'sale_order_id',
+            'invoiced',
+            type='boolean',
+            readonly=True),
+        'order_total': fields.related(
+            'sale_order_id',
+            'amount_total',
+            type='float',
+            readonly=True),
+        'notes': fields.text(
+            'Notes',
+            required=True),
+        }
 
-    def _check_refund_amount(self, cr, uid, ids, context=None):
-        if context is None:
-            context = {}
-        if isinstance(ids, (list, tuple)):
-            ids = ids[0]
+sale_order_claim()
 
-        this = self.browse(cr, uid, ids, context=context)
-        other_comprequests = self.pool.get('sale.comprequest').search(cr, uid, [('sale_order_id','=',this.sale_order_id),
-                                                                                ('id','<>',ids),
-                                                                                ('refund_type','in',['refund','voucher'])], context=context)
-        refunded = sum([c.refund_value for c in self.pool.get('sale.comprequest').browse(cr, uid, other_comprequests, context=context)])
-        return this.refund_value < refunded
 
+class sale_order_issue(osv.osv):
+    '''
+    Sale order issue. This model specialises crm.claim.line for
+    logging issues against specific parts of a sale order. It parses
+    crm.claim.line.resource as either a sale.order.line resource or a
+    stock.move resource, storing a reference in either
+    sale_order_line_id or stock_move_id.
+    '''
+    _inherit = 'crm.claim.line'
+    _name = 'crm.claim.line'
+    _description = 'Individual issue in a sale order claim'
+
+    def _get_related(self, cr, uid, ids, context=None):
+        '''This method parses the .resource field into (model, res_id)
+        pairs, returning a dict with one pair for each resource in
+        ids.'''
+        return dict([(line.id, (line.resource[:line.resource.find(',')], int(line.resource[line.resource.find(',') + 1:])))
+                     for line in self.browse(cr, uid, ids, context=context)])
+
+    def _sm2sol(self, cr, uid, sm_id, context=None):
+        ol_pool = self.pool.get('sale.order.line')
+        try:
+            # FIXME In the case that a sale.order.line is referred to,
+            # we'll just pick the first stock.move from that
+            # sale.order.line. How bad is this?
+            return ol_pool.browse(self, cr, uid, sm_id, context=context).move_ids[0]
+        except IndexError:
+            return False
+
+    def _sol2sm(self, cr, uid, sol_id, context=None):
+        return self.pool.get('stock.move').browse(self, cr, uid, sol_id, context=context).sale_line_id
+
+    _convert = {
+        ('sock.move', 'stock.move'): lambda self, cr, uid, sm_id, ctx: sm_id,
+        ('stock.move', 'sale.order.line'): _sm2sol,
+        ('sale.order.line', 'sale.order.line'): lambda self, cr, uid, sol_id, ctx: sol_id,
+        ('sale.order.line', 'stock.move'): _sol2sm,
+        }
+    '''_convert stores functions for getting IDs of one model given
+    IDs of another. Each entry is index by a 2-tuple containing:
+    (model_in, model_out).'''
+
+    def _get_stock_move(self, cr, uid, ids, field_name, arg, context=None):
+        return dict([(id, self._convert[(model, 'stock.move')](self, cr, uid, id, context=context))
+                     for id, (model, res_id) in self._get_related(cr, uid, ids, context=context).items()])
+
+    def _get_sale_order_line(self, cr, uid, ids, field_name, arg, context=None):
+        return dict([(id, self._convert[(model, 'sale.order.line')](self, cr, uid, id, context=context))
+                     for id, (model, res_id) in self._get_related(cr, uid, ids, context=context).items()])
+
+    _columns = {
+        'sale_order_line_id': fields.function(
+            _get_sale_order_line,
+            method=True,
+            type='many2one',
+            relation='sale.order.line',
+            readonly=True,
+            string='Order line',
+            store={'crm.claim.line': (lambda self, cr, uid, ids, ctx: ids, ['resource'], 10)}),
+        'stock_move_id': fields.function(
+            _get_stock_move,
+            method=True,
+            type='many2one',
+            relation='stock.move',
+            readonly=True,
+            string='Stock move',
+            store={'crm.claim.line': (lambda self, cr, uid, ids, ctx: ids, ['resource'], 10)}),
+        'date': fields.related(
+            'stock_move_id',
+            'date',
+            type='date',
+            readonly=True),
+        'product_id': fields.related(
+            'stock_move_id',
+            'product_id',
+            type='many2one',
+            readonly=True),
+        'product_qty': fields.related(
+            'stock_move_id',
+            'product_qty',
+            type='float',
+            readonly=True),
+        'state': fields.related(
+            'stock_move_id',
+            'state',
+            type='selection',
+            readonly=True),
+        'price_unit': fields.related(
+            'stock_move_id',
+            'price_unit',
+            type='float',
+            readonly=True),
+            
+        }
+
+    def _ensure_claim_is_sale_order_claim(self, cr, uid, ids, context=None):
+        return all([line.claim_id.ref[:line.claim_id.ref.find(',')] == 'sale.order'
+                    for line in self.browse(cr, uid, ids, context=context)])
+            
     _constraints = [
-        (_check_refund_amount, 'This refund amount would make the total refunded greater than the order totel.', ['refund_value']),
+        (_ensure_claim_is_sale_order_claim,
+         'Parent claim of an order issue must be a claim against a sale order.',
+         ['claim_id']),
         ]
 
-    _sql_constraints = [
-        ('name_uniq', 'unique(name)', 'Compensation Request name must be unique !'),
-    ]
-    _order = 'name desc'
-    
-    _defaults = {
-        'name': lambda obj, cr, uid, context: obj.pool.get('ir.sequence').get(cr, uid, 'sale.comprequest'),
-        'state': lambda *a: 'draft',
-    }
-
-    def onchange_damagelog_id(self, cr, uid, ids, damagelog_id):
-        value = {}
-        if damagelog_id:
-            damagelog_rec = self.pool.get('sale.damagelog').browse(cr, uid, damagelog_id)
-            value['sale_order_id'] = damagelog_rec.sale_order_id.id
-            value['partner_id'] = damagelog_rec.sale_order_id.partner_id.id
-            value['product_id'] =  damagelog_rec.product_id.id
-            value['product_sku'] =  damagelog_rec.product_sku
-            value['product_supplier'] = damagelog_rec.product_supplier.id
-            value['product_value'] = damagelog_rec.product_id.list_price
-        return {'value':value}
-    
-    def action_cancel(self, cr, uid, ids, context=None):
-        self.write(cr, uid, ids, {'state': 'cancel', 'cancel_uid': uid, 'cancel_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=context)
-
-    def action_draft(self, cr, uid, ids, context=None):
-        self.write(cr, uid, ids, {'state': 'draft'}, context=context)
-        # TODO Trigger email to reporting agent
-
-    def action_process(self, cr, uid, ids, context=None):
-        self.write(cr, uid, ids, {'state': 'processing'}, context=context)
-
-    def action_confirm(self, cr, uid, ids, context=None):
-        comp_reqs = self.browse(cr, uid, ids, context=context)
-        raise_errors = []
-        for comp_req in comp_reqs:
-            if comp_req.refund_type in ('replace-same', 'replace-diff', 'redispatch') and not comp_req.repl_order_ref:
-                raise_text = 'Replacement / Redispatch Order Reference is required for this Compensation type in record %s' % (comp_req.name or '',)
-                raise_errors.append(raise_text)
-            if comp_req.refund_type == 'voucher' and not comp_req.voucher_code:
-                raise_text = 'Voucher Code is required for this Compensation type in record %s' % (comp_req.name or '',)
-                raise_errors.append(raise_text)
-            if comp_req.refund_type in ('refund', 'voucher') and not comp_req.refund_value:
-                raise_text = 'Compensation Value is required for this Compensation type in record %s' % (comp_req.name or '',)
-                raise_errors.append(raise_text)
-        if raise_errors:
-            raise osv.except_osv('User Error', '\n\n'.join(raise_errors)) # raise_errors is a list of strings
-        self.write(cr, uid, ids, {'state': 'confirmed', 'confirm_uid': uid, 'confirm_date': time.strftime('%Y-%m-%d %H:%M:%S')}, context=context)
-
-sale_comprequest()
-
-
-class sale_comprequest_comment(osv.osv):
-
-    _name = 'sale.comprequest.comment'
-    _rec_name = 'id'
-
-    _columns = {
-        'comprequest_id': fields.many2one('sale.comprequest', 'Compensation Request', required=True),
-        'create_date': fields.datetime('Date Created', readonly=True),
-        'create_uid': fields.many2one('res.users', 'Created By', readonly=True),
-        'comment': fields.text('Comment'),
-    }
-
-sale_comprequest_comment()
-
-class sale_order(osv.osv):
-    _inherit = 'sale.order'
-    
-    _columns = {
-        'comp_reqs': fields.one2many('sale.comprequest', 'sale_order_id', 'Compensation Requests', readonly=True),
-        }
-
-sale_order()
-
-
-class sale_order_line(osv.osv):
-    _inherit = 'sale.order.line'
-
-    def _get_latest_compensation(self, cr, uid, ids, name, arg, context=None):
-        if context is None:
-            context = {}
-
-        res = {}
-        dl_pool = self.pool.get('sale.damagelog')
-        cr_pool = self.pool.get('sale.comprequest')
-
-        for id in ids:
-            # FIXME Why is this taking three steps?
-            damagelog_ids = dl_pool.search(cr, uid, [('sale_line_id','=',id)], context=context)
-            comprequest_ids = [r['comprequest_id'] for r in dl_pool.read(cr, uid, damagelog_ids, ['comprequest_id'])]
-            # FIXME This should probably show returns and replacements too
-            comprequest_id = cr_pool.search(cr, uid, [('id','in',comprequest_ids),
-                                                      ('state','<>','cancel'),
-                                                      ('refund_type','in',['refund','voucher'])],
-                                            limit=1, order='write_date', context=context)
-            if comprequest_id:
-                comprequest = cr_pool.browse(cr, uid, comprequest_id, context=context)
-                res[id] = '%s: %.2f (%s)' % (comprequest.refund_type, comprequest.refund_value, comprequest.state)
-            else:
-                res[id] = None
-
-        return res
-
-    _columns = {
-        'compensation': fields.function(_get_latest_compensation, string='Compensation'),
-        }
-
-sale_order_line()
-
-
-class sale_damagelog_from_order_lines(osv.osv_memory):
-    _name = 'sale.damagelog.from.order.lines'
-    _description = 'Select sale order lines to log issues against'
-    _columns = {
-        'line_ids': fields.one2many('sale.order.line', 'order_id', 'Order Lines'),
-        }
-
-    def add_lines(self, cr, uid, ids, context=None):
-        if context is None:
-            context = {}
-        order_id = context.get('order_id', False)
-        if not order_id:
-            return {'type': 'ir.actions.act_window_close'}
-        data =  self.read(cr, uid, ids, context=context)[0]
-        line_ids = data['line_ids']
-        if not line_ids:
-            return {'type': 'ir.actions.act_window_close'}
-
-        
-
-sale_damagelog_from_order_lines()
+sale_order_issue()
