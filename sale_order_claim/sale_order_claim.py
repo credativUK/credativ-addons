@@ -21,12 +21,7 @@
 ##############################################################################
 
 from osv import osv, fields
-
-def _sale_order_links_get(self, cr, uid, context=None):
-    obj = self.pool.get('res.request.link')
-    ids = obj.search(cr, uid, [('object','=','sale.order')])
-    res = obj.read(cr, uid, ids, ['object', 'name'], context)
-    return [(r['object'], r['name']) for r in res]
+from crm_claim import crm_claim
 
 class sale_order_claim(osv.osv):
     '''
@@ -36,90 +31,118 @@ class sale_order_claim(osv.osv):
     into its own sale_order_line field.
     '''
     _inherit = 'crm.claim'
-    _name = 'crm.claim'
+    _name = 'sale.order.claim'
     _description = 'Claim against a sale order'
 
-    def _get_order_id(self, cr, uid, ids, field_name, arg, context=None):
-        return dict([(claim.id, int(claim.ref[claim.ref.find(',') + 1:]))
-                     for claim in self.browse(cr, uid, ids, context=context)
-                     if claim.ref[:claim.ref.find(',') == 'sale.order']])
+    # def _get_order_id(self, cr, uid, ids, field_name, arg, context=None):
+    #     return dict([(claim.id, int(claim.ref[claim.ref.find(',') + 1:]))
+    #                  for claim in self.browse(cr, uid, ids, context=context)
+    #                  if claim.ref[:claim.ref.find(',') == 'sale.order']])
+
+    def write(self, cr, uid, ids, vals, context=None):
+        if 'sale_order_id' in vals and 'ref' not in vals:
+            vals['ref'] = 'sale.order,%d' % vals['sale_order_id']
+        return super(crm_claim, self).write(cr, uid, ids, vals, context=context)
 
     _columns = {
-        'sale_order_id': fields.function(
-            _get_order_id,
-            method=True,
-            type='many2one',
-            relation='sale.order',
-            readonly=True,
-            required=True,
-            string='Sale order',
-            store={'crm.claim': (lambda self, cr, uid, ids, ctx: ids, ['ref'], 10)}),
-        'order_ref': fields.related(
-            'sale_order_id',
-            'name',
-            type='char',
-            readonly=True),
+        'sale_order_id': fields.many2one(
+            'sale.order',
+            'Sale order',
+            required=True),
+        # 'sale_order_id': fields.function(
+        #     _get_order_id,
+        #     method=True,
+        #     type='many2one',
+        #     relation='sale.order',
+        #     readonly=True,
+        #     required=True,
+        #     string='Sale order',
+        #     store={'crm.claim': (lambda self, cr, uid, ids, ctx: ids, ['ref'], 10)}),
+        # 'order_ref': fields.related(
+        #     'sale_order_id',
+        #     'name',
+        #     type='char',
+        #     readonly=True,
+        #     string='Order ref.'),
+        'whole_order_claim': fields.boolean(
+            'Claim against whole order',
+            required=True),
         'shop_id': fields.related(
-            'sale_order_id',
-            'shop_id',
+            'sale_order_id', 'shop_id',
             type='many2one',
-            readonly=True),
+            relation='sale.shop',
+            readonly=True,
+            string='Shop'),
         'origin': fields.related(
             'sale_order_id',
             'origin',
             type='char',
-            readonly=True),
+            readonly=True,
+            string='Source document'),
         'client_order_ref': fields.related(
             'sale_order_id',
             'client_order_ref',
             type='char',
-            readonly=True),
+            readonly=True,
+            string='Customer ref.'),
         'order_state': fields.related(
             'sale_order_id',
             'state',
-            type='selection',
-            readonly=True),
+            type='char',
+            readonly=True,
+            string='Order state'),
         'date_order': fields.related(
             'sale_order_id',
             'date_order',
             type='date',
             string='Order date',
             readonly=True),
-        'user_id': fields.related(
-            'sale_order_id',
-            'user_id',
+        'merchandiser_id': fields.related(
+            'sale_order_id', 'user_id',
             type='many2one',
+            relation='res.users',
+            readonly=True,
             string='Merchandiser'),
-        'partner_id': fields.related(
-            'sale_order_id',
-            'partner_id',
+        'customer_id': fields.related(
+            'sale_order_id', 'partner_id',
             type='many2one',
             relation='res.partner',
-            string='Customer',
-            readonly=True),
+            readonly=True,
+            string='Customer'),
         'partner_shipping_id': fields.related(
-            'sale_order_id',
-            'partner_shipping_id',
+            'sale_order_id', 'partner_shipping_id',
             type='many2one',
-            readonly=True),
+            relation='res.partner.address',
+            readonly=True,
+            string='Customer shipping addr.'),
         'shipped': fields.related(
             'sale_order_id',
             'shipped',
             type='boolean',
-            readonly=True),
+            readonly=True,
+            string='Shipped?'),
         'invoiced': fields.related(
             'sale_order_id',
             'invoiced',
             type='boolean',
-            readonly=True),
+            readonly=True,
+            string='Invoiced?'),
         'order_total': fields.related(
             'sale_order_id',
             'amount_total',
             type='float',
-            readonly=True),
-        'notes': fields.text(
-            'Notes',
-            required=True),
+            readonly=True,
+            string='Order total'),
+        'order_issue_ids': fields.one2many(
+            'sale.order.issue',
+            'order_claim_id',
+            string='Claim issues',
+            oldname='claim_line_ids'),
+        }
+
+    _defaults = {
+        'name': lambda self, cr, uid, ctx: self.pool.get('ir.sequence').next_by_code(cr, uid, 'sale.order.claim'),
+        'whole_order_claim': False,
         }
 
 sale_order_claim()
@@ -134,7 +157,7 @@ class sale_order_issue(osv.osv):
     sale_order_line_id or stock_move_id.
     '''
     _inherit = 'crm.claim.line'
-    _name = 'crm.claim.line'
+    _name = 'sale.order.issue'
     _description = 'Individual issue in a sale order claim'
 
     def _get_related(self, cr, uid, ids, context=None):
@@ -192,42 +215,52 @@ class sale_order_issue(osv.osv):
             readonly=True,
             string='Stock move',
             store={'crm.claim.line': (lambda self, cr, uid, ids, ctx: ids, ['resource'], 10)}),
+        'order_claim_id': fields.many2one(
+            'sale.order.claim',
+            string='Claim',
+            required=True,
+            oldname='claim_id'),
         'date': fields.related(
-            'stock_move_id',
-            'date',
+            'stock_move_id', 'date',
             type='date',
-            readonly=True),
-        'product_id': fields.related(
-            'stock_move_id',
-            'product_id',
-            type='many2one',
-            readonly=True),
+            relation='stock.move',
+            readonly=True,
+            string='Move date'),
+        'product': fields.related(
+            'stock_move_id', 'product_id', 'name',
+            type='char',
+            relation='product.product',
+            readonly=True,
+            string='Product'),
         'product_qty': fields.related(
-            'stock_move_id',
-            'product_qty',
+            'stock_move_id', 'product_qty',
             type='float',
-            readonly=True),
-        'state': fields.related(
-            'stock_move_id',
-            'state',
-            type='selection',
-            readonly=True),
+            relation='stock.move',
+            readonly=True,
+            string='Quantity'),
+        'move_state': fields.related(
+            'stock_move_id', 'state',
+            type='char',
+            relation='stock.move',
+            readonly=True,
+            string='State'),
         'price_unit': fields.related(
-            'stock_move_id',
-            'price_unit',
+            'stock_move_id', 'price_unit',
             type='float',
-            readonly=True),
-            
+            relation='stock.move',
+            readonly=True,
+            string='Unit price'),
+        # TODO Consider adding any fields from sale.order.line
         }
 
-    def _ensure_claim_is_sale_order_claim(self, cr, uid, ids, context=None):
-        return all([line.claim_id.ref[:line.claim_id.ref.find(',')] == 'sale.order'
-                    for line in self.browse(cr, uid, ids, context=context)])
-            
-    _constraints = [
-        (_ensure_claim_is_sale_order_claim,
-         'Parent claim of an order issue must be a claim against a sale order.',
-         ['claim_id']),
-        ]
+    # def _ensure_claim_is_sale_order_claim(self, cr, uid, ids, context=None):
+    #     return all([line.claim_id.ref[:line.claim_id.ref.find(',')] == 'sale.order'
+    #                 for line in self.browse(cr, uid, ids, context=context)])
+
+    # _constraints = [
+    #     (_ensure_claim_is_sale_order_claim,
+    #      'Parent claim of an order issue must be a claim against a sale order.',
+    #      ['claim_id']),
+    #     ]
 
 sale_order_issue()

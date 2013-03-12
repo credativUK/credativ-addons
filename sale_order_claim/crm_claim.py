@@ -35,6 +35,14 @@ class crm_claim(osv.osv):
     _name = 'crm.claim'
 
     _columns = {
+        'create_uid': fields.many2one(
+            'res.users',
+            'Creator',
+            readonly=True),
+        'write_uid': fields.many2one(
+            'res.users',
+            'Last Modification User',
+            readonly=True),
         'claim_line_ids': fields.one2many(
             'crm.claim.line',
             'claim_id',
@@ -50,7 +58,7 @@ class crm_claim(osv.osv):
     def claim_lines_from_all(self, cr, uid, ids, res_ids, context=None):
         '''
         This method creates claim lines for all the given res_ids
-        (which should be resources of the claim_lines_ref model).
+        (which should be resources of an appropriate model).
         '''
         pass
 

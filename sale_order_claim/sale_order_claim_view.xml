@@ -1,251 +1,159 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
-  <data>
+    <data>
 
-    <!-- Compensation Request Form View -->
+        <!-- sale.order.claim search view -->
+        <record model="ir.ui.view" id="view_sale_order_claim_search">
+            <field name="name">sale.order.claim.search</field>
+            <field name="model">sale.order.claim</field>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <search string="Search sale order claims">
+                    <group col="10" colspan="5">
+                        <field name="sale_order_id" />
+                        <field name="merchandiser_id" />
+                        <field name="create_uid" />
+                        <field name="customer_id" />
+                        <field name="state" />
+                    </group>
+                    <newline />
+                    <group expand="0" string="Group by..." colspan="4" col="4" groups="base.group_extended">
+                        <filter string="Shop" icon="terp-stage" domain="[]" context="{'group_by': 'shop_id'}" />
+                        <filter string="Category" icon="terp-stage" domain="[]" context="{'group_by': 'category'}" />
+                    </group>
+                </search>
+            </field>
+        </record>
 
-    <record id="view_sale_comprequest_form" model="ir.ui.view">
-      <field name="name">sale.comprequest.form</field>
-      <field name="model">sale.comprequest</field>
-      <field name="type">form</field>
-      <field name="arch" type="xml">
-        <form string="Compensation Request">
-          <group colspan="4">
-            <field name="name" select="1"/>
-            <field name="create_date" select="1"/>
-            <field name="create_uid" select="1"/>
-            <field name="write_date" select="1"/>
-            <field name="write_uid" select="1"/>
-          </group>
-          <group colspan="4">
-            <notebook colspan="4">
-              <page string="Order Details">
-                <group colspan="4">
-                  <field name="partner_id" select="1"/>
-                  <field name="sale_order_id" select="1"/>
-                  <field name="date_order" select="1"/>
-                  <newline/>
-                  <field name="damagelog_ids" />
-                </group>
-                <group colspan="4">
-                    <separator string="Notes"/>
-                    <field name="notes" colspan="4" nolabel="1" select="1" required="1"/>
-                <separator string="Compensation Details:" colspan="4"/>
-                </group>
-                <group colspan="4">
-                  <field name="refund_type" select="1"/>
-                  <field name="refund_value" select="2"/>
-                  <field name="voucher_code" select="2"/>
-                  <field name="repl_order_ref" select="2"/>
-                </group>
-              </page>
-              <page string="Comments">
-                <field name="comment_ids" colspan="4" nolabel="1" string="comments"/>
-              </page>
-            </notebook>
-            <group col="5" colspan="4">
-                <field name="state" select="1"/>
-                <button name="action_process" states="draft" string="Process" icon="gtk-go-forward" type="object" groups="base.group_sale_manager"/>
-                <button name="action_confirm" states="processing" string="Confirm" icon="gtk-go-forward" type="object" groups="base.group_sale_manager"/>
-                <button name="action_cancel" states="draft,confirmed" string="Cancel" icon="gtk-cancel" type="object" groups="base.group_sale_manager"/>
-                <button name="action_draft" states="processing,cancel" string="Set to Draft" icon="gtk-convert" type="object"/>
-            </group>
-          </group>
-        </form>
-      </field>
-    </record>
+        <!-- sale.order.claim tree view; although the model inherits
+             from crm.claim, this tree view will not inherit from
+             crm.claim's tree view -->
+        <record model="ir.ui.view" id="view_sale_order_claim_tree">
+            <field name="name">sale.order.claim.tree</field>
+            <field name="model">sale.order.claim</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Sale Order Claims" colors="blue:state=='pending'">
+                    <field name="name"
+                           string="Claim" />
+                    <field name="sale_order_id" />
+                    <field name="customer_id" />
+                    <field name="order_total" />
+                    <field name="category" />
+                    <field name="reason" />
+                    <field name="state" />
+                    <!--
+                        These break the Web client; the named functions don't exist; but also, we need to think more about the stages anyway
+                    <button name="claim_confirm"
+                            string="Confirm"
+                            states="draft"
+                            type="object"
+                            icon="gtk-go-forward" />
+                    <button name="claim_process"
+                            string="Process"
+                            states="review,confirmed"
+                            type="object"
+                            icon="gtk-go-forward" />
+                    <button name="claim_review"
+                            string="Review"
+                            states="processing"
+                            type="object"
+                            icon="gtk-media-pause" />
+                    <button name="claim_approve"
+                            string="Approve"
+                            states="processing"
+                            type="object"
+                            icon="gtk-ok" />
+                    -->
+                </tree>
+            </field>
+        </record>
 
-    <!-- Compensation Request Tree View -->
+        <!-- sale.order.claim form view; although the model inherits
+             from crm.claim, this form view will not inherit from
+             crm.claim's form views -->
+        <record model="ir.ui.view" id="view_sale_order_claim_form">
+            <field name="name">sale.order.claim.form</field>
+            <field name="model">sale.order.claim</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form>
+                    <field name="name"
+                           string="Claim" />
+                    <field name="create_uid" />
+                    <field name="create_date" />
+                    <field name="write_uid" />
+                    <field name="write_date" />
+                    <field name="sale_order_id" />
+                    <field name="shop_id" />
+                    <field name="origin" />
+                    <field name="client_order_ref" />
+                    <field name="order_state" />
+                    <field name="date_order" />
+                    <field name="merchandiser_id" />
+                    <field name="customer_id" />
+                    <field name="partner_shipping_id" />
+                    <field name="shipped" />
+                    <field name="invoiced" />
+                    <field name="order_total" />
+                    <field name="category" />
+                    <field name="reason" />
+                    <field name="resolution" />
+                    <field name="description"
+                           string="Comments"
+                           required="True" />
+                    <field name="whole_order_claim" />
+                    <field name="order_issue_ids" nolabel="1" select="1">
+                        <tree>
+                            <!--
+                            <field name="claim_id"
+                                   attrs="{'invisible':True}"
+                                   required="False" />
+                            -->
+                            <field name="name" />
+                            <field name="resource" />
+                            <field name="category" />
+                            <field name="reason"
+                                   domain="[('parent_categ_id','=','category')]" />
+                            <!--<field name="resolution" />-->
+                            <field name="product" />
+                            <field name="product_qty" />
+                            <field name="price_unit" />
+                            <field name="move_state" />
+                        </tree>
+                    </field>
+                </form>
+            </field>
+        </record>
 
-    <record id="view_sale_comprequest_tree" model="ir.ui.view">
-      <field name="name">sale.comprequest.tree</field>
-      <field name="model">sale.comprequest</field>
-      <field name="type">tree</field>
-      <field name="arch" type="xml">
-        <tree string="Compensation Requests">
-          <field name="name"/>
-          <field name="sale_order_id"/>
-          <field name="partner_id"/>
-          <field name="refund_type"/>
-          <field name="refund_value"/>
-          <field name="state"/>
-          <field name="notes"/>
-          <field name="repl_order_ref"/>
-          <field name="create_date"/>
-          <field name="create_uid"/>
-          <field name="write_date"/>
-          <field name="write_uid"/>
-        </tree>
-      </field>
-    </record>
+        <!-- Actions for sale.order.claim views -->
 
-    <record id="view_sale_comprequest_search" model="ir.ui.view">
-      <field name="name">sale.comprequest.search</field>
-      <field name="model">sale.comprequest</field>
-      <field name="type">search</field>
-      <field name="arch" type="xml">
-        <search string="Search Compensation Requests">
-          <group col="10" colspan="5">
-            <field name="sale_order_id"/>
-            <field name="refund_type"/>
-            <field name="state"/>
-          </group>
-          <newline/>
-          <group expand="0" string="Group By..." colspan="4" col="4" groups="base.group_extended">
-            <filter string="Type" icon="terp-personal" domain="[]" context="{'group_by':'refund_type'}"/>
-            <filter string="Status" icon="terp-personal" domain="[]" context="{'group_by':'state'}"/>
-          </group>
-        </search>
-      </field>
-  </record>
+        <record id="action_sale_order_claim_tree" model="ir.actions.act_window">
+            <field name="name">Sale Order Claim</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">sale.order.claim</field>
+            <field name="view_type">tree</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_sale_order_claim_tree" />
+            <field name="search_view_id" ref="view_sale_order_claim_search" />
+        </record>
 
-    <!-- Action for the view -->
+        <record id="action_sale_order_claim_form" model="ir.actions.act_window">
+            <field name="name">Sale Order Claims</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">sale.order.claim</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_sale_order_claim_form" />
+            <field name="search_view_id" ref="view_sale_order_claim_search" />
+        </record>
 
-    <record id="action_sale_comprequest_tree" model="ir.actions.act_window">
-      <field name="name">Compensation Request</field>
-      <field name="type">ir.actions.act_window</field>
-      <field name="res_model">sale.comprequest</field>
-      <field name="view_type">form</field>
-      <field name="view_mode">tree,form</field>
-      <field name="view_id" ref="view_sale_comprequest_tree"/>
-    </record>
+        <!-- Menu for sale.order.claim views -->
 
-    <record id="action_sale_comprequest_form" model="ir.actions.act_window">
-      <field name="name">Compensation Request</field>
-      <field name="type">ir.actions.act_window</field>
-      <field name="res_model">sale.comprequest</field>
-      <field name="view_type">form</field>
-      <field name="view_mode">tree,form</field>
-      <field name="view_id" ref="view_sale_comprequest_form"/>
-    </record>
+        <menuitem
+            action="action_sale_order_claim_tree"
+            id="menu_sale_order_claim"
+            parent="base.menu_aftersale" />
 
-    <!-- Menu for Compensation Request -->
-
-   <menuitem action="action_sale_comprequest_tree" id="menu_sale_comprequest" parent="account.menu_finance"/>
-
-    <!-- Comment Tree View -->
-    <record id="view_sale_comprequest_comment_tree" model="ir.ui.view">
-      <field name="name">sale.comprequest.comment.tree</field>
-      <field name="model">sale.comprequest.comment</field>
-      <field name="type">tree</field>
-      <field name="arch" type="xml">
-        <tree string="Comments">
-          <field name="create_uid"/>
-          <field name="create_date"/>
-          <field name="comment"/>
-        </tree>
-      </field>
-    </record>
-
-    <!-- Comment Form View -->
-    <record id="view_sale_comprequest_comment_form" model="ir.ui.view">
-      <field name="name">sale.comprequest.comment.form</field>
-      <field name="model">sale.comprequest.comment</field>
-      <field name="type">form</field>
-      <field name="arch" type="xml">
-        <form string="Comments">
-          <separator string="Comment"/>
-          <newline/>
-          <field name="comment" nolabel="1"/>
-        </form>
-      </field>
-    </record>
-
-    <!-- Order line selector -->
-
-    <record id="view_damagelog_from_order_lines" model="ir.ui.view">
-        <field name="name">sale.damagelog.from.order.lines.form</field>
-        <field name="model">sale.damagelog.from.order.lines</field>
-        <field name="type">form</field>
-        <field name="arch" type="xml">
-            <form string="Select Order Lines">
-                <group colspan="1" expand="1">
-                    <separator string="Sale Order Lines" colspan="4" />
-                    <field height="300" width="700" name="line_ids" nolabel="1" />
-                </group>
-                <group colspan="4" col="6">
-                    <label string="" colspan="2"/>
-                    <button icon="gtk-cancel" special="cancel" string="Cancel"/>
-                    <button icon="gtk-execute" string="Ok" name="add_lines" type="object"/>
-                </group>
-            </form>
-        </field>
-    </record>
-
-    <record id="action_view_damagelog_from_order_lines" model="ir.actions.act_window">
-        <field name="name">Import Order Lines</field>
-        <field name="res_model">sale.damagelog.from.order.lines</field>
-        <field name="view_type">form</field>
-        <field name="view_mode">tree,form</field>
-        <field name="view_id" ref="view_damagelog_from_order_lines"/>
-        <field name="target">new</field>
-        <field name="context">{'order_id': active_id}</field>
-    </record>
-
-    <!-- Sale order Compensation Request tab -->
-
-    <record model="ir.ui.view" id="view_order_form_compreqs">
-        <field name="name">sale.order.form.compreqs</field>
-        <field name="model">sale.order</field>
-        <field name="type">form</field>
-        <field name="inherit_id" ref="sale.view_order_form"/>
-        <field name="arch" type="xml">
-            <data>
-                <xpath expr="/form/notebook/page[@string='Sales Order']" position="after">
-                    <page string="Compensation Requests">
-                        <separator colspan="4" string="Compensation Requests"/>
-                        <field colspan="4" name="comp_reqs" nolabel="1" editable="bottom" />
-                        <!-- TODO Insert editable list of sale order lines here; each will have a category field -->
-                        <button name="%(action_view_damagelog_from_order_lines)d"
-                                string="Import Order Lines" type="action" icon="gtk-execute"
-                                attrs="{'invisible':[('state','=','confirm')]}"/>
-
-                        <field colspan="4" name="order_line" nolabel="1" editable="bottom" />
-                    </page>
-                </xpath>
-            </data>
-        </field>
-    </record>
-
-    <!-- Add the compensation field to sale order lines -->
-
-    <record id="sale_order_line_tree_compensation" model="ir.ui.view">
-        <field name="name">sale.order.line.tree.compensation</field>
-        <field name="model">sale.order.line</field>
-        <field name="inherit_id" ref="sale.view_order_line_tree" />
-        <field name="priority" eval="1" />
-        <field name="type">tree</field>
-        <field name="arch" type="xml">
-            <tree string="Sales Order Lines">
-                <field name="price_subtotal" position="after">
-                    <field name="compensation" />
-                </field>
-            </tree>
-        </field>
-    </record>
-
-<!--
-    <record id="sale_multichannel_order_line_tree_compensation" model="ir.ui.view">
-        <field name="name">sale.multichannel.order.line.tree.compensation</field>
-        <field name="model">sale.order.line</field>
-        <field name="inherit_id" ref="base_sale_multichannels.base_sale_multichannel_view_order_line_tree" />
-        <field name="type">tree</field>
-        <field name="arch" type="xml">
-            <tree string="Sales Order Lines">
-                <field name="price_subtotal" position="after">
-                    <field name="compensation" />
-                </field>
-            </tree>
-        </field>
-    </record>
--->
-
-    <act_window
-        domain="[('sale_order_id', 'in', active_ids)]" 
-        id="act_sale_order_2_compreq" 
-        name="Compensation Requests"
-        res_model="sale.comprequest"
-        src_model="sale.order"
-    />
-  </data>
+    </data>
 </openerp>

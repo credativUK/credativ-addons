@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<openerp>
+    <data>
+        <record model="ir.ui.view" id="crm_claim_with_lines_form">
+            <field name="name">CRM - Claim with lines</field>
+            <field name="model">crm.claim</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="crm_claim.crm_case_claims_form_view" />
+            <field name="arch" type="xml">
+                <field name="ref" position="after">
+                    <field name="category" on_change="onchange_category" />
+                    <field name="reason" domain="[('parent_categ_id','=','category')]" />
+                </field>
+                <separator string="Claim/Action Description" position="before">
+                    <separator colspan="4" string="Claim lines" />
+                    <field name="claim_line_ids" nolabel="1" colspan="4" select="1">
+                        <tree string="Claim lines">
+                            <field name="name" />
+                            <field name="resource" />
+                            <field name="category" on_change="onchange_category" />
+                            <field name="reason" domain="[('parent_categ_id','=','category')]" />
+                        </tree>
+                    </field>
+                </separator>
+            </field>
+        </record>
+    </data>
+</openerp>
