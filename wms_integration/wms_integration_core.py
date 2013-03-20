@@ -384,8 +384,14 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         context['use_external_log'] = True
 
         # import the confirmation records
-        conn = self.external_connection(cr, uid, export_mapping.referential_id.id, DEBUG, context=context)
-
+        if context.get('conn') and context['conn'].referential_id == export_mapping.referential_id.id:
+            conn = context['conn']
+        else:
+            if context.get('conn'):
+                del context['conn']
+            conn = self.external_connection(cr, uid, export_mapping.referential_id.id, DEBUG, context=context)
+            context['conn'] = conn
+        
         mapping_obj = self.pool.get('external.mapping')
         log_obj = self.pool.get('external.log')
         verification_mapping = export_mapping.external_verification_mapping or export_mapping
@@ -410,7 +416,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         dirname, basename = os.path.split(verification_mapping.external_import_uri.format(**import_uri_params))
         dirs = (dirname and [dirname]) or ['/']
         importables = conn.find_importables(dirs, re.compile(basename), context=context)
-
+        
         if len(importables) == 0:
             _logger.info('Found no files for import.')
             return {}

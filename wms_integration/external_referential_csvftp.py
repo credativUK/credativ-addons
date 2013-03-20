@@ -124,7 +124,7 @@ class Connection(object):
         self._out_encoding = out_encoding
         self.logger = logger or _logger
         self.reporter = reporter
-        self._saved_ctx = {}
+        self._saved_ctx = None
         self._rename = []
 
         class CustomWriterDialect(csv.Dialect):
@@ -142,17 +142,15 @@ class Connection(object):
         self._sync_ready = False
         self._import_cache = {}
         self._export_cache = {}
-
         self._dispatch_table = {
-            'list': self._list,
-            'get': self._get,
-            'update': self._update,
-            'create': self._create,
-            'delete': self._delete
+            'list': '_list',
+            'get': '_get',
+            'update': '_update',
+            'create': '_create',
+            'delete': '_delete',
             }
-
         self._connect()
-
+        
     def __del__(self):
         self._disconnect()
 
@@ -195,12 +193,20 @@ class Connection(object):
     def _disconnect(self):
         try:
             if self.debug:
-                self.logger.debug('Disconnecting from FTP %s:%d' % (self.host, self.port))
+                self.logger.info('Disconnecting from FTP %s:%d' % (self.host, self.port))
             self._ftp_client.quit()
             self._ftp_client = None
         except ftplib.all_errors, X:
             if self.debug:
                 self.logger.warn('Disconnect from FTP %s:%d failed: %s' % (self.host, self.port, X.message))
+
+    def save_context(self, context=None):
+        if context == None:
+            context = {}
+        ctx = context.copy()
+        if 'conn' in ctx:
+            del ctx['conn'] # To remove circular refs
+        self._saved_ctx = ctx
 
     def ready(self):
         return self._ftp_client is not None
@@ -257,7 +263,7 @@ class Connection(object):
     def find_importables(self, dirs, matching=None, context=None):
         if not context:
             context = {}
-        self._saved_ctx = context
+        self.save_context(context)
 
         matching = matching or re.compile('.*')
         res = []
@@ -315,7 +321,6 @@ class Connection(object):
                 csv_in = csv.DictReader(f, fieldnames=self._column_headers, restkey='__extra__', restval='__missing__')
                 for row in csv_in:
                     if '__extra__' in row or any([v == '__missing__' for v in row.values()]):
-                        print row
                         raise csv.Error('Fields in row do not match column headers')
                     yield (csv_in.line_num, row)
         except csv.Error, X:
@@ -330,7 +335,7 @@ class Connection(object):
     def finalize_import(self, context=None):
         if not context:
             context = {}
-        self._saved_ctx = context
+        self.save_context(context)
 
         self._clean_up_import()
         self._import_ready = False
@@ -338,7 +343,7 @@ class Connection(object):
     def init_export(self, remote_csv_fn, oe_model_name, external_key_name, column_headers, required_fields, context=None):
         if not context:
             context = {}
-        self._saved_ctx = context
+        self.save_context(context)
 
         try:
             self._oe_model_name = oe_model_name
@@ -376,7 +381,7 @@ class Connection(object):
     def finalize_export(self, context=None):
         if not context:
             context = {}
-        self._saved_ctx = context
+        self.save_context(context)
 
         self._check_export_ready()
         try:
@@ -474,7 +479,7 @@ class Connection(object):
     def init_sync(self, import_csv_fn, export_csv_fn, oe_model_name, external_key_name, column_headers, required_fields, context=None):
         if not context:
             context = {}
-        self._saved_ctx = context
+        self.save_context(context)
 
         self.init_import(import_csv_fn, oe_model_name, external_key_name, column_headers)
         self._cache_import()
@@ -496,7 +501,7 @@ class Connection(object):
             self._import_cache[row[self._id_col_name]] = (rec_num, row)
 
     def call(self, method, **kw_args):
-        applicable_method = self._dispatch_table.get(method, None)
+        applicable_method = getattr(self, self._dispatch_table.get(method, None))
         if applicable_method:
             return applicable_method(**kw_args)
         else:
@@ -638,7 +643,7 @@ class Connection(object):
     def finalize_rename(self, context=None):
         if not context:
             context = {}
-        self._saved_ctx = context
+        self.save_context(context)
         
         for (source, destination) in self._rename:
             try:

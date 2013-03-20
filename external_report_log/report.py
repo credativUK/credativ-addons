@@ -230,35 +230,38 @@ class external_log(osv.osv):
     def import_confirmation(self, cr, uid, ids, context=None):
         if context is None:
             context = {}
-
-        if isinstance(ids, (list, tuple)):
-            ids = ids[0]
-
+        if not isinstance(ids, (list, tuple)):
+            ids = [ids,]
         extref_pool = self.pool.get('external.referential')
-
-        log = self.browse(cr, uid, ids, context=context)
-        if not log:
-            # FIXME
-            return {}
-
-        context['external_log_id'] = ids
-        referential = extref_pool.browse(cr, uid, log.referential_id.id, context=context)
-        exported_ids = extref_pool._get_exported_ids_by_log(cr, uid, log.referential_id.id, log.model_id.model, ids, context=context)
-        if exported_ids:
-            res = False
-            try:
-                log_cr = pooler.get_db(cr.dbname).cursor() # We create a new cursor here so that when we commit before renaming the file, we cannot miss an imported file
-                res = extref_pool._verify_export(log_cr, uid, log.mapping_id, exported_ids, context=context)
-            except:
-                log_cr.rollback()
-                raise
+        
+        ctx = context.copy()
+        res = True
+        
+        for log in self.browse(cr, uid, ids, context=ctx):
+            if not log:
+                continue # FIXME: Log errors
+            
+            ctx['external_log_id'] = log.id
+            referential = extref_pool.browse(cr, uid, log.referential_id.id, context=ctx)
+            exported_ids = extref_pool._get_exported_ids_by_log(cr, uid, log.referential_id.id, log.model_id.model, log.id, context=ctx)
+            if exported_ids:
+                res = False
+                try:
+                    log_cr = pooler.get_db(cr.dbname).cursor() # We create a new cursor here so that when we commit before renaming the file, we cannot miss an imported file
+                    res = extref_pool._verify_export(log_cr, uid, log.mapping_id, exported_ids, context=ctx)
+                except:
+                    log_cr.rollback()
+                    raise
+                else:
+                    log_cr.commit()
+                finally:
+                    log_cr.close()
             else:
-                log_cr.commit()
-            finally:
-                log_cr.close()
-            return res
-        else:
-            _logger.warn('Found no exported records for log %s to confirm' % (log.name,))
+                _logger.warn('Found no exported records for log %s to confirm' % (log.name,))
+        
+        if ctx.get('conn'):
+            del ctx['conn']
+        return res
 
     def incomplete_transfers(self, cr, uid, ids, referential_id, model_name, res_name, context=None):
         '''
@@ -288,9 +291,11 @@ class external_log(osv.osv):
                                      ('status','in',['in-progress','imported-fail','imported-success','exported-fail','exported-success'])], context=context)
     
     def run_import_confirmation_scheduler(self, cr, uid, context=None):
+        if context == None:
+            context = {}
         external_log_ids = self.search(cr, uid, [('status','in',['in-progress','imported-fail','imported-success','exported-fail','exported-success'])], context=context)
-        for external_log in self.browse(cr, uid, external_log_ids, context=context):
-            external_log.import_confirmation(context=context)
+        if external_log_ids:
+            self.import_confirmation(cr, uid, external_log_ids, context=context)
         return True
 
 external_log()
