@@ -53,6 +53,9 @@ class crm_claim(osv.osv):
         'reason': fields.many2one(
             'crm.claim.category',
             string='Reason'),
+        'resolution_id': fields.many2one(
+            'crm.claim.resolution',
+            string='Resolution')
         }
 
     def claim_lines_from_all(self, cr, uid, ids, res_ids, context=None):
@@ -73,11 +76,11 @@ class crm_claim_category(osv.osv):
     '''
     _name = 'crm.claim.category'
     _description = 'Categories of CRM claims'
-    _order = 'sequence'
+    _order = 'parent_categ_id,sequence'
 
     _columns = {
         'name': fields.char(
-            'Name',
+            'Category',
             required=True,
             size=64),
         'sequence': fields.integer(
@@ -102,11 +105,11 @@ class crm_claim_line_category(osv.osv):
     '''
     _name = 'crm.claim.line.category'
     _description = 'Categories of CRM claim items'
-    _order = 'sequence'
+    _order = 'parent_claim_categ_id,parent_categ_id,sequence'
 
     _columns = {
         'name': fields.char(
-            'Name',
+            'Category',
             required=True,
             size=64),
         'sequence': fields.integer(
@@ -198,17 +201,113 @@ class crm_claim_line(osv.osv):
         #         required=True,
         #         string='Item'),
         'claim_id': fields.many2one(
-                'crm.claim',
-                string='Claim',
-                required=True),
+            'crm.claim',
+            string='Claim',
+            required=True),
         'category': fields.many2one(
-                'crm.claim.line.category',
-                required=True,
-                string='Category'),
+            'crm.claim.line.category',
+            required=True,
+            string='Category'),
         'reason': fields.many2one(
-                'crm.claim.line.category',
-                required=True,
-                string='Reason'),
+            'crm.claim.line.category',
+            required=True,
+            string='Reason'),
+        'resolution_id': fields.many2one(
+            'crm.claim.resolution',
+            string='Resolution')
         }
 
 crm_claim_line()
+
+
+class crm_claim_resolution(osv.osv):
+    '''
+    CRM claim resolution. This model encapsulates different kinds of
+    resolutions for a claim. It's effectively an alternative to
+    crm.claim's stages mechanism by allowing steps for resolving a
+    claim to be decoupled from claims themselves.
+    '''
+    _name = 'crm.claim.resolution'
+    _description = 'A claim resolution type'
+
+    _columns = {
+        'claim_id': fields.many2one(
+            'crm.claim',
+            string='Claim',
+            required=True),
+        'state': fields.selection(
+            selection=[('draft', 'Draft'),
+                       ('open', 'Open'),
+                       ('processing', 'Processing'),
+                       ('resolved', 'Resolved'),
+                       ('cancel', 'Cancelled')],
+            string='State',
+            required=True),
+        'description': fields.text(
+            'Description'),
+        }
+
+    def wkf_next(self, cr, uid, ids, context=None):
+        '''
+        This method advances the state to the next state.
+        '''
+        self.action_next(cr, uid, ids, context=context)
+
+    def action_next(self, cr, uid, ids, context=None):
+        for resolution in self.browse(self, cr, uid, ids, context=context):
+            # FIXME
+            resolution.state = STATES[STATES.index(cmp=lambda s: s[0] == resolution.state) + 1]
+
+    def wkf_previous(self, cr, uid, ids, context=None):
+        '''
+        This method retrogrades the state to the previous state.
+        '''
+        self.action_previous(cr, uid, ids, context=context)
+
+    def action_previous(self, cr, uid, ids, context=None):
+        for resolution in self.browse(self, cr, uid, ids, context=context):
+            # FIXME
+            resolution.state = STATES[STATES.index(cmp=lambda s: s[0] == resolution.state) - 1]
+
+    def wkf_open(self, cr, uid, ids, context=None):
+        self.action_open(cr, uid, ids, context=context)
+
+    def action_open(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, vals={'state': 'open'}, context=context)
+
+    def wkf_process(self, cr, uid, ids, context=None):
+        self.action_process(cr, uid, ids, context=context)
+
+    def action_process(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, vals={'state': 'processing'}, context=context)
+
+    def wkf_resolve(self, cr, uid, ids, context=None):
+        self.action_resolve(cr, uid, ids, context=context)
+
+    def action_resolve(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, vals={'state': 'resolve'}, context=context)
+
+    def wkf_cancel(self, cr, uid, ids, context=None):
+        self.action_cancel(cr, uid, ids, context=context)
+
+    def action_cancel(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, vals={'state': 'cancel'}, context=context)
+
+
+crm_claim_resolution()
+
+class crm_claim_line_resolution(osv.osv):
+    _inherit = 'crm.claim.resolution'
+    _name = 'crm.claim.line.resolution'
+
+    _columns = {
+        'claim_line_id': fields.many2one(
+            'crm.claim.line',
+            string='Claim line',
+            required=True),
+        'claim_id': fields.related(
+            'claim_line_id', 'claim_id',
+            relation='crm.claim',
+            string='Claim',
+            readonly=True),
+        }

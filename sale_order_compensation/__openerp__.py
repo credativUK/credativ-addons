@@ -20,30 +20,21 @@
 #
 ##############################################################################
 {
-    'name': 'Sale Order Claim',
+    'name': 'Sale Order Compensation',
     'version': '0.1',
     'category': 'Generic Modules/Sales & Purchases',
-    'description': """This module customises crm.claim for sale orders.
+    'description': """This module customises sale order claims for compensation resolutions.
 
-The sale.order.claim model allows claims to be raised against a sale order, providing a variety of categories of claim. The sale.order.issue model allows problems to be registered against specific parts of a sale order which, again, can be of a variety of different categories. The issues are created as lines of the claim so that a single claim comprises multiple issues. Claims may also, however, have no issue lines and be just against the whole order (e.g. change of mind).
-
-The module extends crm.claim providing a new crm.claim.line model (which is the super-model of sale.order.issue). It also provides a number of new states in which claims may be.
-
-The module provides a crm.claim.resolution model which allows different kinds of resolutions to be defined and associated with claims. Resolutions may have a workflow.
+It adds new fields to sale.order.claim and sale.order.issue for retrieving information on refunds and vouchers issued against sale orders.
 """,
     'author': 'credativ Ltd',
     'website' : 'http://credativ.co.uk',
-    'depends': ['sale','crm','crm_claim','account'],
+    'depends': ['sale_order_claim'],
     'init_xml': [],
     'update_xml': [
-        #'security/ir.model.access.csv',
-        'sale_order_claim_sequence.xml',
-        'crm_claim_view.xml',
-        'sale_order_claim_view.xml'
-        #'sale_order_issue_view.xml',
-        #'wizard/create_order_issue.xml',
-        #'sale_order_claim_view.xml',
-        #'wizard/wizard_order_claim.xml',
+        #'sale_order_compensation_data.xml',
+        'sale_order_compensation_view.xml',
+        #'wizard/create_order_claim.xml',
     ],
     'demo_xml': [],
     'installable': True,

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<openerp>
+    <data>
+        <record model="ir.ui.view" id="view_sale_order_compensation_form">
+            <field name="name">sale.order.compensation.form</field>
+            <field name="model">sale.order.claim</field>
+            <field name="inherit_id" ref="sale_order_claim.view_sale_order_claim_form" />
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <field name="user_id" position="before">
+                    <group col="8" colspan="4">
+                        <field name="prev_refund" />
+                        <field name="prev_voucher" />
+                        <field name="pending_refund" />
+                        <field name="pending_voucher" />
+                        <field name="max_refundable" />
+                    </group>
+                </field>
+
+                <field name="whole_order_claim" position="replace">
+                    <group col="6" colspan="4">
+                        <field name="whole_order_claim"
+                               on_change="toggle_whole_order_claim(whole_order_claim)" />
+                        <field name="refund_resolution_id"
+                               options="{'quick_create': true}" />
+                        <field name="voucher_resolution_id"
+                               options="{'quick_create': true}" />
+                    </group>
+                </field>
+
+                <field name="order_issue_ids" position="replace">
+                    <field name="order_issue_ids" nolabel="1" select="1">
+                        <tree editable="bottom">
+                            <field name="name" />
+                            <field name="resource"
+                                   on_change="onchange_resource(resource)" />
+                            <field name="category"
+                                   domain="[('parent_categ_id','=',False)]" />
+                            <field name="reason"
+                                   domain="[('parent_categ_id','=',category)]" />
+                            <field name="refund_resolution_id"
+                                   options="{'quick_create': true}" />
+                            <field name="voucher_resolution_id"
+                                   options="{'quick_create': true}" />
+                            <field name="prev_compensation" />
+                            <field name="product" />
+                            <field name="product_qty" />
+                            <field name="price_unit" />
+                            <field name="move_state" />
+                        </tree>
+                        <field name="total_refund" />
+                        <field name="total_voucher" />
+                        <field name="voucher_code" />
+                    </field>
+                </field>
+            </field>
+        </record>
+    </data>
+</openerp>
