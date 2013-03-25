@@ -21,7 +21,6 @@
 ##############################################################################
 
 from osv import osv, fields
-from crm_claim import crm_claim
 
 _issue_models = {
     'sale.order.line': {'desc': 'Sale order lines',
@@ -50,7 +49,7 @@ class sale_order_claim(osv.osv):
     def write(self, cr, uid, ids, vals, context=None):
         if 'sale_order_id' in vals and 'ref' not in vals:
             vals['ref'] = 'sale.order,%d' % vals['sale_order_id']
-        return super(crm_claim, self).write(cr, uid, ids, vals, context=context)
+        return super(sale_order_claim, self).write(cr, uid, ids, vals, context=context)
 
     _columns = {
         'sale_order_id': fields.many2one(
@@ -62,11 +61,11 @@ class sale_order_claim(osv.osv):
             selection=_issue_model_selection,
             string='Issue type',
             required=True),
-        'order_id_field': fields.char(
-            'Issue model order link field',
-            size=64,
-            required=True,
-            help='''Field name of the field on the issue model that points to a sale order.'''),
+        # 'order_id_field': fields.char(
+        #     'Issue model order link field',
+        #     size=64,
+        #     required=True,
+        #     help='''Field name of the field on the issue model that points to a sale order.'''),
         'whole_order_claim': fields.boolean(
             'Claim against whole order',
             required=True),
@@ -157,10 +156,10 @@ class sale_order_claim(osv.osv):
         'state': 'draft',
         'whole_order_claim': False,
         'issue_model': 'sale.order.line',
-        'order_id_field': 'order_id',
+        #'order_id_field': 'order_id',
         }
 
-    def onchange_issue_model(self, cr, uid, ids, issue_model, context=None):
+    def onchange_issue_model(self, cr, uid, ids, new_issue_model, context=None):
         # Don't allow changing the model if issues already exist
         if isinstance(ids, int) or (isinstance(ids, (list, tuple)) and len(ids) == 1):
             claim = self.browse(cr, uid, ids, context=context)
@@ -169,14 +168,10 @@ class sale_order_claim(osv.osv):
                         'warning': {'title': 'Change not allowed',
                                     'message': 'The issue model may not be changed while issues exist. '
                                     'You may remove all the issues and then change the issue model.'}}
+            #else:
+            #    return {'value': {'issue_model': new_issue_model}}
 
-        # When the issue model is changed, update the order_id_field
-        # accordingly
-        for claim in self.browse(cr, uid, ids, context=context):
-            if not claim.order_issue_ids and issue_model in self._issue_models:
-                self.write(cr, uid, claim.id,
-                           {'order_id_field': self._issue_models[issue_model]['order_id_field']},
-                           context=context)
+        return {'issue_model': new_issue_model}
 
     def toggle_whole_order_claim(self, cr, uid, ids, whole_order_claim, context=None):
         if whole_order_claim:
@@ -229,84 +224,63 @@ class sale_order_issue(osv.osv):
         return dict([(line.id, (line.resource[:line.resource.find(',')], int(line.resource[line.resource.find(',') + 1:])))
                      for line in self.browse(cr, uid, ids, context=context)])
 
-    def _sm2sol(self, cr, uid, sm_id, context=None):
-        ol_pool = self.pool.get('sale.order.line')
-        try:
-            # FIXME In the case that a sale.order.line is referred to,
-            # we'll just pick the first stock.move from that
-            # sale.order.line. How bad is this?
-            return ol_pool.browse(self, cr, uid, sm_id, context=context).move_ids[0]
-        except IndexError:
-            return False
+    def _find_records_for_order(self, cr, uid, order_id, context=None):
+        '''
+        Implementations of this method should return a browse object
+        containing all the records of the claim's issue_model which
+        are related to the given order_id.
+        '''
+        raise NotImplementedError()
 
-    def _sm2sp(self, cr, uid, sp_id, context=None):
-        pass
+    def _make_issue_dict(self, cr, uid, claim_id, rec_id, fields=None, context=None):
+        '''
+        Implementations of this method should return a dict containing
+        all the fields needed to create a new record of their own
+        issue type.
+        '''
+        raise NotImplementedError()
 
-    def _sol2sm(self, cr, uid, sol_id, context=None):
-        return self.pool.get('stock.move').browse(self, cr, uid, sol_id, context=context).sale_line_id
+    def read(self, cr, uid, ids, fields=None, context=None):
+        '''
+        Override read to include any resources from the related model
+        which do not already have a related sale.order.issue. The
+        purpose of this is so that the one2many list of
+        sale.order.issues will always show *all* the
+        sale.order.claim.issue_model resources for the appropriate
+        sale.order allowing the user to tick the
+        sale.order.issue.select field for them.
+        '''
+        # ensure order_claim_id is in the fields list
+        if fields is not None and 'order_claim_id' not in fields:
+            fields.append('order_claim_id')
 
-    def _sol2sp(self, cr, uid, sp_id, context=None):
-        pass
+        # read the resources using super.read
+        res = super(sale_order_issue).read(cr, uid, ids, fields=fields, context=context)
 
-    def _sp2sol(self, cr, uid, sp_id, context=None):
-        pass
+        # find the distinct claims in the specified issues
+        claim_ids = set([issue['order_claim_id'] for (id, issue) in res.items()])
 
-    def _sp2sm(self, cr, uid, sp_id, context=None):
-        pass
+        if len(claim_ids) == 1:
+            # if the specified issues are all from the same claim then
+            # add any missing resources from the issue_model to the
+            # read list
+            claim = self.pool.get('sale.order.claim').browse(cr, uid, claim_ids[0], context=context)
 
-    _convert = {
-        ('stock.move', 'stock.move'): lambda self, cr, uid, sm_id, ctx: sm_id,
-        ('stock.move', 'sale.order.line'): _sm2sol,
-        ('stock.move', 'stock.picking'): _sm2sp,
-        ('sale.order.line', 'sale.order.line'): lambda self, cr, uid, sol_id, ctx: sol_id,
-        ('sale.order.line', 'stock.move'): _sol2sm,
-        ('sale.order.line', 'stock.picking'): _sol2sp,
-        ('stock.picking', 'stock.picking'): lambda self, cr, uid, sp_id, ctx: sp_id,
-        ('stock.picking', 'stock.move'): _sp2sm,
-        ('stock.picking', 'sale.order.line'): _sp2sol,
-        }
-    '''_convert stores functions for getting IDs of one model given
-    IDs of another. Each entry is index by a 2-tuple containing:
-    (model_in, model_out).'''
+            for rec in self._find_records_for_order(cr, uid, claim.sale_order_id, context=context):
+                if res.id not in res:
+                    res[rec.id] = self._make_issue_dict(cr, uid, claim.id, rec.id, fields=fields, context=context)
 
-    def _get_related_id(self, cr, uid, ids, dest_model, context=None):
-        return dict([(id, self._convert[(model, dest_model)](self, cr, uid, id, context=context))
-                     for id, (model, res_id) in self._get_related(cr, uid, ids, context=context).items()])
-        
-    def _get_stock_move(self, cr, uid, ids, field_name, arg, context=None):
-        return self._get_related_id(cr, uid, ids, 'stock.move', context=context)
+        return res
 
-    def _get_sale_order_line(self, cr, uid, ids, field_name, arg, context=None):
-        return self._get_related_id(cr, uid, ids, 'sale.order.line', context=context)
-
-    def _get_stock_picking(self, cr, uid, ids, field_name, arg, context=None):
-        return self._get_related_id(cr, uid, ids, 'stock.picking', context=context)
+    def write(self, cr, uid, ids, vals, context=None):
+        '''
+        If a record is written with selected=False, that means the
+        issue should be removed.
+        '''
+        if 'selected' in vals and vals['selected'] is False:
+            self.unlink(cr, uid, ids, context=context)
 
     _columns = {
-        'sale_order_line_id': fields.function(
-            _get_sale_order_line,
-            method=True,
-            type='many2one',
-            relation='sale.order.line',
-            readonly=True,
-            string='Order line',
-            store={'sale.order.issue': (lambda self, cr, uid, ids, ctx: ids, ['resource'], 10)}),
-        'stock_move_id': fields.function(
-            _get_stock_move,
-            method=True,
-            type='many2one',
-            relation='stock.move',
-            readonly=True,
-            string='Stock move',
-            store={'sale.order.issue': (lambda self, cr, uid, ids, ctx: ids, ['resource'], 10)}),
-        'stock_picking_id': fields.function(
-            _get_stock_picking,
-            method=True,
-            type='many2one',
-            relation='stock.picking',
-            readonly=True,
-            string='Stock picking',
-            store={'sale.order.issue': (lambda self, cr, uid, ids, ctx: ids, ['resource'], 10)}),
         'resource': fields.reference(
             'Item',
             selection=_issue_model_selection,
@@ -316,37 +290,14 @@ class sale_order_issue(osv.osv):
             string='Claim',
             required=True,
             oldname='claim_id'),
-        'date': fields.related(
-            'stock_move_id', 'date',
-            type='date',
-            relation='stock.move',
-            readonly=True,
-            string='Move date'),
-        'product': fields.related(
-            'stock_move_id', 'product_id', 'name',
-            type='char',
-            relation='product.product',
-            readonly=True,
-            string='Product'),
-        'product_qty': fields.related(
-            'stock_move_id', 'product_qty',
-            type='float',
-            relation='stock.move',
-            readonly=True,
-            string='Quantity'),
-        'move_state': fields.related(
-            'stock_move_id', 'state',
-            type='char',
-            relation='stock.move',
-            readonly=True,
-            string='State'),
-        'price_unit': fields.related(
-            'stock_move_id', 'price_unit',
-            type='float',
-            relation='stock.move',
-            readonly=True,
-            string='Unit price'),
-        # TODO Consider adding any fields from sale.order.line
+        'select': fields.boolean(
+            'Select',
+            required=True,
+            help='Add this item to the claim')
+        }
+
+    _defaults = {
+        'select': False,
         }
 
     # def _ensure_claim_is_sale_order_claim(self, cr, uid, ids, context=None):
@@ -382,3 +333,19 @@ class sale_order_issue(osv.osv):
                                         context=context)
 
 sale_order_issue()
+
+
+class sale_order(osv.osv):
+    '''
+    Add a list of sale.order.claims to the sale.order model.
+    '''
+    _inherit = 'sale.order'
+
+    _columns = {
+        'claim_ids': fields.one2many(
+            'sale.order.claim',
+            'sale_order_id',
+            string='Claims')
+        }
+
+sale_order()

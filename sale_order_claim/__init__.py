@@ -23,5 +23,7 @@
 #import wizard
 import crm_claim
 import sale_order_claim
+import sale_order_issue_stock_move
+import sale_order_issue_sale_order_line
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

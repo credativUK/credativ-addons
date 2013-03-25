@@ -39,7 +39,9 @@ The module provides a crm.claim.resolution model which allows different kinds of
         #'security/ir.model.access.csv',
         'sale_order_claim_sequence.xml',
         'crm_claim_view.xml',
-        'sale_order_claim_view.xml'
+        'sale_order_claim_view.xml',
+        'sale_order_issue_sale_order_line_view.xml',
+        'sale_order_issue_stock_move_view.xml'
         #'sale_order_issue_view.xml',
         #'wizard/create_order_issue.xml',
         #'sale_order_claim_view.xml',

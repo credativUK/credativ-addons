@@ -86,19 +86,18 @@
                                on_change="onchange_issue_model(issue_model)" />
                     </group>
                     <group col="1" colspan="4">
-                        <field name="order_issue_ids" nolabel="1" select="1">
+                        <field name="order_issue_ids" nolabel="1" select="1"
+                               attrs="{'readonly':[('whole_order_claim','=',True)]}">
                             <tree editable="bottom">
+                                <field name="order_claim_id"
+                                       invisible="1" />
                                 <field name="name" />
                                 <field name="resource"
-                                       on_change="onchange_resource(resource)" />
+                                       invisible="1" />
                                 <field name="category"
                                        domain="[('parent_categ_id','=',False)]" />
                                 <field name="reason"
                                        domain="[('parent_categ_id','=',category)]" />
-                                <field name="product" />
-                                <field name="product_qty" />
-                                <field name="price_unit" />
-                                <field name="move_state" />
                             </tree>
                         </field>
                     </group>
@@ -163,6 +162,8 @@
                     <field name="name"
                            string="Claim" />
                     <field name="sale_order_id" />
+                    <field name="user_id" />
+                    <field name="date" />
                     <field name="customer_id" />
                     <field name="order_total" />
                     <field name="category"
@@ -228,5 +229,57 @@
             id="menu_sale_order_claim"
             parent="base.menu_aftersale" />
 
+        <!-- Add tab of claims to sale order form view -->
+
+        <record id="view_sale_order_form_claims_page" model="ir.ui.view">
+            <field name="name">Claims</field>
+            <field name="model">sale.order</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="sale.view_order_form" />
+            <field name="arch" type="xml">
+                <page string="Sales Order" position="after">
+                    <page string="Claims">
+                        <field name="claim_ids" nolabel="1">
+                            <tree string="Claims" colors="blue:state=='processing'">
+                                <field name="name"
+                                       string="Claim" />
+                                <field name="create_uid" />
+                                <field name="date" />
+                                <field name="category"
+                                       domain="[('parent_categ_id','=',False)]" />
+                                <field name="reason"
+                                       domain="[('parent_categ_id','=',category)]" />
+                                <field name="state" />
+                                <button name="action_open"
+                                        string="Open"
+                                        states="draft"
+                                        type="object"
+                                        icon="gtk-go-forward" />
+                                <button name="action_process"
+                                        string="Process"
+                                        states="opened,review"
+                                        type="object"
+                                        icon="gtk-go-forward" />
+                                <button name="action_review"
+                                        string="Review"
+                                        states="processing"
+                                        type="object"
+                                        icon="gtk-media-pause" />
+                                <button name="action_approve"
+                                        string="Approve"
+                                        states="processing,review"
+                                        type="object"
+                                        icon="gtk-ok" />
+                                <button name="action_cancel"
+                                        string="Cancel"
+                                        states="draft,opened,processing,review"
+                                        type="object"
+                                        icon="gtk-cancel" />
+                            </tree>
+                        </field>
+                    </page>
+                </page>
+            </field>
+        </record>
     </data>
 </openerp>
