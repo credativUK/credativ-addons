@@ -10,7 +10,8 @@
             <field name="arch" type="xml">
                 <search string="Search sale order claims">
                     <group col="10" colspan="5">
-                        <field name="sale_order_id" />
+                        <field name="sale_order_id"
+                               on_change="reread_issues(sale_order_id, order_issue_ids)" />
                         <field name="merchandiser_id" />
                         <field name="create_uid" />
                         <field name="customer_id" />
@@ -59,6 +60,7 @@
                         <field name="shipped" />
                         <field name="invoiced" />
                         <field name="order_total" />
+                        <field name="shipping_charge" />
                     </group>
                     <group col="4" colspan="4">
                         <separator string="Claim details" colspan="4" />
@@ -89,8 +91,9 @@
                         <field name="order_issue_ids" nolabel="1" select="1"
                                attrs="{'readonly':[('whole_order_claim','=',True)]}">
                             <tree editable="bottom">
-                                <field name="order_claim_id"
-                                       invisible="1" />
+                                <field name="select"
+                                       string=""
+                                       on_change="toggle_item_selected(select, sale_order_id)" />
                                 <field name="name" />
                                 <field name="resource"
                                        invisible="1" />
@@ -218,6 +221,7 @@
             <field name="res_model">sale.order.claim</field>
             <field name="view_type">form</field>
             <field name="view_mode">form</field>
+            <field name="target">new</field>
             <field name="view_id" ref="view_sale_order_claim_form" />
             <field name="search_view_id" ref="view_sale_order_claim_search" />
         </record>
@@ -239,6 +243,7 @@
             <field name="arch" type="xml">
                 <page string="Sales Order" position="after">
                     <page string="Claims">
+                        <group colspan="4" col="1">
                         <field name="claim_ids" nolabel="1">
                             <tree string="Claims" colors="blue:state=='processing'">
                                 <field name="name"
@@ -277,6 +282,7 @@
                                         icon="gtk-cancel" />
                             </tree>
                         </field>
+                        </group>
                     </page>
                 </page>
             </field>

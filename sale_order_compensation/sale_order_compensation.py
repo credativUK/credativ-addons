@@ -23,126 +23,6 @@
 from osv import osv, fields
 from decimal_precision import decimal_precision as dp
 
-class order_resolution_refund(osv.osv):
-    '''
-    Order resolution: refund. This models implements
-    crm.claim.resolution for making a refund against a
-    sale.order.claim.
-    '''
-    _inherit = 'crm.claim.resolution'
-    _name = 'sale.order.resolution.refund'
-
-    _columns = {
-        'refund': fields.float(
-            'Refund',
-            digits_compute=dp.get_precision('Sale Price')),
-        }
-
-    def action_open(self, cr, uid, ids, context=None):
-        return super(order_resolution_refund, self).action_open(cr, uid, ids, context)
-
-    def action_process(self, cr, uid, ids, context=None):
-        return super(order_resolution_refund, self).action_process(cr, uid, ids, context)
-
-    def action_resolve(self, cr, uid, ids, context=None):
-        return super(order_resolution_refund, self).action_resolve(cr, uid, ids, context)
-
-    def action_cancel(self, cr, uid, ids, context=None):
-        return super(order_resolution_refund, self).action_cancel(cr, uid, ids, context)
-
-order_resolution_refund()
-
-
-class order_resolution_voucher(osv.osv):
-    '''
-    Order resolution: voucher. This models implements
-    crm.claim.resolution for issuing a voucher against a
-    sale.order.claim.
-    '''
-    _inherit = 'crm.claim.resolution'
-    _name = 'sale.order.resolution.voucher'
-
-    _columns = {
-        'voucher': fields.float(
-            'Voucher',
-            digits_compute=dp.get_precision('Sale Price')),
-        }
-
-    def action_open(self, cr, uid, ids, context=None):
-        return super(order_resolution_voucher, self).action_open(cr, uid, ids, context)
-
-    def action_process(self, cr, uid, ids, context=None):
-        return super(order_resolution_voucher, self).action_process(cr, uid, ids, context)
-
-    def action_resolve(self, cr, uid, ids, context=None):
-        return super(order_resolution_voucher, self).action_resolve(cr, uid, ids, context)
-
-    def action_cancel(self, cr, uid, ids, context=None):
-        return super(order_resolution_voucher, self).action_cancel(cr, uid, ids, context)
-
-order_resolution_voucher()
-
-
-class issue_resolution_refund(osv.osv):
-    '''
-    Issue resolution: refund. This models implements
-    crm.claim.resolution for making a refund against a
-    sale.order.issue.
-    '''
-    _inherit = 'crm.claim.resolution'
-    _name = 'sale.issue.resolution.refund'
-
-    _columns = {
-        'refund': fields.float(
-            'Refund',
-            digits_compute=dp.get_precision('Sale Price')),
-        }
-
-    def action_open(self, cr, uid, ids, context=None):
-        return super(issue_resolution_refund, self).action_open(cr, uid, ids, context)
-
-    def action_process(self, cr, uid, ids, context=None):
-        return super(issue_resolution_refund, self).action_process(cr, uid, ids, context)
-
-    def action_resolve(self, cr, uid, ids, context=None):
-        return super(issue_resolution_refund, self).action_resolve(cr, uid, ids, context)
-
-    def action_cancel(self, cr, uid, ids, context=None):
-        return super(issue_resolution_refund, self).action_cancel(cr, uid, ids, context)
-
-issue_resolution_refund()
-
-
-class issue_resolution_voucher(osv.osv):
-    '''
-    Issue resolution: voucher. This models implements
-    crm.claim.resolution for issuing a voucher against a
-    sale.order.issue.
-    '''
-    _inherit = 'crm.claim.resolution'
-    _name = 'sale.issue.resolution.voucher'
-
-    _columns = {
-        'voucher': fields.float(
-            'Voucher',
-            digits_compute=dp.get_precision('Sale Price')),
-        }
-
-    def action_open(self, cr, uid, ids, context=None):
-        return super(issue_resolution_voucher, self).action_open(cr, uid, ids, context)
-
-    def action_process(self, cr, uid, ids, context=None):
-        return super(issue_resolution_voucher, self).action_process(cr, uid, ids, context)
-
-    def action_resolve(self, cr, uid, ids, context=None):
-        return super(issue_resolution_voucher, self).action_resolve(cr, uid, ids, context)
-
-    def action_cancel(self, cr, uid, ids, context=None):
-        return super(issue_resolution_voucher, self).action_cancel(cr, uid, ids, context)
-
-issue_resolution_voucher()
-
-
 class sale_order_claim(osv.osv):
     '''
     This class allows a refund and a voucher to be issued against a
@@ -251,19 +131,27 @@ class sale_order_claim(osv.osv):
                                                                             context=context)[claim.id])
                      for claim in self.browse(cr, uid, ids, context=context)])
 
+    def _get_claims_from_issues(self, cr, uid, ids, context=None):
+        issue_pool = self.pool.get('sale.order.issue')
+        return list(set([issue['order_claim_id'] for issue in issue_pool.read(cr, uid, ids, ['order_claim_id'], context=context)]))
+
     _columns = {
-        #'refund_resolution_ids': None,
-        #'voucher_resolution_id': None,
         'total_refund': fields.function(
             _total_refund,
             type='float',
             string='Total refunded',
-            readonly=True),
+            readonly=True,
+            store={
+                'sale.order.issue': (_get_claims_from_issues , ['refund'], 10)
+                }),
         'total_voucher': fields.function(
             _total_voucher,
             type='float',
             string='Total vouchers',
-            readonly=True),
+            readonly=True,
+            store={
+                'sale.order.issue': (_get_claims_from_issues , ['voucher'], 10)
+                }),
         'prev_refund': fields.function(
             _prev_refund,
             type='float',
@@ -289,16 +177,31 @@ class sale_order_claim(osv.osv):
             type='float',
             string='Maximum refundable',
             readonly=True),
-        'refund_resolution_id': fields.many2one(
-            'sale.order.resolution.refund',
-            string='Refund'),
-        'voucher_resolution_id': fields.many2one(
-            'sale.order.resolution.voucher',
-            string='Voucher'),
+        'refund': fields.float(
+            'Refund',
+            digits_compute=dp.get_precision('Sale Price')),
+        'voucher': fields.float(
+            'Voucher',
+            digits_compute=dp.get_precision('Sale Price')),
         'voucher_code': fields.char(
             'Voucher code',
             size=128),
         }
+
+    def action_open(self, cr, uid, ids, context=None):
+        return super(sale_order_claim, self).action_open(cr, uid, ids, context=context)
+
+    def action_process(self, cr, uid, ids, context=None):
+        return super(sale_order_claim, self).action_process(cr, uid, ids, context=context)
+
+    def action_review(self, cr, uid, ids, context=None):
+        return super(sale_order_claim, self).action_review(cr, uid, ids, context=context)
+
+    def action_approve(self, cr, uid, ids, context=None):
+        return super(sale_order_claim, self).action_approve(cr, uid, ids, context=context)
+
+    def action_cancel(self, cr, uid, ids, context=None):
+        return super(sale_order_claim, self).action_cancel(cr, uid, ids, context=context)
 
 sale_order_claim()
 
@@ -356,27 +259,80 @@ class sale_order_issue(osv.osv):
                                         context=context)
 
     _columns = {
-        'refund_resolution_id': fields.many2one(
-            'sale.issue.resolution.refund',
-            string='Refund'),
-        'voucher_resolution_id': fields.many2one(
-            'sale.issue.resolution.voucher',
-            string='Voucher'),
-        'refund': fields.related(
-            'refund_resolution_id', 'refund',
-            type='float',
-            relation='sale.issue.resolution.refund',
-            string='Refund'),
-        'voucher': fields.related(
-            'voucher_resolution_id', 'voucher',
-            type='float',
-            relation='sale.issue.resolution.voucher',
-            string='Voucher'),
+        'refund': fields.float(
+            'Refund',
+            digits_compute=dp.get_precision('Sale Price')),
+        'voucher': fields.float(
+            'Voucher',
+            digits_compute=dp.get_precision('Sale Price')),
         'prev_compensation': fields.function(
             _prev_compensation,
             type='float',
-            string='Already compensated',
+            string='Compensated',
             readonly=True),
         }
 
+    def on_change_refund(self, cr, uid, ids, refund, order_claim_id, sale_order_id, context=None):
+        pass
+
+    def on_change_voucher(self, cr, uid, ids, voucher, order_claim_id, sale_order_id, context=None):
+        pass
+
 sale_order_issue()
+
+
+class sale_order(osv.osv):
+    '''
+    Add columns to sale.order to sum the total compensation paid out
+    against the order.
+    '''
+    _inherit = 'sale.order'
+
+    def _total_compensation(self, cr, uid, ids, compensation_type=['refund','voucher'], claim_state=('approved',), context=None):
+        '''Calculates the sum of all compensations of the specified
+        type(s) and in the specified state(s) made against this
+        sale.order'''
+        res = {}
+
+        order_claims_pool = self.pool.get('sale.order.claim')
+
+        for id in ids:
+            claim_ids = order_claims_pool.search(cr, uid, [('sale_order_id','=',id),
+                                                           ('state','in',claim_state)], context=context)
+            res[id] = sum([sum([getattr(claim, 'total_%s' % (comp_type,))
+                                for comp_type in compensation_type])
+                           for claim in order_claims_pool.browse(cr, uid, claim_ids, context)])
+
+        return res
+
+    def _total_refund(self, cr, uid, ids, field_name, arg, context=None):
+        '''Calculates the sum of all refunds made against this
+        sale.order'''
+        return self._total_compensation(cr, uid, ids,
+                                       compensation_type=['refund'],
+                                       claim_state=('approved',),
+                                       context=context)
+
+    def _total_voucher(self, cr, uid, ids, field_name, arg, context=None):
+        '''Calculates the sum of all vouchers issued against this
+        sale.order'''
+        return self._total_compensation(cr, uid, ids,
+                                       compensation_type=['voucher'],
+                                       claim_state=('approved',),
+                                       context=context)
+
+    _columns = {
+        # FIXME Consider storing these as their calculation requires
+        # at least four inner loops and it will make generating the
+        # list view of sale orders take even longer
+        'total_refund': fields.function(
+            _total_refund,
+            type='float',
+            string='Refunded',
+            readonly=True),
+        'total_voucher': fields.function(
+            _total_voucher,
+            type='float',
+            string='Vouchers',
+            readonly=True),
+        }

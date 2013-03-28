@@ -13,20 +13,20 @@
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='order_issue_ids']/tree/field[@name='resource']" position="after">
                     <field name="stock_move_id"
-                           attrs="{'invisible':[('order_claim_id.issue_model','!=','stock.move')]}" />
+                           attrs="{'invisible':[('parent.issue_model','!=','stock.move')]}" />
                 </xpath>
 
                 <xpath expr="//field[@name='order_issue_ids']/tree/field[@name='reason']" position="after">
                     <field name="sm_date"
-                           attrs="{'invisible':[('order_claim_id.issue_model','!=','stock.move')]}" />
+                           attrs="{'invisible':[('parent.issue_model','!=','stock.move')]}" />
                     <field name="sm_product"
-                           attrs="{'invisible':[('order_claim_id.issue_model','!=','stock.move')]}" />
+                           attrs="{'invisible':[('parent.issue_model','!=','stock.move')]}" />
                     <field name="sm_product_qty"
-                           attrs="{'invisible':[('order_claim_id.issue_model','!=','stock.move')]}" />
+                           attrs="{'invisible':[('parent.issue_model','!=','stock.move')]}" />
                     <field name="sm_state"
-                           attrs="{'invisible':[('order_claim_id.issue_model','!=','stock.move')]}" />
+                           attrs="{'invisible':[('parent.issue_model','!=','stock.move')]}" />
                     <field name="sm_price_unit"
-                           attrs="{'invisible':[('order_claim_id.issue_model','!=','stock.move')]}" />
+                           attrs="{'invisible':[('parent.issue_model','!=','stock.move')]}" />
                 </xpath>
             </field>
         </record>

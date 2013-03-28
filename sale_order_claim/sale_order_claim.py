@@ -46,6 +46,54 @@ class sale_order_claim(osv.osv):
     _name = 'sale.order.claim'
     _description = 'Claim against a sale order'
 
+    def _get_shipping_charge(self, cr, uid, ids, field_name, arg, context=None):
+        res = {}
+        ol_pool = self.pool.get('sale.order.line')
+        for claim in self.browse(cr, uid, ids, context=context):
+            shipping_ids = ol_pool.search(cr, uid, [('order_id','=',claim.sale_order_id.id),
+                                                    # FIXME What's a better way of getting the shipping line?
+                                                    ('product_id','=',1)],
+                                          context=context)
+            res[claim.id] = sum([ol['price_unit'] for ol in ol_pool.read(cr, uid, shipping_ids, ['price_unit'], context=context)])
+
+        return res
+
+    def _get_order_discount(self, cr, uid, ids, field_name, arg, context=None):
+        res = {}
+        ol_pool = self.pool.get('sale.order.line')
+        for claim in self.browse(cr, uid, ids, context=context):
+            line_ids = ol_pool.search(cr, uid, [('order_id','=',claim.sale_order_id.id)], context=context)
+            res[claim.id] = sum([ol['price_unit'] * ol['discount']
+                                 for ol in ol_pool.read(cr, uid, line_ids, ['price_unit', 'discount'], context=context)])
+        return res
+
+    def default_get(self, cr, uid, fields, context=None):
+        rec_id = context and context.get('active_id', False)
+        if rec_id:
+            return {'sale_order_id': rec_id,
+                    'order_issue_ids': self.reread_issues(cr, uid, ids=[], sale_order_id=rec_id, order_issue_ids=[], context=context)['value']['order_issue_ids']}
+        else:
+            return super(sale_order_claim, self).default_get(cr, uid, fields, context=context)
+
+    # def create(self, cr, uid, vals, context=None):
+    #     '''
+    #     When creating a new sale.order.claim, set any existing
+    #     sale.order.issue reccords' order_claim_id fields to the new
+    #     claim's ID.
+    #     '''
+    #     res_id = super(sale_order_claim, self).create(cr, uid, vals, context=context)
+    #     new_issue_lines = []
+    #     for issue_line in vals['order_issue_ids']:
+    #         op, id, rec = issue_line
+    #         if op in [0,1]:
+    #             rec['order_claim_id'] = res_id
+    #             new_issue_lines = (op, id, rec)
+
+    #     vals['order_issue_ids'] = new_issue_lines
+    #     self.write(cr, uid, res_id, vales, context=context)
+    #     import pdb; pdb.set_trace()
+    #     return res_id
+
     def write(self, cr, uid, ids, vals, context=None):
         if 'sale_order_id' in vals and 'ref' not in vals:
             vals['ref'] = 'sale.order,%d' % vals['sale_order_id']
@@ -61,11 +109,6 @@ class sale_order_claim(osv.osv):
             selection=_issue_model_selection,
             string='Issue type',
             required=True),
-        # 'order_id_field': fields.char(
-        #     'Issue model order link field',
-        #     size=64,
-        #     required=True,
-        #     help='''Field name of the field on the issue model that points to a sale order.'''),
         'whole_order_claim': fields.boolean(
             'Claim against whole order',
             required=True),
@@ -144,6 +187,16 @@ class sale_order_claim(osv.osv):
             type='float',
             readonly=True,
             string='Order total'),
+        'shipping_charge': fields.function(
+            _get_shipping_charge,
+            type='float',
+            readonly=True,
+            string='Shipping charge'),
+        'order_discount': fields.function(
+            _get_order_discount,
+            type='float',
+            readonly=True,
+            string='Discount'),
         'order_issue_ids': fields.one2many(
             'sale.order.issue',
             'order_claim_id',
@@ -156,27 +209,52 @@ class sale_order_claim(osv.osv):
         'state': 'draft',
         'whole_order_claim': False,
         'issue_model': 'sale.order.line',
-        #'order_id_field': 'order_id',
         }
 
+    def reread_issues(self, cr, uid, ids, sale_order_id, order_issue_ids, context=None):
+        '''
+        This method is called when the sale_order_id is changed. It
+        causes the list of issues to be re-read. This is necessary
+        because order_issue_ids is not a related field to
+        sale_order_id.
+        '''
+        if context is None:
+            context = {}
+
+        issue_pool = self.pool.get('sale.order.issue')
+        #claim = self.browse(cr, uid, ids, context=context)
+        context['sale_order_id'] = sale_order_id
+        # FIXME Which sale_order_id and which order_issue_ids
+        # should we use? New ones or current ones?
+        return {'value': {'order_issue_ids': issue_pool.read(cr, uid, [], ['id'], context=context),
+                          'sale_order_id': sale_order_id}}
+
     def onchange_issue_model(self, cr, uid, ids, new_issue_model, context=None):
+        # set _visible fields for each possible model type
+        visibles = dict([('order_issue_ids.%s_visible' % (model.replace('.','_'),), model == new_issue_model)
+                         for model in _issue_models.keys()])
+
         # Don't allow changing the model if issues already exist
-        if isinstance(ids, int) or (isinstance(ids, (list, tuple)) and len(ids) == 1):
+        if isinstance(ids, int) or (isinstance(ids, (list, tuple)) and len(ids) <= 1):
             claim = self.browse(cr, uid, ids, context=context)
             if claim.order_issue_ids:
                 return {'value': {'issue_model': claim.issue_model},
                         'warning': {'title': 'Change not allowed',
                                     'message': 'The issue model may not be changed while issues exist. '
                                     'You may remove all the issues and then change the issue model.'}}
-            #else:
-            #    return {'value': {'issue_model': new_issue_model}}
+            else:
+                new_issues = self.reread_issues(cr, uid, ids, claim.sale_order_id, claim.order_issue_ids, context=context)['value']['order_issue_ids']
+                visibles.update({'order_issue_ids': new_issues})
+                return {'value': visibles}
 
-        return {'issue_model': new_issue_model}
+        visibles.update({'issue_model': new_issue_model})
+        return {'value': visibles}
 
     def toggle_whole_order_claim(self, cr, uid, ids, whole_order_claim, context=None):
         if whole_order_claim:
             for claim in self.browse(cr, uid, ids, context=context):
                 item_pool = self.pool.get(claim.issue_model)
+                # TODO Mark as selected
 
         else:
             # We can't really remove all the items from the claim
@@ -232,7 +310,7 @@ class sale_order_issue(osv.osv):
         '''
         raise NotImplementedError()
 
-    def _make_issue_dict(self, cr, uid, claim_id, rec_id, fields=None, context=None):
+    def _make_issue_dict(self, cr, uid, claim_id, rec_id, context=None):
         '''
         Implementations of this method should return a dict containing
         all the fields needed to create a new record of their own
@@ -240,7 +318,7 @@ class sale_order_issue(osv.osv):
         '''
         raise NotImplementedError()
 
-    def read(self, cr, uid, ids, fields=None, context=None):
+    def read(self, cr, uid, ids, fields=None, context=None, load='_classic_read'):
         '''
         Override read to include any resources from the related model
         which do not already have a related sale.order.issue. The
@@ -250,25 +328,41 @@ class sale_order_issue(osv.osv):
         sale.order allowing the user to tick the
         sale.order.issue.select field for them.
         '''
+        import pdb; pdb.set_trace()
         # ensure order_claim_id is in the fields list
         if fields is not None and 'order_claim_id' not in fields:
             fields.append('order_claim_id')
 
-        # read the resources using super.read
-        res = super(sale_order_issue).read(cr, uid, ids, fields=fields, context=context)
+        # read the resources using super read
+        res = super(sale_order_issue, self).read(cr, uid, ids, fields=fields, context=context, load=load)
+        res_ids = [r['id'] for r in res]
 
         # find the distinct claims in the specified issues
-        claim_ids = set([issue['order_claim_id'] for (id, issue) in res.items()])
 
+        # (Note: the order_claim_id values being retrieved by .read
+        # seem to be of the form (id, name) so we're selecging the
+        # first component of that tuple)
+        claim_ids = set([issue['order_claim_id'][0] for issue in res])
+
+        if len(claim_ids) > 1 or 'sale_order_id' not in context:
+            # if the specified issues cover multiple claims or if no
+            # sale order has been specified, we can't add issue_model
+            # resources; so we give up
+            return res
+
+        # if the specified issues are all from the same claim then add
+        # any missing resources from the issue_model to the read list
         if len(claim_ids) == 1:
-            # if the specified issues are all from the same claim then
-            # add any missing resources from the issue_model to the
-            # read list
             claim = self.pool.get('sale.order.claim').browse(cr, uid, claim_ids[0], context=context)
+            claim_id = claim.id
+            sale_order_id = claim.sale_order_id
+        elif len(claim_ids) == 0 and 'sale_order_id' in context:
+            claim_id = context.get('active_model') == 'sale.order.claim' and context.get('active_id', False) or False
+            sale_order_id = context['sale_order_id']
 
-            for rec in self._find_records_for_order(cr, uid, claim.sale_order_id, context=context):
-                if res.id not in res:
-                    res[rec.id] = self._make_issue_dict(cr, uid, claim.id, rec.id, fields=fields, context=context)
+        for rec in self._find_records_for_order(cr, uid, sale_order_id, context=context):
+            if rec.id not in res_ids:
+                res.append(self._make_issue_dict(cr, uid, claim_id, rec, context=context))
 
         return res
 
@@ -300,16 +394,6 @@ class sale_order_issue(osv.osv):
         'select': False,
         }
 
-    # def _ensure_claim_is_sale_order_claim(self, cr, uid, ids, context=None):
-    #     return all([line.claim_id.ref[:line.claim_id.ref.find(',')] == 'sale.order'
-    #                 for line in self.browse(cr, uid, ids, context=context)])
-
-    # _constraints = [
-    #     (_ensure_claim_is_sale_order_claim,
-    #      'Parent claim of an order issue must be a claim against a sale order.',
-    #      ['claim_id']),
-    #     ]
-
     def onchange_resource(self, cr, uid, ids, new_resource, context=None):
         if isinstance(ids, int) or (isinstance(ids, (list, tuple)) and len(ids) == 1):
             issue = self.browse(cr, uid, ids, context=context)
@@ -319,6 +403,9 @@ class sale_order_issue(osv.osv):
                         'warning': {'title': 'Wrong model',
                                     'message': 'Each issue must be against an item of the model: "%s"' %\
                                         (issue.claim_id.issue_model,)}}
+
+    def toggle_item_selected(self, cr, uid, ids, select, order_claim_id, sale_order_id, context=None):
+        pass
 
     def resolution_next(self, cr, uid, ids, context=None):
         resolution_pool = self.pool.get('crm.claim.resolution')
