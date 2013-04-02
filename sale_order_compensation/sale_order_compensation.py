@@ -33,50 +33,37 @@ class sale_order_claim(osv.osv):
 
     def _total_refund(self, cr, uid, ids, field_name, arg, context=None):
         '''Calculates the sum of all the refunds for this claim'''
-        res = {}
+        if isinstance(ids, (int, long)):
+            ids = [ids]
 
-        claim_refund_pool = self.pool.get('sale.claim.resolution.refund')
-        issue_refund_pool = self.pool.get('sale.issue.resolution.refund')
+        claim_pool = self.pool.get('sale.order.claim')
 
-        for id in ids:
-            claim_refund_ids = claim_refund_pool.search(cr, uid, [('claim_id','=',id)], context=context)
-            claim_total = sum([r['refund'] for r in claim_refund_pool.read(cr, uid, claim_refund_ids, ['refund'], context=context)])
-
-            issue_refund_ids = issue_refund_pool.search(cr, uid, [('claim_id','=',id)], context=context)
-            issue_total = sum([r['refund'] for r in issue_refund_pool.read(cr, uid, issue_refund_ids, ['refund'], context=context)])
-
-            res[id] = claim_total + issue_total
-
-        return res
+        return dict([(claim.id, sum([claim.refund] + [issue.refund for issue in claim.order_issue_ids]))
+                     for claim in claim_pool.browse(cr, uid, ids, context=context)])
 
     def _total_voucher(self, cr, uid, ids, field_name, arg, context=None):
         '''Calculates the sum of all the vouchers for this claim'''
-        res = {}
+        if isinstance(ids, (int, long)):
+            ids = [ids]
 
-        claim_voucher_pool = self.pool.get('sale.claim.resolution.voucher')
-        issue_voucher_pool = self.pool.get('sale.issue.resolution.voucher')
+        claim_pool = self.pool.get('sale.order.claim')
 
-        for id in ids:
-            claim_voucher_ids = claim_voucher_pool.search(cr, uid, [('claim_id','=',id)], context=context)
-            claim_total = sum([r['voucher'] for r in claim_voucher_pool.read(cr, uid, claim_voucher_ids, ['voucher'], context=context)])
-
-            issue_voucher_ids = issue_voucher_pool.search(cr, uid, [('claim_id','=',id)], context=context)
-            issue_total = sum([r['voucher'] for r in issue_voucher_pool.read(cr, uid, issue_voucher_ids, ['voucher'], context=context)])
-
-            res[id] = claim_total + issue_total
-
-        return res
+        return dict([(claim.id, sum([claim.voucher] + [issue.voucher for issue in claim.order_issue_ids]))
+                     for claim in claim_pool.browse(cr, uid, ids, context=context)])
 
     def _prev_compensation(self, cr, uid, ids, compensation_type=['refund','voucher'], claim_state=('approved',), context=None):
         '''Calculates the sum of all compensations of the specified
         type(s) made against the same sale.order as this claim and for
         claims in the specified state(s)'''
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         res = {}
 
         order_claims_pool = self.pool.get('sale.order.claim')
 
         for id in ids:
-            sale_order_id = self.browse(cr, uid, id, context=context).sale_order_id
+            sale_order_id = self.browse(cr, uid, id, context=context).sale_order_id.id
             claim_ids = order_claims_pool.search(cr, uid, [('sale_order_id','=',sale_order_id),
                                                            ('id','<>',id),
                                                            ('state','in',claim_state)], context=context)
@@ -188,6 +175,36 @@ class sale_order_claim(osv.osv):
             size=128),
         }
 
+    def on_change_refund(self, cr, uid, ids, refund, context=None):
+        if not ids:
+            return {'value': {'total_refund': refund}}
+            
+        total_refund = self._total_refund(cr, uid, ids, field_name='total_refund', arg=None, context=None)
+        max_refundable = self._max_refundable(cr, uid, ids, field_name='max_refundable', arg=None, context=None)
+
+        if isinstance(ids, (list, tuple)):
+            id = ids[0]
+        elif isinstance(ids, (int, long)):
+            id = ids
+
+        return {'value': {'total_refund': total_refund[id] + refund,
+                          'max_refundable': max_refundable[id] - refund}}
+
+    def on_change_voucher(self, cr, uid, ids, voucher, context=None):
+        if not ids:
+            return {'value': {'total_voucher': voucher}}
+
+        total_voucher = self._total_voucher(cr, uid, ids, field_name='total_voucher', arg=None, context=None)
+        max_refundable = self._max_refundable(cr, uid, ids, field_name='max_refundable', arg=None, context=None)
+
+        if isinstance(ids, (list, tuple)):
+            id = ids[0]
+        elif isinstance(ids, (int, long)):
+            id = ids
+
+        return {'value': {'total_voucher': total_voucher[id] + voucher,
+                          'max_refundable': max_refundable[id] - voucher}}
+
     def action_open(self, cr, uid, ids, context=None):
         return super(sale_order_claim, self).action_open(cr, uid, ids, context=context)
 
@@ -273,10 +290,26 @@ class sale_order_issue(osv.osv):
         }
 
     def on_change_refund(self, cr, uid, ids, refund, order_claim_id, sale_order_id, context=None):
-        pass
+        if not ids:
+            return {'value': {'total_refund': refund}}
+
+        claim_pool = self.pool.get('sale.order.claim')
+        total_refund = claim_pool._total_refund(cr, uid, order_claim_id, field_name='total_refund', arg=None, context=None)
+        max_refundable = claim_pool._max_refundable(cr, uid, order_claim_id, field_name='max_refundable', arg=None, context=None)
+
+        return {'value': {'total_refund': total_refund[order_claim_id] + refund,
+                          'max_refundable': max_refundable[order_claim_id] - refund}}
 
     def on_change_voucher(self, cr, uid, ids, voucher, order_claim_id, sale_order_id, context=None):
-        pass
+        if not ids:
+            return {'value': {'total_voucher': voucher}}
+
+        claim_pool = self.pool.get('sale.order.claim')
+        total_voucher = claim_pool._total_voucher(cr, uid, order_claim_id, field_name='total_voucher', arg=None, context=None)
+        max_refundable = claim_pool._max_refundable(cr, uid, order_claim_id, field_name='max_refundable', arg=None, context=None)
+
+        return {'value': {'total_voucher': total_voucher[order_claim_id] + voucher,
+                          'max_refundable': max_refundable[order_claim_id] - voucher}}
 
 sale_order_issue()
 
@@ -292,6 +325,9 @@ class sale_order(osv.osv):
         '''Calculates the sum of all compensations of the specified
         type(s) and in the specified state(s) made against this
         sale.order'''
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         res = {}
 
         order_claims_pool = self.pool.get('sale.order.claim')

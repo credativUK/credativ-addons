@@ -44,6 +44,10 @@ class sale_order_issue(osv.osv):
                     'sale_order_line_id': rec.id})
         return res
 
+    def _issue_eq_res(self, cr, uid, issue, res, context=None):
+        return 'sale_order_line_id' in issue and\
+            issue['sale_order_line_id'] == res.id
+
     def write(self, cr, uid, ids, vals, context=None):
         if 'sale_order_line_id' in vals and 'resource' not in vals:
             vals['resource'] = 'sale.order.line,%d' % vals['sale_order_line_id']

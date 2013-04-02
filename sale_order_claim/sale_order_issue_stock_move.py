@@ -44,6 +44,10 @@ class sale_order_issue(osv.osv):
                     'stock_move_id': rec.id})
         return res
 
+    def _issue_eq_res(self, cr, uid, issue, res, context=None):
+        return 'stock_move_id' in issue and\
+            issue['stock_move_id'] == res.id
+
     def write(self, cr, uid, ids, vals, context=None):
         if 'stock_move_id' in vals and 'resource' not in vals:
             vals['resource'] = 'stock.move,%d' % vals['stock_move_id']

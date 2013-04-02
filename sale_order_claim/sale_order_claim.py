@@ -235,7 +235,7 @@ class sale_order_claim(osv.osv):
                          for model in _issue_models.keys()])
 
         # Don't allow changing the model if issues already exist
-        if isinstance(ids, int) or (isinstance(ids, (list, tuple)) and len(ids) <= 1):
+        if isinstance(ids, int) or (isinstance(ids, (list, tuple)) and len(ids) == 1):
             claim = self.browse(cr, uid, ids, context=context)
             if claim.order_issue_ids:
                 return {'value': {'issue_model': claim.issue_model},
@@ -318,6 +318,18 @@ class sale_order_issue(osv.osv):
         '''
         raise NotImplementedError()
 
+    def _issue_eq_res(self, cr, uid, issue, res, context=None):
+        '''
+        Implements of this method should return True if the given
+        issue and the given resource represent the same thing, or
+        False otherwise.
+
+        @param issue (dict): an existing sale.order.issue
+        @param res (browse_object): an existing record of the
+        issue_model model
+        '''
+        raise NotImplementedError()
+
     def read(self, cr, uid, ids, fields=None, context=None, load='_classic_read'):
         '''
         Override read to include any resources from the related model
@@ -328,24 +340,25 @@ class sale_order_issue(osv.osv):
         sale.order allowing the user to tick the
         sale.order.issue.select field for them.
         '''
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         # ensure order_claim_id is in the fields list
         if fields is not None and 'order_claim_id' not in fields:
             fields.append('order_claim_id')
 
         # read the resources using super read
         res = super(sale_order_issue, self).read(cr, uid, ids, fields=fields, context=context, load=load)
-        res_ids = [r['id'] for r in res]
+        # clean up the many2one field values produced by .read
+        def clean(r):
+            if isinstance(r['order_claim_id'], tuple):
+                r['order_claim_id'] = r['order_claim_id'][0]
+            return r
+        res = map(clean, res)
 
         # find the distinct claims in the specified issues
+        claim_ids = list(set([issue['order_claim_id'] for issue in res]))
 
-        # (Note: the order_claim_id values being retrieved by .read
-        # seem to be of the form (id, name) so we're selecging the
-        # first component of that tuple)
-        claim_ids = set([issue['order_claim_id'][0] for issue in res])
-
-        if len(claim_ids) > 1 or 'sale_order_id' not in context:
-            # if the specified issues cover multiple claims or if no
+        if len(claim_ids) > 1 and 'sale_order_id' not in context:
+            # if the specified issues cover multiple claims and no
             # sale order has been specified, we can't add issue_model
             # resources; so we give up
             return res
@@ -355,13 +368,13 @@ class sale_order_issue(osv.osv):
         if len(claim_ids) == 1:
             claim = self.pool.get('sale.order.claim').browse(cr, uid, claim_ids[0], context=context)
             claim_id = claim.id
-            sale_order_id = claim.sale_order_id
+            sale_order_id = claim.sale_order_id.id
         elif len(claim_ids) == 0 and 'sale_order_id' in context:
             claim_id = context.get('active_model') == 'sale.order.claim' and context.get('active_id', False) or False
             sale_order_id = context['sale_order_id']
 
         for rec in self._find_records_for_order(cr, uid, sale_order_id, context=context):
-            if rec.id not in res_ids:
+            if not filter(lambda issue: self._issue_eq_res(cr, uid, issue, rec, context=context), res):
                 res.append(self._make_issue_dict(cr, uid, claim_id, rec, context=context))
 
         return res
