@@ -194,7 +194,7 @@ class external_referential(wms_integration_osv.wms_integration_osv):
     def make_fieldproc(self, output_opts):
         def strip_delimiter(field):
             if isinstance(field, (str, unicode)):
-                return field.replace(output_opts.get('delimier',','),'')
+                return field.replace(output_opts.get('delimier',','),'').replace(output_opts.get('quotechar','"'),'')
             else:
                 return field
         return strip_delimiter
