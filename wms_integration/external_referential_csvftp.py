@@ -81,7 +81,7 @@ class Connection(object):
     >>> conn.finalize_export()
     '''
 
-    def __init__(self, username, password, host, referential_id, cr, uid, port=21, timeout=5, out_encoding='iso-8859-1', csv_writer_opts={}, debug=False, logger=False, reporter=None):
+    def __init__(self, username, password, host, referential_id, cr, uid, port=21, timeout=5, out_encoding='utf-8', csv_writer_opts={}, debug=False, logger=False, reporter=None):
         '''
         The constructor sets up the FTP connection.
 
