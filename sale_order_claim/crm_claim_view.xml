@@ -10,9 +10,9 @@
             <field name="arch" type="xml">
                 <field name="ref" position="after">
                     <field name="category"
-                           domain="[('parent_categ_id','=',False)]" />
+                           domain="[('active','=',True),('parent_categ_id','=',False)]" />
                     <field name="reason"
-                           domain="[('parent_categ_id','=',category)]" />
+                           domain="[('active','=',True),('parent_categ_id','=',category)]" />
                 </field>
                 <separator string="Claim/Action Description" position="before">
                     <separator colspan="4" string="Claim lines" />
@@ -21,9 +21,9 @@
                             <field name="name" />
                             <field name="resource" />
                             <field name="category"
-                                   domain="[('parent_categ_id','=',False)]" />
+                                   domain="[('active','=',True),('parent_categ_id','=',False)]" />
                             <field name="reason"
-                                   domain="[('parent_categ_id','=',category)]" />
+                                   domain="[('active','=',True),('parent_categ_id','=',category)]" />
                         </tree>
                     </field>
                 </separator>
@@ -42,6 +42,7 @@
                     <field name="parent_categ_id" />
                     <field name="name" />
                     <field name="sequence" />
+                    <field name="active" />
                 </tree>
             </field>
         </record>
@@ -57,6 +58,7 @@
                     <field name="parent_categ_id" />
                     <field name="name" />
                     <field name="sequence" />
+                    <field name="active" />
                 </tree>
             </field>
         </record>

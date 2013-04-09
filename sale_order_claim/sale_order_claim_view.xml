@@ -48,7 +48,8 @@
                     </group>
                     <group col="6" colspan="4">
                         <separator string="Order details" colspan="6" />
-                        <field name="sale_order_id" />
+                        <field name="sale_order_id"
+                               on_change="onchange_sale_order(sale_order_id, order_issue_ids)" />
                         <field name="shop_id" />
                         <field name="origin" />
                         <field name="client_order_ref" />
@@ -59,8 +60,10 @@
                         <field name="partner_shipping_id" />
                         <field name="shipped" />
                         <field name="invoiced" />
-                        <field name="order_total" />
+                        <field name="order_items_total" />
                         <field name="shipping_charge" />
+                        <field name="order_discount" />
+                        <field name="order_total" />
                     </group>
                     <group col="4" colspan="4">
                         <separator string="Claim details" colspan="4" />
@@ -69,9 +72,9 @@
                         <field name="priority"/>
                         <field name="date_deadline"/>
                         <field name="category"
-                               domain="[('parent_categ_id','=',False)]" />
+                               domain="[('active','=',True),('parent_categ_id','=',False)]" />
                         <field name="reason"
-                               domain="[('parent_categ_id','=',category)]" />
+                               domain="[('active','=',True),('parent_categ_id','=',category)]" />
                     </group>
                     <group col="1" colspan="4">
                         <separator string="Comments" colspan="1" />
@@ -89,7 +92,8 @@
                     </group>
                     <group col="1" colspan="4">
                         <field name="order_issue_ids" nolabel="1" select="1"
-                               attrs="{'readonly':[('whole_order_claim','=',True)]}">
+                               attrs="{'readonly':[('whole_order_claim','=',True)]}"
+                               context="{'order_issue_id': id}">
                             <tree editable="bottom">
                                 <field name="select"
                                        string=""
@@ -98,9 +102,9 @@
                                 <field name="resource"
                                        invisible="1" />
                                 <field name="category"
-                                       domain="[('parent_categ_id','=',False)]" />
+                                       domain="[('active','=',True),('parent_categ_id','=',False)]" />
                                 <field name="reason"
-                                       domain="[('parent_categ_id','=',category)]" />
+                                       domain="[('active','=',True),('parent_categ_id','=',category)]" />
                             </tree>
                         </field>
                     </group>
@@ -170,9 +174,9 @@
                     <field name="customer_id" />
                     <field name="order_total" />
                     <field name="category"
-                           domain="[('parent_categ_id','=',False)]" />
+                           domain="[('active','=',True),('parent_categ_id','=',False)]" />
                     <field name="reason"
-                           domain="[('parent_categ_id','=',category)]" />
+                           domain="[('active','=',True),('parent_categ_id','=',category)]" />
                     <field name="state" />
                     <button name="action_open"
                             string="Open"
@@ -251,9 +255,9 @@
                                 <field name="create_uid" />
                                 <field name="date" />
                                 <field name="category"
-                                       domain="[('parent_categ_id','=',False)]" />
+                                       domain="[('active','=',True),('parent_categ_id','=',False)]" />
                                 <field name="reason"
-                                       domain="[('parent_categ_id','=',category)]" />
+                                       domain="[('active','=',True),('parent_categ_id','=',category)]" />
                                 <field name="state" />
                                 <button name="action_open"
                                         string="Open"

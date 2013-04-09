@@ -46,57 +46,89 @@ class sale_order_claim(osv.osv):
     _name = 'sale.order.claim'
     _description = 'Claim against a sale order'
 
+    def _sum_items(self, cr, uid, sale_order_id, context=None):
+        product_pool = self.pool.get('product.product')
+        shipping_ids = product_pool.search(cr, uid, [('full_name', 'ilike', '%shipping%')], context=context)
+
+        ol_pool = self.pool.get('sale.order.line')
+        line_ids = ol_pool.search(cr, uid, [('order_id','=',sale_order_id),
+                                            ('product_id','not in',shipping_ids)], context=context)
+        return sum([ol['price_unit'] for ol in ol_pool.read(cr, uid, line_ids, ['price_unit'], context=context)])
+        
+    def _get_items_total(self, cr, uid, ids, field_name, arg, context=None):
+        return dict([(claim.id, self._sum_items(cr, uid, claim.sale_order_id.id, context=context))
+                     for claim in self.browse(cr, uid, ids, context=context)])
+
+    def _sum_shipping(self, cr, uid, sale_order_id, context=None):
+        product_pool = self.pool.get('product.product')
+        shipping_ids = product_pool.search(cr, uid, [('full_name', 'ilike', '%shipping%')], context=context)
+
+        ol_pool = self.pool.get('sale.order.line')
+        shipping_ids = ol_pool.search(cr, uid, [('order_id','=',sale_order_id),
+                                                ('product_id','in',shipping_ids)],
+                                      context=context)
+        return sum([ol['price_unit'] for ol in ol_pool.read(cr, uid, shipping_ids, ['price_unit'], context=context)])
+        
     def _get_shipping_charge(self, cr, uid, ids, field_name, arg, context=None):
-        res = {}
+        return dict([(claim.id, self._sum_shipping(cr, uid, claim.sale_order_id.id, context=context))
+                     for claim in self.browse(cr, uid, ids, context=context)])
+
+    def _sum_discounts(self, cr, uid, sale_order_id, context=None):
         ol_pool = self.pool.get('sale.order.line')
-        for claim in self.browse(cr, uid, ids, context=context):
-            shipping_ids = ol_pool.search(cr, uid, [('order_id','=',claim.sale_order_id.id),
-                                                    # FIXME What's a better way of getting the shipping line?
-                                                    ('product_id','=',1)],
-                                          context=context)
-            res[claim.id] = sum([ol['price_unit'] for ol in ol_pool.read(cr, uid, shipping_ids, ['price_unit'], context=context)])
-
-        return res
-
+        line_ids = ol_pool.search(cr, uid, [('order_id','=',sale_order_id)], context=context)
+        return -sum([ol['price_unit'] * (ol['discount'] / 100.0)
+                     for ol in ol_pool.read(cr, uid, line_ids, ['price_unit', 'discount'], context=context)])
+        
     def _get_order_discount(self, cr, uid, ids, field_name, arg, context=None):
-        res = {}
-        ol_pool = self.pool.get('sale.order.line')
-        for claim in self.browse(cr, uid, ids, context=context):
-            line_ids = ol_pool.search(cr, uid, [('order_id','=',claim.sale_order_id.id)], context=context)
-            res[claim.id] = sum([ol['price_unit'] * ol['discount']
-                                 for ol in ol_pool.read(cr, uid, line_ids, ['price_unit', 'discount'], context=context)])
-        return res
+        return dict([(claim.id, self._sum_discounts(cr, uid, claim.sale_order_id.id, context=context))
+                     for claim in self.browse(cr, uid, ids, context=context)])
 
     def default_get(self, cr, uid, fields, context=None):
         rec_id = context and context.get('active_id', False)
         if rec_id:
-            return {'sale_order_id': rec_id,
+            return {'active': True,
+                    'sale_order_id': rec_id,
                     'order_issue_ids': self.reread_issues(cr, uid, ids=[], sale_order_id=rec_id, order_issue_ids=[], context=context)['value']['order_issue_ids']}
         else:
             return super(sale_order_claim, self).default_get(cr, uid, fields, context=context)
 
-    # def create(self, cr, uid, vals, context=None):
-    #     '''
-    #     When creating a new sale.order.claim, set any existing
-    #     sale.order.issue reccords' order_claim_id fields to the new
-    #     claim's ID.
-    #     '''
-    #     res_id = super(sale_order_claim, self).create(cr, uid, vals, context=context)
-    #     new_issue_lines = []
-    #     for issue_line in vals['order_issue_ids']:
-    #         op, id, rec = issue_line
-    #         if op in [0,1]:
-    #             rec['order_claim_id'] = res_id
-    #             new_issue_lines = (op, id, rec)
+    def _update_issues(self, cr, uid, claim, claim_id, context=None):
+        '''
+        Given a dict representing a draft claim (from create or
+        write's vals argument), returns an updated order_issue_ids
+        value with the correct claim_id.
+        '''
+        if isinstance(claim_id, (tuple, list)):
+            claim_id = ids[0]
+        new_issue_lines = []
+        for issue_line in claim['order_issue_ids']:
+            if isinstance(issue_line, (list, tuple)):
+                op, id, rec = issue_line
+            else:
+                continue
+            if op in [0,1]:
+                rec['claim_id'] = claim_id
+                rec['order_claim_id'] = claim_id
+                new_issue_lines = (op, id, rec)
 
-    #     vals['order_issue_ids'] = new_issue_lines
-    #     self.write(cr, uid, res_id, vales, context=context)
-    #     import pdb; pdb.set_trace()
-    #     return res_id
+        return new_issue_lines
+
+    def create(self, cr, uid, vals, context=None):
+        '''
+        When creating a new sale.order.claim, set any existing
+        sale.order.issue reccords' order_claim_id fields to the new
+        claim's ID.
+        '''
+        res_id = super(sale_order_claim, self).create(cr, uid, vals, context=context)
+        vals['order_issue_ids'] = self._update_issues(cr, uid, vals, res_id, context=context)
+        self.write(cr, uid, res_id, vals, context=context)
+        return res_id
 
     def write(self, cr, uid, ids, vals, context=None):
         if 'sale_order_id' in vals and 'ref' not in vals:
             vals['ref'] = 'sale.order,%d' % vals['sale_order_id']
+        if isinstance(ids, (int, long)) or len(ids) == 1:
+            vals['order_issue_ids'] = self._update_issues(cr, uid, vals, ids, context=context)
         return super(sale_order_claim, self).write(cr, uid, ids, vals, context=context)
 
     _columns = {
@@ -181,12 +213,11 @@ class sale_order_claim(osv.osv):
             type='boolean',
             readonly=True,
             string='Invoiced?'),
-        'order_total': fields.related(
-            'sale_order_id',
-            'amount_total',
+        'order_items_total': fields.function(
+            _get_items_total,
             type='float',
             readonly=True,
-            string='Order total'),
+            string='Items total'),
         'shipping_charge': fields.function(
             _get_shipping_charge,
             type='float',
@@ -197,6 +228,12 @@ class sale_order_claim(osv.osv):
             type='float',
             readonly=True,
             string='Discount'),
+        'order_total': fields.related(
+            'sale_order_id',
+            'amount_total',
+            type='float',
+            readonly=True,
+            string='Order total'),
         'order_issue_ids': fields.one2many(
             'sale.order.issue',
             'order_claim_id',
@@ -207,9 +244,36 @@ class sale_order_claim(osv.osv):
     _defaults = {
         'name': lambda self, cr, uid, ctx: self.pool.get('ir.sequence').next_by_code(cr, uid, 'sale.order.claim'),
         'state': 'draft',
+        'active': True,
         'whole_order_claim': False,
         'issue_model': 'sale.order.line',
         }
+
+    def onchange_sale_order(self, cr, uid, ids, sale_order_id, order_issue_ids, context=None):
+        res = self.reread_issues(cr, uid, ids, sale_order_id, order_issue_ids, context=None)
+
+        so_pool = self.pool.get('sale.order')
+        sale_order = so_pool.browse(cr, uid, sale_order_id, context=context)
+        if sale_order:
+            # I don't like this. Why do I have to repeat all these
+            # relations?
+            res['value'].update({
+                    'shop_id': sale_order.shop_id.name,
+                    'origin': sale_order.origin,
+                    'client_order_ref': sale_order.client_order_ref,
+                    'order_state': sale_order.state,
+                    'date_order': sale_order.date_order,
+                    'merchandiser_id': sale_order.user_id.name,
+                    'customer_id': sale_order.partner_id.name,
+                    'partner_shipping_id': sale_order.partner_shipping_id.name,
+                    'shipped': sale_order.shipped,
+                    'invoiced': sale_order.invoiced,
+                    'order_items_total': self._sum_items(cr, uid, sale_order_id, context=context),
+                    'shipping_charge': self._sum_shipping(cr, uid, sale_order_id, context=context),
+                    'order_discount': self._sum_discounts(cr, uid, sale_order_id, context=context),
+                    'order_total': sale_order.amount_total})
+
+        return res
 
     def reread_issues(self, cr, uid, ids, sale_order_id, order_issue_ids, context=None):
         '''
@@ -260,6 +324,13 @@ class sale_order_claim(osv.osv):
             # We can't really remove all the items from the claim
             pass
 
+    def save_draft(self, cr, uid, ids, context=None):
+        '''
+        This method is necessary when the form is presented in a
+        pop-up window.
+        '''
+        return {'view_mode': 'tree,form',
+                'type': 'ir.actions.act_window_close'}
 
     def action_open(self, cr, uid, ids, context=None):
         self.write(cr, uid, ids, {'state': 'opened'}, context=context)
@@ -310,7 +381,7 @@ class sale_order_issue(osv.osv):
         '''
         raise NotImplementedError()
 
-    def _make_issue_dict(self, cr, uid, claim_id, rec_id, context=None):
+    def _make_issue_dict(self, cr, uid, issue_id, sale_order_id, claim_id, rec_id, context=None):
         '''
         Implementations of this method should return a dict containing
         all the fields needed to create a new record of their own
@@ -340,7 +411,6 @@ class sale_order_issue(osv.osv):
         sale.order allowing the user to tick the
         sale.order.issue.select field for them.
         '''
-        #import pdb; pdb.set_trace()
         # ensure order_claim_id is in the fields list
         if fields is not None and 'order_claim_id' not in fields:
             fields.append('order_claim_id')
@@ -349,8 +419,11 @@ class sale_order_issue(osv.osv):
         res = super(sale_order_issue, self).read(cr, uid, ids, fields=fields, context=context, load=load)
         # clean up the many2one field values produced by .read
         def clean(r):
-            if isinstance(r['order_claim_id'], tuple):
-                r['order_claim_id'] = r['order_claim_id'][0]
+            # if isinstance(r['order_claim_id'], tuple):
+            #     r['order_claim_id'] = r['order_claim_id'][0]
+            for k, v in r.items():
+                if isinstance(v, tuple):
+                    r[k] = v[0]
             return r
         res = map(clean, res)
 
@@ -372,10 +445,12 @@ class sale_order_issue(osv.osv):
         elif len(claim_ids) == 0 and 'sale_order_id' in context:
             claim_id = context.get('active_model') == 'sale.order.claim' and context.get('active_id', False) or False
             sale_order_id = context['sale_order_id']
+        else:
+            return res
 
         for rec in self._find_records_for_order(cr, uid, sale_order_id, context=context):
             if not filter(lambda issue: self._issue_eq_res(cr, uid, issue, rec, context=context), res):
-                res.append(self._make_issue_dict(cr, uid, claim_id, rec, context=context))
+                res.append(self._make_issue_dict(cr, uid, False, sale_order_id, claim_id, rec, context=context))
 
         return res
 
@@ -404,6 +479,7 @@ class sale_order_issue(osv.osv):
         }
 
     _defaults = {
+        'order_claim_id': lambda s, c, u, i, ctx: ctx.get('order_claim_id', None),
         'select': False,
         }
 

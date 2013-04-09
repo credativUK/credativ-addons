@@ -92,6 +92,14 @@ class crm_claim_category(osv.osv):
             'crm.claim.line.category',
             'parent_claim_categ_id',
             string='Child claim line categories'),
+        'active': fields.boolean(
+            'Active',
+            required=True,
+            help='Indicates whether this category is available to use.'),
+        }
+
+    _defaults = {
+        'active': True,
         }
 
 crm_claim_category()
@@ -120,6 +128,14 @@ class crm_claim_line_category(osv.osv):
         'parent_claim_categ_id': fields.many2one(
             'crm.claim.category',
             string='Parent claim category'),
+        'active': fields.boolean(
+            'Active',
+            required=True,
+            help='Indicates whether this category is available to use.'),
+        }
+
+    _defaults = {
+        'active': True,
         }
 
 crm_claim_line_category()
@@ -136,7 +152,9 @@ class crm_claim_line(osv.osv):
     _order = 'name'
 
     def _get_name(self, cr, uid, ids, field_name, args, context=None):
-        pass
+        return dict([(id, 'claim line #%s' % (id,)) for id in ids])
+        # return dict([(line.id, '%s %s' % (line.id, repr(line.resource)))
+        #              for line in self.browse(cr, uid, ids, context=context)])
 
     def _get_claim_resource(self, cr, uid, ids, context=None):
         if isinstance(ids, (list, tuple)):
@@ -209,9 +227,18 @@ class crm_claim_line(osv.osv):
         'reason': fields.many2one(
             'crm.claim.line.category',
             string='Reason'),
+        'state': fields.selection(
+            selection=[('draft', 'Draft'),
+                       ('confirm', 'Confirm'),
+                       ('cancel', 'Cancel')],
+            string='State'),
         'resolution_id': fields.many2one(
             'crm.claim.resolution',
             string='Resolution')
+        }
+
+    _defaults = {
+        'state': 'draft',
         }
 
 crm_claim_line()

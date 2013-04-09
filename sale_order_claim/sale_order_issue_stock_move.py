@@ -36,9 +36,11 @@ class sale_order_issue(osv.osv):
                               sm_pool.search(cr, uid, [('sale_id','=',order_id)], context=context),
                               context=context)
 
-    def _make_issue_dict(self, cr, uid, claim_id, rec, context=None):
+    def _make_issue_dict(self, cr, uid, issue_id, sale_order_id, claim_id, rec, context=None):
         res = dict([(col, False) for col in self._columns.keys()])
-        res.update({'resource': 'stock.move,%d' % (rec.id,),
+        res.update({'id': issue_id,
+                    'resource': 'stock.move,%d' % (rec.id,),
+                    'claim_id': claim_id,
                     'order_claim_id': claim_id,
                     'select': False,
                     'stock_move_id': rec.id})

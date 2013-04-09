@@ -69,7 +69,7 @@ class sale_order_claim(osv.osv):
                                                            ('state','in',claim_state)], context=context)
             res[id] = sum([sum([getattr(claim, 'total_%s' % (comp_type,))
                                 for comp_type in compensation_type])
-                           for claim in order_claims_pool.browse(cr, uid, claim_ids, context)])
+                           for claim in order_claims_pool.browse(cr, uid, claim_ids, context=context)])
 
         return res
 
@@ -175,35 +175,89 @@ class sale_order_claim(osv.osv):
             size=128),
         }
 
+    def onchange_sale_order(self, cr, uid, ids, sale_order_id, order_issue_ids, context=None):
+        res = super(sale_order_claim, self).onchange_sale_order(cr, uid, ids, sale_order_id, order_issue_ids, context=context)
+
+        so_pool = self.pool.get('sale.order')
+        sale_order = so_pool.browse(cr, uid, sale_order_id, context=context)
+
+        if not sale_order:
+            return res
+
+        if isinstance(ids, (list, tuple)):
+            id = ids and ids[0] or []
+        elif isinstance(ids, (int, long)):
+            id = ids
+
+        claim = self.browse(cr, uid, id, context=context)
+
+        if not claim:
+            # if the claim is still in draft, get the totals without
+            # using the claim object
+
+            def claim_total_compensation(comp_type):
+                # FIXME You need to get the current claim.refund and
+                # claim.voucher values; they should be passed as
+                # arguments to this onchange
+                return sum([issue.get(comp_type, 0.0) for (_, _, issue) in order_issue_ids if issue])
+
+            def so_total_compensation(sale_order_id, comp_type, claim_state=('approved',)):
+                claim_ids = self.search(cr, uid, [('sale_order_id','=',sale_order_id),
+                                                  ('state','in',claim_state)], context=context)
+                return sum([sum([getattr(claim, 'total_%s' % (ct,))
+                                 for ct in comp_type])
+                            for claim in self.browse(cr, uid, claim_ids, context=context)])
+
+            res['value'].update({
+                    'total_refund': claim_total_compensation('refund'),
+                    'total_voucher': claim_total_compensation('voucher'),
+                    'prev_refund': so_total_compensation(sale_order_id, ['refund'], claim_state=('approved',)),
+                    'prev_voucher': so_total_compensation(sale_order_id, ['voucher'], claim_state=('approved',)),
+                    'pending_refund': so_total_compensation(sale_order_id, ['refund'], claim_state=('open','processing','review')),
+                    'pending_voucher': so_total_compensation(sale_order_id, ['voucher'], claim_state=('open','processing','review')),
+                    'max_refundable': sale_order.amount_total - so_total_compensation(sale_order_id, ['refund','voucher'], claim_state=('open','processing','review','approved')),
+                    })
+
+        else:
+            res['value'].update({
+                    'total_refund': claim._total_refund(cr, uid, ids, field_name='total_refund', arg=None, context=None),
+                    'total_voucher': claim._total_voucher(cr, uid, ids, field_name='total_voucher', arg=None, context=None),
+                    'prev_refund': claim._prev_refund(cr, uid, ids, field_name='prev_refund', arg=None, context=None),
+                    'prev_voucher': claim._prev_voucher(cr, uid, ids, field_name='prev_voucher', arg=None, context=None),
+                    'pending_refund': claim._pending_refund(cr, uid, ids, field_name='pending_refund', arg=None, context=None),
+                    'pending_voucher': claim._prev_voucher(cr, uid, ids, field_name='pending_voucher', arg=None, context=None),
+                    'max_refundable': claim._max_refundable(cr, uid, ids, field_name='max_refundable', arg=None, context=None),
+                    })
+
+        return res
+
     def on_change_refund(self, cr, uid, ids, refund, context=None):
         if not ids:
             return {'value': {'total_refund': refund}}
             
-        total_refund = self._total_refund(cr, uid, ids, field_name='total_refund', arg=None, context=None)
-        max_refundable = self._max_refundable(cr, uid, ids, field_name='max_refundable', arg=None, context=None)
-
         if isinstance(ids, (list, tuple)):
             id = ids[0]
         elif isinstance(ids, (int, long)):
             id = ids
 
-        return {'value': {'total_refund': total_refund[id] + refund,
-                          'max_refundable': max_refundable[id] - refund}}
+        claim = self.browse(cr, uid, id, context=context)
+
+        return {'value': {'total_refund': claim._total_refund(cr, uid, id, field_name='total_refund', arg=None, context=None) + refund,
+                          'max_refundable': claim._max_refundable(cr, uid, ids, field_name='max_refundable', arg=None, context=None) - refund}}
 
     def on_change_voucher(self, cr, uid, ids, voucher, context=None):
         if not ids:
             return {'value': {'total_voucher': voucher}}
 
-        total_voucher = self._total_voucher(cr, uid, ids, field_name='total_voucher', arg=None, context=None)
-        max_refundable = self._max_refundable(cr, uid, ids, field_name='max_refundable', arg=None, context=None)
-
         if isinstance(ids, (list, tuple)):
             id = ids[0]
         elif isinstance(ids, (int, long)):
             id = ids
 
-        return {'value': {'total_voucher': total_voucher[id] + voucher,
-                          'max_refundable': max_refundable[id] - voucher}}
+        claim = self.browse(cr, uid, id, context=context)
+
+        return {'value': {'total_voucher': claim._total_voucher(cr, uid, id, field_name='total_voucher', arg=None, context=None) + voucher,
+                          'max_refundable': claim._max_refundable(cr, uid, id, field_name='max_refundable', arg=None, context=None) - voucher}}
 
     def action_open(self, cr, uid, ids, context=None):
         return super(sale_order_claim, self).action_open(cr, uid, ids, context=context)
@@ -246,6 +300,7 @@ class sale_order_issue(osv.osv):
                 continue
 
             issue_ids = order_issues_pool.search(cr, uid, [('resource','=',issue.resource),
+                                                           ('state','not in',['draft']),
                                                            ('id','<>',issue.id)], context=context)
             res[issue.id] = sum([sum([getattr(issue, comp_type)
                                       for comp_type in compensation_type])
