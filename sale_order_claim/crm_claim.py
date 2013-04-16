@@ -203,6 +203,8 @@ class crm_claim_line(osv.osv):
             'Resource',
             selection=crm._links_get,
             size=128),
+        'non_item_issue': fields.boolean(
+            'Issue not related to any item?'),
         ## Attempting to implement better arbitrary model linking than fields.reference
         # 'res_id': fields.integer(
         #     'Item ID'),
@@ -239,6 +241,7 @@ class crm_claim_line(osv.osv):
 
     _defaults = {
         'state': 'draft',
+        'non_item_issue': False,
         }
 
 crm_claim_line()

@@ -40,7 +40,6 @@ class sale_order_issue(osv.osv):
         res = dict([(col, False) for col in self._columns.keys()])
         res.update({'id': issue_id,
                     'resource': 'stock.move,%d' % (rec.id,),
-                    'claim_id': claim_id,
                     'order_claim_id': claim_id,
                     'select': False,
                     'stock_move_id': rec.id})

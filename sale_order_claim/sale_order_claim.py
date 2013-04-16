@@ -96,10 +96,10 @@ class sale_order_claim(osv.osv):
         '''
         Given a dict representing a draft claim (from create or
         write's vals argument), returns an updated order_issue_ids
-        value with the correct claim_id.
+        value with the correct order_claim_id.
         '''
         if isinstance(claim_id, (tuple, list)):
-            claim_id = ids[0]
+            claim_id = claim_id[0]
         new_issue_lines = []
         for issue_line in claim['order_issue_ids']:
             if isinstance(issue_line, (list, tuple)):
@@ -107,9 +107,10 @@ class sale_order_claim(osv.osv):
             else:
                 continue
             if op in [0,1]:
-                rec['claim_id'] = claim_id
                 rec['order_claim_id'] = claim_id
-                new_issue_lines = (op, id, rec)
+                # FIXME Sometimes you've made the issues list just a
+                # list of dicts and ignored the other values
+                new_issue_lines.append((op, id, rec))
 
         return new_issue_lines
 
@@ -127,7 +128,9 @@ class sale_order_claim(osv.osv):
     def write(self, cr, uid, ids, vals, context=None):
         if 'sale_order_id' in vals and 'ref' not in vals:
             vals['ref'] = 'sale.order,%d' % vals['sale_order_id']
-        if isinstance(ids, (int, long)) or len(ids) == 1:
+        if isinstance(ids, (int, long)) or len(ids) == 1 and 'order_issue_ids' in vals:
+            # We only need to update the issues if some new issues
+            # have been supplied
             vals['order_issue_ids'] = self._update_issues(cr, uid, vals, ids, context=context)
         return super(sale_order_claim, self).write(cr, uid, ids, vals, context=context)
 
@@ -146,10 +149,9 @@ class sale_order_claim(osv.osv):
             required=True),
         'state': fields.selection(
             selection=(('draft', 'Draft'),
-                       ('opened', 'Open'),
-                       ('processing', 'Process'),
-                       ('review', 'Review'),
-                       ('approved', 'Approve'),
+                       ('opened', 'Opened'),
+                       ('processed', 'Processed'),
+                       ('rejected', 'Rejected'),
                        ('cancelled', 'Cancel')),
             required=True,
             string='State'),
@@ -337,15 +339,11 @@ class sale_order_claim(osv.osv):
         return True
 
     def action_process(self, cr, uid, ids, context=None):
-        self.write(cr, uid, ids, {'state': 'processing'}, context=context)
+        self.write(cr, uid, ids, {'state': 'procesed'}, context=context)
         return True
 
-    def action_review(self, cr, uid, ids, context=None):
-        self.write(cr, uid, ids, {'state': 'review'}, context=context)
-        return True
-
-    def action_approve(self, cr, uid, ids, context=None):
-        self.write(cr, uid, ids, {'state': 'approved'}, context=context)
+    def action_reject(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, {'state': 'rejected'}, context=context)
         return True
 
     def action_cancel(self, cr, uid, ids, context=None):
@@ -419,8 +417,6 @@ class sale_order_issue(osv.osv):
         res = super(sale_order_issue, self).read(cr, uid, ids, fields=fields, context=context, load=load)
         # clean up the many2one field values produced by .read
         def clean(r):
-            # if isinstance(r['order_claim_id'], tuple):
-            #     r['order_claim_id'] = r['order_claim_id'][0]
             for k, v in r.items():
                 if isinstance(v, tuple):
                     r[k] = v[0]
@@ -454,13 +450,21 @@ class sale_order_issue(osv.osv):
 
         return res
 
-    def write(self, cr, uid, ids, vals, context=None):
-        '''
-        If a record is written with selected=False, that means the
-        issue should be removed.
-        '''
-        if 'selected' in vals and vals['selected'] is False:
-            self.unlink(cr, uid, ids, context=context)
+    # def write(self, cr, uid, ids, vals, context=None):
+    #     '''
+    #     If a record is written with selected=False, that means the
+    #     issue should be removed.
+    #     '''
+    #     import pdb; pdb.set_trace()
+    #     res = super(sale_order_issue, self).write(cr, uid, ids, vals, context=context)
+    #     if not res:
+    #         return False
+
+    #     if 'selected' in vals and vals['selected'] is False:
+    #         self.unlink(cr, uid, ids, context=context)
+    #         return True
+    #     else:
+    #         return False
 
     _columns = {
         'resource': fields.reference(
@@ -487,7 +491,7 @@ class sale_order_issue(osv.osv):
         if isinstance(ids, int) or (isinstance(ids, (list, tuple)) and len(ids) == 1):
             issue = self.browse(cr, uid, ids, context=context)
             model = issue.resource[:issue.resource.find(',')]
-            if model != issue.claim_id.issue_model:
+            if model != issue.order_claim_id.issue_model:
                 return {'value': {'resource': False},
                         'warning': {'title': 'Wrong model',
                                     'message': 'Each issue must be against an item of the model: "%s"' %\
