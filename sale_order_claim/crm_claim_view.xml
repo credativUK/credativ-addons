@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<openerp>
+    <data>
+        <record model="ir.ui.view" id="crm_claim_with_lines_form">
+            <field name="name">CRM - Claim with lines</field>
+            <field name="model">crm.claim</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="crm_claim.crm_case_claims_form_view" />
+            <field name="arch" type="xml">
+                <field name="ref" position="after">
+                    <field name="category"
+                           domain="[('active','=',True),('parent_categ_id','=',False)]" />
+                    <field name="reason"
+                           domain="[('active','=',True),('parent_categ_id','=',category)]" />
+                </field>
+                <separator string="Claim/Action Description" position="before">
+                    <separator colspan="4" string="Claim lines" />
+                    <field name="claim_line_ids" nolabel="1" colspan="4" select="1">
+                        <tree string="Claim lines">
+                            <field name="name" />
+                            <field name="resource" />
+                            <field name="category"
+                                   domain="[('active','=',True),('parent_categ_id','=',False)]" />
+                            <field name="reason"
+                                   domain="[('active','=',True),('parent_categ_id','=',category)]" />
+                        </tree>
+                    </field>
+                </separator>
+                <field name="resolution" position="after">
+                    <field name="resolution_id" />
+                </field>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="view_crm_claim_category_tree">
+            <field name="name">CRM claim categories</field>
+            <field name="model">crm.claim.category</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Claim categories" editable="bottom">
+                    <field name="parent_categ_id" />
+                    <field name="name" />
+                    <field name="sequence" />
+                    <field name="active" />
+                </tree>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="view_crm_claim_line_category_tree">
+            <field name="name">CRM claim line categories</field>
+            <field name="model">crm.claim.line.category</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Claim line categories" editable="bottom">
+                    <field name="parent_claim_categ_id"
+                           string="Claim category" />
+                    <field name="parent_categ_id" />
+                    <field name="name" />
+                    <field name="sequence" />
+                    <field name="active" />
+                </tree>
+            </field>
+        </record>
+
+        <record id="action_crm_claim_category_tree" model="ir.actions.act_window">
+            <field name="name">CRM Claim Categories</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">crm.claim.category</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_crm_claim_category_tree" />
+            <!--<field name="search_view_id" ref="view_crm_claim_category_tree_search" />-->
+        </record>
+
+        <record id="action_crm_claim_line_category_tree" model="ir.actions.act_window">
+            <field name="name">CRM Claim Line Categories</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">crm.claim.line.category</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_crm_claim_line_category_tree" />
+            <!--<field name="search_view_id" ref="view_crm_claim_line_category_tree_search" />-->
+        </record>
+
+        <menuitem
+            action="action_crm_claim_category_tree"
+            id="menu_crm_claim_category"
+            parent="crm_claim.menu_config_claim" />
+
+        <menuitem
+            action="action_crm_claim_line_category_tree"
+            id="menu_crm_claim_line_category"
+            parent="crm_claim.menu_config_claim" />
+
+    </data>
+</openerp>

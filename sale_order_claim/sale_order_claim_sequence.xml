@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data noupdate="1">
+
+        <!-- Sequences for sale.order.claim -->
+        <record id="seq_type_sale_order_claim" model="ir.sequence.type">
+            <field name="name">Sale Order Claim</field>
+            <field name="code">sale.order.claim</field>
+        </record>
+
+        <record id="seq_sale_order_claim" model="ir.sequence">
+            <field name="name">Sale Order Claim</field>
+            <field name="code">sale.order.claim</field>
+            <field name="prefix">C</field>
+            <field name="padding">8</field>
+        </record>
+
+    </data>
+</openerp>

@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <!-- sale.order.claim search view -->
+        <record model="ir.ui.view" id="view_sale_order_claim_search">
+            <field name="name">sale.order.claim.search</field>
+            <field name="model">sale.order.claim</field>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <search string="Search sale order claims">
+                    <group col="10" colspan="5">
+                        <field name="sale_order_id"
+                               on_change="reread_issues(sale_order_id, order_issue_ids)" />
+                        <field name="merchandiser_id" />
+                        <field name="create_uid" />
+                        <field name="customer_id" />
+                        <field name="state" />
+                    </group>
+                    <newline />
+                    <group expand="0" string="Group by..." colspan="4" col="4" groups="base.group_extended">
+                        <filter string="Shop" icon="terp-stage" domain="[]" context="{'group_by': 'shop_id'}" />
+                        <filter string="Category" icon="terp-stage" domain="[]" context="{'group_by': 'category'}" />
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- sale.order.claim form view; although the model inherits
+             from crm.claim, this form view will not inherit from
+             crm.claim's form views -->
+        <record model="ir.ui.view" id="view_sale_order_claim_form">
+            <field name="name">sale.order.claim.form</field>
+            <field name="model">sale.order.claim</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form>
+                    <group col="4" colspan="4">
+                        <field name="name"
+                               string="Claim" />
+                        <field name="date" />
+                    </group>
+                    <group col="8" colspan="4">
+                        <field name="create_uid" />
+                        <field name="create_date" />
+                        <field name="write_uid" />
+                        <field name="write_date" />
+                    </group>
+                    <group col="6" colspan="4">
+                        <separator string="Order details" colspan="6" />
+                        <field name="sale_order_id"
+                               on_change="onchange_sale_order(sale_order_id, order_issue_ids)" />
+                        <field name="shop_id" />
+                        <field name="origin" />
+                        <field name="client_order_ref" />
+                        <field name="order_state" />
+                        <field name="date_order" />
+                        <field name="merchandiser_id" />
+                        <field name="customer_id" />
+                        <field name="partner_shipping_id" />
+                        <field name="shipped" />
+                        <field name="invoiced" />
+                        <field name="order_items_total" />
+                        <field name="shipping_charge" />
+                        <field name="order_discount" />
+                        <field name="order_total" />
+                    </group>
+                    <group col="4" colspan="4">
+                        <separator string="Claim details" colspan="4" />
+                        <field name="user_id"/>
+                        <field name="section_id" widget="selection" />
+                        <field name="priority"/>
+                        <field name="date_deadline"/>
+                        <field name="category"
+                               domain="[('active','=',True),('parent_categ_id','=',False)]" />
+                        <field name="reason"
+                               domain="[('active','=',True),('parent_categ_id','=',category)]" />
+                    </group>
+                    <group col="1" colspan="4">
+                        <separator string="Comments" colspan="1" />
+                        <field name="description"
+                               nolabel="1"
+                               required="True" />
+                    </group>
+                    <group col="4" colspan="4">
+                        <separator string="Order issues" colspan="4" />
+                        <field name="whole_order_claim"
+                               on_change="toggle_whole_order_claim(whole_order_claim)" />
+                        <newline />
+                        <field name="issue_model"
+                               on_change="onchange_issue_model(issue_model)" />
+                    </group>
+                    <group col="1" colspan="4">
+                        <field name="order_issue_ids" nolabel="1" select="1"
+                               attrs="{'readonly':[('whole_order_claim','=',True)]}"
+                               context="{'order_issue_id': id}">
+                            <tree editable="bottom">
+                                <field name="select"
+                                       string=""
+                                       on_change="toggle_item_selected(select, sale_order_id)" />
+                                <field name="name" />
+                                <field name="resource"
+                                       invisible="1" />
+                                <field name="category"
+                                       domain="[('active','=',True),('parent_categ_id','=',False)]" />
+                                <field name="reason"
+                                       domain="[('active','=',True),('parent_categ_id','=',category)]" />
+                            </tree>
+                        </field>
+                    </group>
+                    <group col="6" colspan="4">
+                        <separator string="Follow up" colspan="6" />
+                        <!-- FIXME Add the crm.claim communication/history stuff -->
+                        <field name="resolution_id" />
+                        <button name="resolution_previous"
+                                string=""
+                                type="object"
+                                icon="gtk-go-back" />
+                        <button name="resolution_next"
+                                string=""
+                                type="object"
+                                icon="gtk-go-forward" />
+                    </group>
+                    <group col="8" colspan="4">
+                        <separator string="Progress" colspan="8" />
+                        <field name="state"
+                               widget="statusbar"
+                               statusbar_visible="draft,opened,processing,review,approved"
+                               statusbar_colors='{"cancel":"red"}' />
+                        <button name="action_open"
+                                string="Open"
+                                states="draft"
+                                type="object"
+                                icon="gtk-go-forward" />
+                        <button name="action_process"
+                                string="Processing"
+                                states="open,review"
+                                type="object"
+                                icon="gtk-go-forward" />
+                        <button name="action_review"
+                                string="Review"
+                                states="processing"
+                                type="object"
+                                icon="gtk-pause" />
+                        <button name="action_approve"
+                                string="Approve"
+                                states="processing,review"
+                                type="object"
+                                icon="gtk-ok" />
+                        <button name="action_cancel"
+                                string="Cancel"
+                                states="draft,processing,review"
+                                type="object"
+                                icon="gtk-cancel" />
+                    </group>
+                </form>
+            </field>
+        </record>
+
+        <!-- sale.order.claim tree view; although the model inherits
+             from crm.claim, this tree view will not inherit from
+             crm.claim's tree view -->
+        <record model="ir.ui.view" id="view_sale_order_claim_tree">
+            <field name="name">sale.order.claim.tree</field>
+            <field name="model">sale.order.claim</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Sale Order Claims" colors="blue:state=='processed'">
+                    <field name="name"
+                           string="Claim" />
+                    <field name="sale_order_id" />
+                    <field name="user_id" />
+                    <field name="date" />
+                    <field name="customer_id" />
+                    <field name="order_total" />
+                    <field name="category"
+                           domain="[('active','=',True),('parent_categ_id','=',False)]" />
+                    <field name="reason"
+                           domain="[('active','=',True),('parent_categ_id','=',category)]" />
+                    <field name="state" />
+                    <button name="action_open"
+                            string="Open"
+                            states="draft"
+                            type="object"
+                            icon="gtk-go-forward" />
+                    <button name="action_process"
+                            string="Process"
+                            states="opened,review"
+                            type="object"
+                            icon="gtk-go-forward" />
+                    <button name="action_review"
+                            string="Review"
+                            states="processing"
+                            type="object"
+                            icon="gtk-media-pause" />
+                    <button name="action_approve"
+                            string="Approve"
+                            states="processing,review"
+                            type="object"
+                            icon="gtk-ok" />
+                    <button name="action_cancel"
+                            string="Cancel"
+                            states="draft,opened,processing,review"
+                            type="object"
+                            icon="gtk-cancel" />
+                </tree>
+            </field>
+        </record>
+
+        <!-- Actions for sale.order.claim views -->
+
+        <record id="action_sale_order_claim_tree" model="ir.actions.act_window">
+            <field name="name">Sale Order Claims</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">sale.order.claim</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_sale_order_claim_tree" />
+            <field name="search_view_id" ref="view_sale_order_claim_search" />
+        </record>
+
+        <record id="action_sale_order_claim_form" model="ir.actions.act_window">
+            <field name="name">Sale Order Claim</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">sale.order.claim</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="view_id" ref="view_sale_order_claim_form" />
+            <field name="search_view_id" ref="view_sale_order_claim_search" />
+        </record>
+
+        <!-- Menu for sale.order.claim views -->
+
+        <menuitem
+            action="action_sale_order_claim_tree"
+            id="menu_sale_order_claim"
+            parent="base.menu_aftersale" />
+
+        <!-- Add Claims item to right hand menu -->
+
+	<act_window
+            domain="[('sale_order_id', 'in', active_ids)]" 
+	    id="action_sale_order_claims" 
+	    name="Claims" 
+	    res_model="sale.order.claim" 
+	    src_model="sale.order" />
+
+    </data>
+</openerp>

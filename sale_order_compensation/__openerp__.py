@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2012 credativ Ltd (<http://credativ.co.uk>).
+#    Copyright (C) 2013 credativ Ltd (<http://credativ.co.uk>).
 #    All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -20,21 +20,21 @@
 #
 ##############################################################################
 {
-    'name': 'Sale Issue Log',
-    'version': '1.0',
+    'name': 'Sale Order Compensation',
+    'version': '0.1',
     'category': 'Generic Modules/Sales & Purchases',
-    'description': """This Module allows you to manage the log for products with issues.""",
+    'description': """This module customises sale order claims for compensation resolutions.
+
+It adds new fields to sale.order.claim and sale.order.issue for retrieving information on refunds and vouchers issued against sale orders.
+""",
     'author': 'credativ Ltd',
     'website' : 'http://credativ.co.uk',
-    'depends': ['sale','crm','crm_claim','account'],
+    'depends': ['sale_order_claim'],
     'init_xml': [],
     'update_xml': [
-        'security/ir.model.access.csv',
-        'sale_damagelog_view.xml',
-        'wizard/create_damagelog.xml',
-        'sale_comprequest_view.xml',
-        'sale_comprequest_sequence.xml',
-        'wizard/wizard_compensation_request.xml',
+        #'sale_order_compensation_data.xml',
+        'sale_order_compensation_view.xml',
+        #'wizard/create_order_claim.xml',
     ],
     'demo_xml': [],
     'installable': True,
