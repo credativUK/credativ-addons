@@ -165,7 +165,7 @@
             <field name="model">sale.order.claim</field>
             <field name="type">tree</field>
             <field name="arch" type="xml">
-                <tree string="Sale Order Claims" colors="blue:state=='processing'">
+                <tree string="Sale Order Claims" colors="blue:state=='processed'">
                     <field name="name"
                            string="Claim" />
                     <field name="sale_order_id" />
@@ -237,59 +237,14 @@
             id="menu_sale_order_claim"
             parent="base.menu_aftersale" />
 
-        <!-- Add tab of claims to sale order form view -->
+        <!-- Add Claims item to right hand menu -->
 
-        <record id="view_sale_order_form_claims_page" model="ir.ui.view">
-            <field name="name">Claims</field>
-            <field name="model">sale.order</field>
-            <field name="type">form</field>
-            <field name="inherit_id" ref="sale.view_order_form" />
-            <field name="arch" type="xml">
-                <page string="Sales Order" position="after">
-                    <page string="Claims">
-                        <group colspan="4" col="1">
-                        <field name="claim_ids" nolabel="1">
-                            <tree string="Claims" colors="blue:state=='processing'">
-                                <field name="name"
-                                       string="Claim" />
-                                <field name="create_uid" />
-                                <field name="date" />
-                                <field name="category"
-                                       domain="[('active','=',True),('parent_categ_id','=',False)]" />
-                                <field name="reason"
-                                       domain="[('active','=',True),('parent_categ_id','=',category)]" />
-                                <field name="state" />
-                                <button name="action_open"
-                                        string="Open"
-                                        states="draft"
-                                        type="object"
-                                        icon="gtk-go-forward" />
-                                <button name="action_process"
-                                        string="Process"
-                                        states="opened,review"
-                                        type="object"
-                                        icon="gtk-go-forward" />
-                                <button name="action_review"
-                                        string="Review"
-                                        states="processing"
-                                        type="object"
-                                        icon="gtk-media-pause" />
-                                <button name="action_approve"
-                                        string="Approve"
-                                        states="processing,review"
-                                        type="object"
-                                        icon="gtk-ok" />
-                                <button name="action_cancel"
-                                        string="Cancel"
-                                        states="draft,opened,processing,review"
-                                        type="object"
-                                        icon="gtk-cancel" />
-                            </tree>
-                        </field>
-                        </group>
-                    </page>
-                </page>
-            </field>
-        </record>
+	<act_window
+            domain="[('sale_order_id', 'in', active_ids)]" 
+	    id="action_sale_order_claims" 
+	    name="Claims" 
+	    res_model="sale.order.claim" 
+	    src_model="sale.order" />
+
     </data>
 </openerp>

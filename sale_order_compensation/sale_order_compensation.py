@@ -160,7 +160,7 @@ class sale_order_claim(osv.osv):
 
     def _get_claims_from_issues(self, cr, uid, ids, context=None):
         issue_pool = self.pool.get('sale.order.issue')
-        return list(set([issue['order_claim_id'] for issue in issue_pool.read(cr, uid, ids, ['order_claim_id'], context=context)]))
+        return list(set([issue['order_claim_id'][0] for issue in issue_pool.read(cr, uid, ids, ['order_claim_id'], context=context)]))
 
     _columns = {
         'total_refund': fields.function(
@@ -260,7 +260,7 @@ class sale_order_claim(osv.osv):
         claim = self.browse(cr, uid, id, context=context)
 
         return {'value': {'total_refund': claim._total_refund(cr, uid, id, field_name='total_refund', arg=None, context=None) + refund,
-                          'max_refundable': claim._max_refundable(cr, uid, ids, field_name='max_refundable', arg=None, context=None) - refund}}
+                          'max_refundable': claim._max_refundable(cr, uid, id, field_name='max_refundable', arg=None, context=None) - refund}}
 
     def on_change_claim_voucher(self, cr, uid, ids, voucher, context=None):
         if not ids:

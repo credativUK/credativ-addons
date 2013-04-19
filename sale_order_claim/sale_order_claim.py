@@ -21,6 +21,8 @@
 ##############################################################################
 
 from osv import osv, fields
+import time
+from tools.misc import DEFAULT_SERVER_DATETIME_FORMAT
 
 _issue_models = {
     'sale.order.line': {'desc': 'Sale order lines',
@@ -86,53 +88,17 @@ class sale_order_claim(osv.osv):
     def default_get(self, cr, uid, fields, context=None):
         rec_id = context and context.get('active_id', False)
         if rec_id:
-            return {'active': True,
-                    'sale_order_id': rec_id,
-                    'order_issue_ids': self.reread_issues(cr, uid, ids=[], sale_order_id=rec_id, order_issue_ids=[], context=context)['value']['order_issue_ids']}
+            return {'sale_order_id': rec_id,
+                    'name': self.pool.get('ir.sequence').next_by_code(cr, uid, 'sale.order.claim'),
+                    'state': 'draft',
+                    'active': True,
+                    'whole_order_claim': False,
+                    'issue_model': 'sale.order.line',
+                    'user_id': uid,
+                    'date': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
+                    }
         else:
             return super(sale_order_claim, self).default_get(cr, uid, fields, context=context)
-
-    def _update_issues(self, cr, uid, claim, claim_id, context=None):
-        '''
-        Given a dict representing a draft claim (from create or
-        write's vals argument), returns an updated order_issue_ids
-        value with the correct order_claim_id.
-        '''
-        if isinstance(claim_id, (tuple, list)):
-            claim_id = claim_id[0]
-        new_issue_lines = []
-        for issue_line in claim['order_issue_ids']:
-            if isinstance(issue_line, (list, tuple)):
-                op, id, rec = issue_line
-            else:
-                continue
-            if op in [0,1]:
-                rec['order_claim_id'] = claim_id
-                # FIXME Sometimes you've made the issues list just a
-                # list of dicts and ignored the other values
-                new_issue_lines.append((op, id, rec))
-
-        return new_issue_lines
-
-    def create(self, cr, uid, vals, context=None):
-        '''
-        When creating a new sale.order.claim, set any existing
-        sale.order.issue reccords' order_claim_id fields to the new
-        claim's ID.
-        '''
-        res_id = super(sale_order_claim, self).create(cr, uid, vals, context=context)
-        vals['order_issue_ids'] = self._update_issues(cr, uid, vals, res_id, context=context)
-        self.write(cr, uid, res_id, vals, context=context)
-        return res_id
-
-    def write(self, cr, uid, ids, vals, context=None):
-        if 'sale_order_id' in vals and 'ref' not in vals:
-            vals['ref'] = 'sale.order,%d' % vals['sale_order_id']
-        if isinstance(ids, (int, long)) or len(ids) == 1 and 'order_issue_ids' in vals:
-            # We only need to update the issues if some new issues
-            # have been supplied
-            vals['order_issue_ids'] = self._update_issues(cr, uid, vals, ids, context=context)
-        return super(sale_order_claim, self).write(cr, uid, ids, vals, context=context)
 
     _columns = {
         'sale_order_id': fields.many2one(
@@ -249,51 +215,32 @@ class sale_order_claim(osv.osv):
         'active': True,
         'whole_order_claim': False,
         'issue_model': 'sale.order.line',
+        'user_id': lambda self, cr, uid, ctx: uid,
+        'date': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
         }
 
     def onchange_sale_order(self, cr, uid, ids, sale_order_id, order_issue_ids, context=None):
-        res = self.reread_issues(cr, uid, ids, sale_order_id, order_issue_ids, context=None)
-
+        #res = self.reread_issues(cr, uid, ids, sale_order_id, order_issue_ids, context=None)
         so_pool = self.pool.get('sale.order')
         sale_order = so_pool.browse(cr, uid, sale_order_id, context=context)
         if sale_order:
             # I don't like this. Why do I have to repeat all these
             # relations?
-            res['value'].update({
-                    'shop_id': sale_order.shop_id.name,
-                    'origin': sale_order.origin,
-                    'client_order_ref': sale_order.client_order_ref,
-                    'order_state': sale_order.state,
-                    'date_order': sale_order.date_order,
-                    'merchandiser_id': sale_order.user_id.name,
-                    'customer_id': sale_order.partner_id.name,
-                    'partner_shipping_id': sale_order.partner_shipping_id.name,
-                    'shipped': sale_order.shipped,
-                    'invoiced': sale_order.invoiced,
-                    'order_items_total': self._sum_items(cr, uid, sale_order_id, context=context),
-                    'shipping_charge': self._sum_shipping(cr, uid, sale_order_id, context=context),
-                    'order_discount': self._sum_discounts(cr, uid, sale_order_id, context=context),
-                    'order_total': sale_order.amount_total})
-
-        return res
-
-    def reread_issues(self, cr, uid, ids, sale_order_id, order_issue_ids, context=None):
-        '''
-        This method is called when the sale_order_id is changed. It
-        causes the list of issues to be re-read. This is necessary
-        because order_issue_ids is not a related field to
-        sale_order_id.
-        '''
-        if context is None:
-            context = {}
-
-        issue_pool = self.pool.get('sale.order.issue')
-        #claim = self.browse(cr, uid, ids, context=context)
-        context['sale_order_id'] = sale_order_id
-        # FIXME Which sale_order_id and which order_issue_ids
-        # should we use? New ones or current ones?
-        return {'value': {'order_issue_ids': issue_pool.read(cr, uid, [], ['id'], context=context),
-                          'sale_order_id': sale_order_id}}
+            return {'value': {
+                'shop_id': sale_order.shop_id.name,
+                'origin': sale_order.origin,
+                'client_order_ref': sale_order.client_order_ref,
+                'order_state': sale_order.state,
+                'date_order': sale_order.date_order,
+                'merchandiser_id': sale_order.user_id.name,
+                'customer_id': sale_order.partner_id.name,
+                'partner_shipping_id': sale_order.partner_shipping_id.name,
+                'shipped': sale_order.shipped,
+                'invoiced': sale_order.invoiced,
+                'order_items_total': self._sum_items(cr, uid, sale_order_id, context=context),
+                'shipping_charge': self._sum_shipping(cr, uid, sale_order_id, context=context),
+                'order_discount': self._sum_discounts(cr, uid, sale_order_id, context=context),
+                'order_total': sale_order.amount_total}}
 
     def onchange_issue_model(self, cr, uid, ids, new_issue_model, context=None):
         # set _visible fields for each possible model type
@@ -326,14 +273,6 @@ class sale_order_claim(osv.osv):
             # We can't really remove all the items from the claim
             pass
 
-    def save_draft(self, cr, uid, ids, context=None):
-        '''
-        This method is necessary when the form is presented in a
-        pop-up window.
-        '''
-        return {'view_mode': 'tree,form',
-                'type': 'ir.actions.act_window_close'}
-
     def action_open(self, cr, uid, ids, context=None):
         self.write(cr, uid, ids, {'state': 'opened'}, context=context)
         return True
@@ -363,108 +302,6 @@ class sale_order_issue(osv.osv):
     _inherit = 'crm.claim.line'
     _name = 'sale.order.issue'
     _description = 'Individual issue in a sale order claim'
-
-    def _get_related(self, cr, uid, ids, context=None):
-        '''This method parses the .resource field into (model, res_id)
-        pairs, returning a dict with one pair for each resource in
-        ids.'''
-        return dict([(line.id, (line.resource[:line.resource.find(',')], int(line.resource[line.resource.find(',') + 1:])))
-                     for line in self.browse(cr, uid, ids, context=context)])
-
-    def _find_records_for_order(self, cr, uid, order_id, context=None):
-        '''
-        Implementations of this method should return a browse object
-        containing all the records of the claim's issue_model which
-        are related to the given order_id.
-        '''
-        raise NotImplementedError()
-
-    def _make_issue_dict(self, cr, uid, issue_id, sale_order_id, claim_id, rec_id, context=None):
-        '''
-        Implementations of this method should return a dict containing
-        all the fields needed to create a new record of their own
-        issue type.
-        '''
-        raise NotImplementedError()
-
-    def _issue_eq_res(self, cr, uid, issue, res, context=None):
-        '''
-        Implements of this method should return True if the given
-        issue and the given resource represent the same thing, or
-        False otherwise.
-
-        @param issue (dict): an existing sale.order.issue
-        @param res (browse_object): an existing record of the
-        issue_model model
-        '''
-        raise NotImplementedError()
-
-    def read(self, cr, uid, ids, fields=None, context=None, load='_classic_read'):
-        '''
-        Override read to include any resources from the related model
-        which do not already have a related sale.order.issue. The
-        purpose of this is so that the one2many list of
-        sale.order.issues will always show *all* the
-        sale.order.claim.issue_model resources for the appropriate
-        sale.order allowing the user to tick the
-        sale.order.issue.select field for them.
-        '''
-        # ensure order_claim_id is in the fields list
-        if fields is not None and 'order_claim_id' not in fields:
-            fields.append('order_claim_id')
-
-        # read the resources using super read
-        res = super(sale_order_issue, self).read(cr, uid, ids, fields=fields, context=context, load=load)
-        # clean up the many2one field values produced by .read
-        def clean(r):
-            for k, v in r.items():
-                if isinstance(v, tuple):
-                    r[k] = v[0]
-            return r
-        res = map(clean, res)
-
-        # find the distinct claims in the specified issues
-        claim_ids = list(set([issue['order_claim_id'] for issue in res]))
-
-        if len(claim_ids) > 1 and 'sale_order_id' not in context:
-            # if the specified issues cover multiple claims and no
-            # sale order has been specified, we can't add issue_model
-            # resources; so we give up
-            return res
-
-        # if the specified issues are all from the same claim then add
-        # any missing resources from the issue_model to the read list
-        if len(claim_ids) == 1:
-            claim = self.pool.get('sale.order.claim').browse(cr, uid, claim_ids[0], context=context)
-            claim_id = claim.id
-            sale_order_id = claim.sale_order_id.id
-        elif len(claim_ids) == 0 and 'sale_order_id' in context:
-            claim_id = context.get('active_model') == 'sale.order.claim' and context.get('active_id', False) or False
-            sale_order_id = context['sale_order_id']
-        else:
-            return res
-
-        for rec in self._find_records_for_order(cr, uid, sale_order_id, context=context):
-            if not filter(lambda issue: self._issue_eq_res(cr, uid, issue, rec, context=context), res):
-                res.append(self._make_issue_dict(cr, uid, False, sale_order_id, claim_id, rec, context=context))
-
-        return res
-
-    # def write(self, cr, uid, ids, vals, context=None):
-    #     '''
-    #     If a record is written with selected=False, that means the
-    #     issue should be removed.
-    #     '''
-    #     import pdb; pdb.set_trace()
-    #     res = super(sale_order_issue, self).write(cr, uid, ids, vals, context=context)
-    #     if not res:
-    #         return False
-
-    #     if 'selected' in vals and vals['selected'] is False:
-    #         self.unlink(cr, uid, ids, context=context)
-    #         return True
-    #     else:
-    #         return False
 
     _columns = {
         'resource': fields.reference(
