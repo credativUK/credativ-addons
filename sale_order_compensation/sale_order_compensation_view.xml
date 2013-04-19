@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<openerp>
+    <data>
+        <record model="ir.ui.view" id="view_sale_order_compensation_form">
+            <field name="name">sale.order.compensation.form</field>
+            <field name="model">sale.order.claim</field>
+            <field name="inherit_id" ref="sale_order_claim.view_sale_order_claim_form" />
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <field name="user_id" position="before">
+                    <group col="8" colspan="4">
+                        <field name="prev_refund" />
+                        <field name="prev_voucher" />
+                        <field name="pending_refund" />
+                        <field name="pending_voucher" />
+                        <field name="max_refundable" />
+                    </group>
+                </field>
+
+                <field name="whole_order_claim" position="replace">
+                    <group col="6" colspan="4">
+                        <field name="whole_order_claim"
+                               on_change="toggle_whole_order_claim(whole_order_claim)" />
+                        <field name="refund"
+                               on_change="on_change_refund(refund)"
+                               attrs="{'required':[('whole_order_claim','=',True)],'readonly':[('whole_order_claim','=',False)]}" />
+                        <field name="voucher"
+                               on_change="on_change_voucher(voucher)"
+                               attrs="{'required':[('whole_order_claim','=',True)],'readonly':[('whole_order_claim','=',False)]}" />
+                    </group>
+                </field>
+
+                <xpath expr="//field[@name='order_issue_ids']/tree/field[@name='reason']" position="after">
+                    <field name="refund"
+                           on_change="on_change_refund(refund, order_claim_id, sale_order_id)" />
+                    <field name="voucher"
+                           on_change="on_change_voucher(voucher, order_claim_id, sale_order_id)" />
+                    <field name="prev_compensation" />
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Change the inheritance hierarchy for the stock.move issues form -->
+        <!--
+        <record model="ir.ui.view" id="sale_order_claim.view_sale_order_claim_form_stock_move_issues">
+            <field name="name">sale.order.claim.form.stock_move_issues</field>
+            <field name="inherit_id" ref="view_sale_order_compensation_form" />
+        </record>
+        -->
+        <!-- Change the inheritance hierarchy for the sale.order.line issues form -->
+        <!--
+        <record model="ir.ui.view" id="sale_order_claim.view_sale_order_claim_form_sale_order_line_issues">
+            <field name="name">sale.order.claim.form.sale_order_line_issues</field>
+            <field name="inherit_id" ref="view_sale_order_compensation_form" />
+        </record>
+        -->
+        <!-- Alter sale.order Claims tab to show compensation amounts -->
+
+        <record id="view_sale_order_form_compensations_page" model="ir.ui.view">
+            <field name="name">Compensations</field>
+            <field name="model">sale.order</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="sale_order_claim.view_sale_order_form_claims_page" />
+            <field name="arch" type="xml">
+                <field name="reason" position="after">
+                    <field name="total_refund" />
+                    <field name="total_voucher" />
+                </field>
+            </field>
+        </record>
+
+        <!-- Add the compensation totals to the sale orders tree view -->
+
+        <record id="view_sale_order_tree_compensations" model="ir.ui.view">
+            <field name="name">Compensations</field>
+            <field name="model">sale.order</field>
+            <field name="type">tree</field>
+            <field name="inherit_id" ref="sale.view_order_tree" />
+            <field name="arch" type="xml">
+                <field name="amount_total" position="after">
+                    <field name="total_refund" />
+                    <field name="total_voucher" />
+                </field>
+            </field>
+        </record>
+
+    </data>
+</openerp>

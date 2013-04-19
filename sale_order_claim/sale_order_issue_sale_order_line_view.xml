@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<openerp>
+    <data>
+
+        <!-- Add the sale.order.line fields to the issues one2many view -->
+
+        <record model="ir.ui.view" id="view_sale_order_claim_form_sale_order_line_issues">
+            <field name="name">sale.order.claim.form.sale_order_line_issues</field>
+            <field name="model">sale.order.claim</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="view_sale_order_claim_form" />
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='order_issue_ids']/tree/field[@name='resource']" position="after">
+                    <field name="sale_order_line_id"
+                           attrs="{'invisible':[('parent.issue_model','!=','sale.order.line')]}" />
+                </xpath>
+
+                <xpath expr="//field[@name='order_issue_ids']/tree/field[@name='reason']" position="after">
+                    <field name="ol_product"
+                           attrs="{'invisible':[('parent.issue_model','!=','sale.order.line')]}" />
+                    <field name="ol_product_uos_qty"
+                           attrs="{'invisible':[('parent.issue_model','!=','sale.order.line')]}" />
+                    <field name="ol_state"
+                           attrs="{'invisible':[('parent.issue_model','!=','sale.order.line')]}" />
+                    <field name="ol_price_unit"
+                           attrs="{'invisible':[('parent.issue_model','!=','sale.order.line')]}" />
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
