@@ -41,35 +41,6 @@
             </field>
         </record>
 
-        <!-- Change the inheritance hierarchy for the stock.move issues form -->
-        <!--
-        <record model="ir.ui.view" id="sale_order_claim.view_sale_order_claim_form_stock_move_issues">
-            <field name="name">sale.order.claim.form.stock_move_issues</field>
-            <field name="inherit_id" ref="view_sale_order_compensation_form" />
-        </record>
-        -->
-        <!-- Change the inheritance hierarchy for the sale.order.line issues form -->
-        <!--
-        <record model="ir.ui.view" id="sale_order_claim.view_sale_order_claim_form_sale_order_line_issues">
-            <field name="name">sale.order.claim.form.sale_order_line_issues</field>
-            <field name="inherit_id" ref="view_sale_order_compensation_form" />
-        </record>
-        -->
-        <!-- Alter sale.order Claims tab to show compensation amounts -->
-
-        <record id="view_sale_order_form_compensations_page" model="ir.ui.view">
-            <field name="name">Compensations</field>
-            <field name="model">sale.order</field>
-            <field name="type">form</field>
-            <field name="inherit_id" ref="sale_order_claim.view_sale_order_form_claims_page" />
-            <field name="arch" type="xml">
-                <field name="reason" position="after">
-                    <field name="total_refund" />
-                    <field name="total_voucher" />
-                </field>
-            </field>
-        </record>
-
         <!-- Add the compensation totals to the sale orders tree view -->
 
         <record id="view_sale_order_tree_compensations" model="ir.ui.view">
