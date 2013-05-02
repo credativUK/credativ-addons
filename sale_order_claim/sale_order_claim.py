@@ -205,7 +205,7 @@ class sale_order_claim(osv.osv):
         'order_issue_ids': fields.one2many(
             'sale.order.issue',
             'order_claim_id',
-            string='Claim issues',
+            string='Claim Issues',
             oldname='claim_line_ids'),
         }
 
