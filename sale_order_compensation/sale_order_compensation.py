@@ -112,6 +112,8 @@ class sale_order_claim(osv.osv):
         sale.order; defined as the difference between the sale.order
         total and the sum of previous and pending refunds and
         vouchers'''
+        if isinstance(ids, (int, long)):
+            ids = [ids]
         return dict([(claim.id, claim.order_total - self._prev_compensation(cr, uid, claim.id,
                                                                             compensation_type=['refund','voucher'],
                                                                             claim_state=('open-vouchers','open-refunds','rejected','processed'),
@@ -206,10 +208,14 @@ class sale_order_claim(osv.osv):
             readonly=True),
         'refund': fields.float(
             'Refund',
-            digits_compute=dp.get_precision('Sale Price')),
+            digits_compute=dp.get_precision('Sale Price'),
+            readonly=True,
+            states={'draft': [('readonly', False)]}),
         'voucher': fields.float(
             'Voucher',
-            digits_compute=dp.get_precision('Sale Price')),
+            digits_compute=dp.get_precision('Sale Price'),
+            readonly=True,
+            states={'draft': [('readonly', False)]}),
         'voucher_code': fields.char(
             'Voucher code',
             size=128),
@@ -237,13 +243,13 @@ class sale_order_claim(osv.osv):
             res['value'].update(self._draft_amounts(cr, uid, sale_order_id, order_issue_ids, context=context))
         else:
             res['value'].update({
-                    'total_refund': claim._total_refund(cr, uid, ids, field_name='total_refund', arg=None, context=None),
-                    'total_voucher': claim._total_voucher(cr, uid, ids, field_name='total_voucher', arg=None, context=None),
-                    'prev_refund': claim._prev_refund(cr, uid, ids, field_name='prev_refund', arg=None, context=None),
-                    'prev_voucher': claim._prev_voucher(cr, uid, ids, field_name='prev_voucher', arg=None, context=None),
-                    'pending_refund': claim._pending_refund(cr, uid, ids, field_name='pending_refund', arg=None, context=None),
-                    'pending_voucher': claim._prev_voucher(cr, uid, ids, field_name='pending_voucher', arg=None, context=None),
-                    'max_refundable': claim._max_refundable(cr, uid, ids, field_name='max_refundable', arg=None, context=None),
+                    'total_refund': self._total_refund(cr, uid, id, field_name='total_refund', arg=None, context=None)[id],
+                    'total_voucher': self._total_voucher(cr, uid, id, field_name='total_voucher', arg=None, context=None)[id],
+                    'prev_refund': self._prev_refund(cr, uid, id, field_name='prev_refund', arg=None, context=None)[id],
+                    'prev_voucher': self._prev_voucher(cr, uid, id, field_name='prev_voucher', arg=None, context=None)[id],
+                    'pending_refund': self._pending_refund(cr, uid, id, field_name='pending_refund', arg=None, context=None)[id],
+                    'pending_voucher': self._prev_voucher(cr, uid, id, field_name='pending_voucher', arg=None, context=None)[id],
+                    'max_refundable': self._max_refundable(cr, uid, id, field_name='max_refundable', arg=None, context=None)[id],
                     })
 
         return res
@@ -259,8 +265,8 @@ class sale_order_claim(osv.osv):
 
         claim = self.browse(cr, uid, id, context=context)
 
-        return {'value': {'total_refund': claim._total_refund(cr, uid, id, field_name='total_refund', arg=None, context=None) + refund,
-                          'max_refundable': claim._max_refundable(cr, uid, id, field_name='max_refundable', arg=None, context=None) - refund}}
+        return {'value': {'total_refund': self._total_refund(cr, uid, id, 'total_refund', None, context=None)[id] + refund,
+                          'max_refundable': self._max_refundable(cr, uid, id, 'max_refundable', None, context=None)[id] - refund}}
 
     def on_change_claim_voucher(self, cr, uid, ids, voucher, context=None):
         if not ids:
@@ -273,8 +279,8 @@ class sale_order_claim(osv.osv):
 
         claim = self.browse(cr, uid, id, context=context)
 
-        return {'value': {'total_voucher': claim._total_voucher(cr, uid, id, field_name='total_voucher', arg=None, context=None) + voucher,
-                          'max_refundable': claim._max_refundable(cr, uid, id, field_name='max_refundable', arg=None, context=None) - voucher}}
+        return {'value': {'total_voucher': self._total_voucher(cr, uid, id, field_name='total_voucher', arg=None, context=None)[id] + voucher,
+                          'max_refundable': self._max_refundable(cr, uid, id, field_name='max_refundable', arg=None, context=None)[id] - voucher}}
 
     def action_open(self, cr, uid, ids, context=None):
         # TODO What should we do with the refunds/vouchers here?

@@ -87,18 +87,10 @@ class sale_order_claim(osv.osv):
 
     def default_get(self, cr, uid, fields, context=None):
         rec_id = context and context.get('active_id', False)
+        res = super(sale_order_claim, self).default_get(cr, uid, fields, context=context)
         if rec_id:
-            return {'sale_order_id': rec_id,
-                    'name': self.pool.get('ir.sequence').next_by_code(cr, uid, 'sale.order.claim'),
-                    'state': 'draft',
-                    'active': True,
-                    'whole_order_claim': False,
-                    'issue_model': 'sale.order.line',
-                    'user_id': uid,
-                    'date': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
-                    }
-        else:
-            return super(sale_order_claim, self).default_get(cr, uid, fields, context=context)
+            res.update({'sale_order_id': rec_id,})
+        return res
 
     _columns = {
         'sale_order_id': fields.many2one(
@@ -205,8 +197,10 @@ class sale_order_claim(osv.osv):
         'order_issue_ids': fields.one2many(
             'sale.order.issue',
             'order_claim_id',
-            string='Claim issues',
-            oldname='claim_line_ids'),
+            string='Claim Issues',
+            oldname='claim_line_ids',
+            readonly=True,
+            states={'draft': [('readonly', False)]}),
         }
 
     _defaults = {
@@ -320,7 +314,7 @@ class sale_order_issue(osv.osv):
         }
 
     _defaults = {
-        'order_claim_id': lambda s, c, u, i, ctx: ctx.get('order_claim_id', None),
+        'order_claim_id': lambda self, cr, uid, ctx: ctx.get('order_claim_id', None),
         'select': False,
         }
 
