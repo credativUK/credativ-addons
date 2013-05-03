@@ -156,23 +156,13 @@ class crm_claim_line(osv.osv):
         # return dict([(line.id, '%s %s' % (line.id, repr(line.resource)))
         #              for line in self.browse(cr, uid, ids, context=context)])
 
-    def _get_claim_resource(self, cr, uid, ids, context=None):
-        if isinstance(ids, (list, tuple)):
-            a = ids[0]
-        else:
-            a = ids
-        claim_ref = self.browse(cr, uid, a, context=context).claim_id.claim_lines_model_id.ref
-        model, res_id = claim_ref.split(',')
-        return (model, int(res_id))
-        
     def _get_model(self, cr, uid, ids, field_name, args, context=None):
-        model, res_id = self._get_claim_resource(cr, uid, ids, context=context)
-        return dict([(id, model) for id in ids])
-
-    def _get_resource(self, cr, uid, ids, field_name, arg, context=None):
-        model = self._get_model(cr, uid, ids, field_name, arg, context=context)[ids[0]]
-        obj = self.pool.get(model)
-        return obj.browse(cr, uid, [l['res_id'] for l in self.read(cr, uid, ids, ['res_id'], context=context)], context=context)
+        res = {}
+        for id in ids:
+            res[id] = False
+        for line in self.browse(cr, uid, ids, context=context):
+            res[line.id] = line.order_claim_id.issue_model
+        return res
 
     ## Attempting to implement better arbitrary model linking than fields.reference
     # def _write_resource(self, cr, uid, ids, field_name, field_value, arg, context=None):
@@ -196,9 +186,10 @@ class crm_claim_line(osv.osv):
             store=True),
         'model': fields.function(
             _get_model,
+            type='char',
+            string='Model',
             method=True,
-            readonly=True,
-            store=False),
+            readonly=True),
         'resource': fields.reference(
             'Resource',
             selection=crm._links_get,

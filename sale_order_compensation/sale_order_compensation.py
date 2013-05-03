@@ -208,10 +208,14 @@ class sale_order_claim(osv.osv):
             readonly=True),
         'refund': fields.float(
             'Refund',
-            digits_compute=dp.get_precision('Sale Price')),
+            digits_compute=dp.get_precision('Sale Price'),
+            readonly=True,
+            states={'draft': [('readonly', False)]}),
         'voucher': fields.float(
             'Voucher',
-            digits_compute=dp.get_precision('Sale Price')),
+            digits_compute=dp.get_precision('Sale Price'),
+            readonly=True,
+            states={'draft': [('readonly', False)]}),
         'voucher_code': fields.char(
             'Voucher code',
             size=128),
