@@ -119,7 +119,8 @@ class stock_dispatch(osv.osv):
                 extlog_pool.end_transfer(cr, uid, external_log_id, context=context)
         
         else:
-            raise # FIXME: Something went very wrong here
+            _logger.info('Cannot export dispatches.  Either incomplete transfers exist or there are no dispatches to export.')
+            # FIXME: Should this return a user error as well?
 
         return
     

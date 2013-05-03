@@ -404,40 +404,72 @@ class external_report_lines(osv.osv):
 
     def log_failed(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, data_record=None, defaults=None, context=None):
         res = super(external_report_lines, self).log_failed(cr, uid, model, action, referential_id, res_id=res_id, external_id=external_id, data_record=data_record, defaults=defaults, context=context)
-        log_cr = pooler.get_db(cr.dbname).cursor()
-        try:
-            vals = {'state': 'failed'}
-            if context.get('external_log_id'):
-                vals['external_log_id'] = context.get('external_log_id')
-            if res:
-                self.write(log_cr, uid, res, vals)
-        except:
-            log_cr.rollback()
-            raise
+        if context.get('new_cursor', True):
+            log_cr = pooler.get_db(cr.dbname).cursor()
+            try:
+                vals = {'state': 'failed'}
+                if context.get('external_log_id'):
+                    vals['external_log_id'] = context.get('external_log_id')
+                if res:
+                    self.write(log_cr, uid, res, vals)
+            except:
+                log_cr.rollback()
+                raise
+            else:
+                log_cr.commit()
+            finally:
+                if context.get('new_cursor', True):
+                    log_cr.close()
         else:
-            log_cr.commit()
-        finally:
-            log_cr.close()
+            try:
+                vals = {'state': 'failed'}
+                if context.get('external_log_id'):
+                    vals['external_log_id'] = context.get('external_log_id')
+                if res:
+                    self.write(cr, uid, res, vals)
+            except:
+                raise
         return res
 
     def log_success(self, cr, uid, model, action, referential_id, res_id=None, external_id=None,  data_record=None, defaults=None, context=None):
-        # FIXME: This is creating an excessive amount of log messages, do not log sucesses since these are logged elsewhere by other modules
-        return True
-        # FIXME The super method actually removes the fail log, so we
-        # probably don't actually want to do this
-        #res = super(external_report_lines, self).log_success(cr, uid, model, action, referential_id, res_id, external_id, context)
-        res = False
-        log_cr = pooler.get_db(cr.dbname).cursor()
-        try:
-            res = self._log(log_cr, uid, model, action, referential_id, 'confirmed', res_id=res_id, external_id=external_id, data_record=data_record, defaults=defaults, context=context)
-        except:
-            log_cr.rollback()
-            raise
+        if res_id is None and external_id is None:
+            raise ValueError('Missing ext_id or external_id')
+        domain = [
+            ('res_model', '=', model),
+            ('action', '=', action),
+            ('referential_id', '=', referential_id),
+        ]
+        if res_id is not None:
+            domain += ('res_id', '=', res_id),
+        if external_id is not None:
+            domain += ('external_id', '=', external_id),
+
+        if context.get('new_cursor', True):
+            log_cr = pooler.get_db(cr.dbname).cursor()
+            try:
+                log_ids = self.search(
+                    log_cr, uid, domain, context=context)
+                vals = {'state': 'confirmed'}
+                for log_id in log_ids:
+                    self.write(log_cr, uid, log_id, vals, context=context)
+            except:
+                log_cr.rollback()
+                raise
+            else:
+                log_cr.commit()
+            finally:
+                if context.get('new_cursor', True):
+                    log_cr.close()
         else:
-            log_cr.commit()
-        finally:
-            log_cr.close()
-        return res
+            try:
+                log_ids = self.search(
+                    cr, uid, domain, context=context)
+                vals = {'state': 'confirmed'}
+                for log_id in log_ids:
+                    self.write(cr, uid, log_id, vals, context=context)
+            except:
+                raise
+        return True
 
     def log_rejected(self, cr, uid, model, action, referential_id, res_id=None, external_id=None, context=None):
         return self._log(cr, uid, model, action, referential_id, 'rejected', res_id=res_id, external_id=external_id, context=context)
