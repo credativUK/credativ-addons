@@ -45,7 +45,7 @@ class procurement_order(osv.osv):
         po_obj = self.pool.get('purchase.order')
         po_line_obj = self.pool.get('purchase.order.line')
         for procurement in self.browse(cr, uid, ids, context=context):
-	        res_id = procurement.move_id.id
+            res_id = procurement.move_id and procurement.move_id.id or False
             partner = procurement.product_id.seller_id # Taken Main Supplier of Product of Procurement.
             seller_qty = procurement.product_id.seller_qty
             seller_delay = int(procurement.product_id.seller_delay)
@@ -55,7 +55,7 @@ class procurement_order(osv.osv):
             fiscal_position = partner.property_account_position and partner.property_account_position.id or False
 
             uom_id = procurement.product_id.uom_po_id.id
-
+            
             qty = uom_obj._compute_qty(cr, uid, procurement.product_uom.id, procurement.product_qty, uom_id)
             if seller_qty:
                 qty = max(qty,seller_qty)
@@ -99,10 +99,10 @@ class procurement_order(osv.osv):
             ('state', 'in', ['draft','planned'])])
 
             if po_exists:
-            purchase_id = po_exists[0]
+                purchase_id = po_exists[0]
 
             else:
-            purchase_id = po_obj.create(cr, uid, {
+                purchase_id = po_obj.create(cr, uid, {
                 'state': 'planned',
                 'origin': procurement.origin,
                 'partner_id': partner_id,
@@ -111,7 +111,7 @@ class procurement_order(osv.osv):
                 'location_id': procurement.location_id.id,
                 'company_id': procurement.company_id.id,
                 'fiscal_position': partner.property_account_position and partner.property_account_position.id or False
-            })
+                })
 
             line_exists = po_line_obj.search(cr, uid, [('product_id','=',procurement.product_id.id),('order_id','=',purchase_id)])
             if line_exists:
