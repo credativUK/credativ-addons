@@ -14,7 +14,7 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
 	                expr="//field[@name='order_line']/tree/field[@name='product_uom']"
 	                position="after">
 	                <field name="cbm"/>
-	                <field name="cbm_total"/>
+	                <field name="cbm_total" sum="Subtotal CBM"/>
 	            </xpath>
         	</data>
         </field>
