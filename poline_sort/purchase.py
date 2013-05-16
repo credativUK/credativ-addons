@@ -19,17 +19,26 @@
 #
 ##############################################################################
 
-from osv import osv,fields
-from collections import defaultdict
-import decimal_precision as dp
+from osv import osv, fields
 
 class purchase_order_line(osv.osv):
     _inherit = 'purchase.order.line'
     _order = 'product_name asc'
     
+    def _get_lines_from_products(self, cr, uid, product_ids, context=None):
+        res = set()
+        for product in product_ids:
+            ids = self.pool.get('purchase.order.line').search(cr, uid, [('product_id', '=', product),], context=context)
+            res.update(ids)
+        return list(res)
+    
     _columns = {
-        'product_name':fields.related('product_id','name', string='Product', type='char',store=True)
-               }
+            'product_name': fields.related('product_id', 'name', string='Product', type='char',
+                    store={
+                            'purchase.order.line': (lambda self, cr, uid, ids, ctx: ids, ['product_id'], 10),
+                            'product.product': (_get_lines_from_products, ['name', 'name_template'], 10),
+                          })
+        }
 
 purchase_order_line()
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
