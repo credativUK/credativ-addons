@@ -25,10 +25,8 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
             <field name="arch" type="xml">
             <data>
                 <xpath expr="/form/notebook/page/field[@name='product_qty']" position="after">
-                    <field name="qty_available_dummy"/>
-                    <field name="incoming_qty_dummy"/>
-                    <field name="qty_available" readonly="0" invisible="1"/>
-                    <field name="incoming_qty" readonly="0" invisible="1"/>
+                    <field name="qty_available" readonly="0" on_change="onchange_stock_qtys(parent.pricelist_id,product_id,product_qty,product_uom,parent.partner_id, parent.date_order,parent.fiscal_position,date_planned,name,price_unit,notes,qty_available,incoming_qty,context)" />
+                    <field name="incoming_qty" readonly="0" on_change="onchange_stock_qtys(parent.pricelist_id,product_id,product_qty,product_uom,parent.partner_id, parent.date_order,parent.fiscal_position,date_planned,name,price_unit,notes,qty_available,incoming_qty,context)" />
                 </xpath>
                 </data>
             </field>

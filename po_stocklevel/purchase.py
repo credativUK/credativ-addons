@@ -47,12 +47,8 @@ class purchase_order_line(osv.osv):
         
         for pol in self.browse(cr, uid, ids, context=context):
             for field_name in field_names:
-                if field_name[-6:] == '_dummy':
-                    field_name_read = field_name[:-6]
-                else:
-                    field_name_read = field_name
-                if pol.product_id and hasattr(pol.product_id, field_name_read):
-                    res[id][field_name] = getattr(pol.product_id, field_name_read) or 0.0
+                if pol.product_id and hasattr(pol.product_id, field_name):
+                    res[id][field_name] = getattr(pol.product_id, field_name) or 0.0
                 else:
                     res[id][field_name] = 0.0
         
@@ -69,8 +65,6 @@ class purchase_order_line(osv.osv):
             stock = product_obj.read(cr, uid, product_id, ['incoming_qty', 'qty_available'], context=context)
             qty_dic['incoming_qty'] = stock.get('incoming_qty', 0.0)
             qty_dic['qty_available'] = stock.get('qty_available', 0.0)
-            qty_dic['incoming_qty_dummy'] = stock.get('incoming_qty', 0.0)
-            qty_dic['qty_available_dummy'] = stock.get('qty_available', 0.0)
             
         res_values =  super(purchase_order_line,self).onchange_product_id(cr, uid, ids, pricelist_id, product_id, qty, uom_id,
             partner_id, date_order=date_order, fiscal_position_id=fiscal_position_id, date_planned=date_planned,
@@ -81,6 +75,20 @@ class purchase_order_line(osv.osv):
         return res_values
     
     product_id_change = onchange_product_id
+
+    def onchange_stock_qtys(self, cr, uid, ids, pricelist_id, product_id, qty, uom_id,
+            partner_id, date_order=False, fiscal_position_id=False, date_planned=False,
+            name=False, price_unit=False, notes=False, qty_available=0.0, incoming_qty=0.0, context=None):
+        
+        res = self.onchange_product_id(cr, uid, ids, pricelist_id, product_id, qty, uom_id,
+            partner_id, date_order=date_order, fiscal_position_id=fiscal_position_id, date_planned=date_planned,
+            name=name, price_unit=price_unit, notes=notes, context=context)
+        
+        if res.get('value', {}).get('incoming_qty') == incoming_qty and \
+                res.get('value', {}).get('qty_available') == qty_available:
+            return {}
+        
+        return res
     
     # _dummy fields are required as a work around where readonly fields are not copied from the form to the tree for
     # PO lines. We have to mirror the fields so one is readonly and the other is editable and invisible
