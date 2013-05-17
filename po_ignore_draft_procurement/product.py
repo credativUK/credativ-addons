@@ -122,7 +122,7 @@ class product_product(osv.osv):
                 'and sm.product_id IN %s '\
                 'and sm.state IN %s' + (date_str and 'and '+date_str+' ' or '') +' '\
                 + prodlot_clause + 
-                'and po.state NOT IN %s '\
+                'and po.state IN %s '\
                 'group by sm.product_id,sm.product_uom',tuple(where))
             results = cr.fetchall()
         if 'out' in what:
@@ -137,7 +137,7 @@ class product_product(osv.osv):
                 'and sm.product_id  IN %s '\
                 'and sm.state in %s ' + (date_str and 'and '+date_str+' ' or '') + ' '\
                 + prodlot_clause + 
-                'and po.state NOT IN %s '\
+                'and po.state IN %s '\
                 'group by sm.product_id,sm.product_uom',tuple(where))
             results2 = cr.fetchall()
             
