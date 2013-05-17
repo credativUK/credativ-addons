@@ -95,7 +95,7 @@ class sale_order_claim(osv.osv):
         processed)'''
         return self._prev_compensation(cr, uid, ids,
                                        compensation_type=['refund'],
-                                       claim_state=('open','processing','review'),
+                                       claim_state=('open-vouchers','open-refunds','processed'),
                                        context=context)
 
     def _pending_voucher(self, cr, uid, ids, field_name, arg, context=None):
@@ -104,7 +104,7 @@ class sale_order_claim(osv.osv):
         yet processed)'''
         return self._prev_compensation(cr, uid, ids,
                                        compensation_type=['voucher'],
-                                       claim_state=('open','processing','review'),
+                                       claim_state=('open-vouchers','open-refunds','processed'),
                                        context=context)
 
     def _max_refundable(self, cr, uid, ids, field_name, arg, context=None):
