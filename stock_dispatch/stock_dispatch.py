@@ -43,6 +43,7 @@ class stock_dispatch(osv.osv):
         'dispatch_date': fields.date('Planned Dispatch Date', required=True, readonly=True, states={'draft':[('readonly',False)]}),
         'cutoff_date': fields.datetime('Cutoff Date', required=True, readonly=True, states={'draft':[('readonly',False)]}),
         'warehouse_id': fields.many2one('stock.warehouse', string='Warehouse', required=True, readonly=True, states={'draft':[('readonly',False)]}),
+        'notes': fields.text('Notes'),
         }
 
     _sql_constraints = [

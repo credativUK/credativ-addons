@@ -91,6 +91,9 @@
                         <page string="Stock Moves">
                             <field colspan="4" name="stock_moves" nolabel="1" widget="many2many" on_change="on_change_stock_moves(stock_moves)" domain="[('state', '=', 'assigned'), ('picking_type', '=', 'out'), '|', ('dispatch_id', '=', False), ('dispatch_id', '=', active_id)]" />
                         </page>
+                        <page string="Notes">
+                            <field colspan="4" name="notes" nolabel="1"/>
+                        </page>
                     </notebook>
                 </form>
             </field>
