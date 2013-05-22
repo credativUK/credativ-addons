@@ -22,15 +22,6 @@
 from osv import osv, fields
 import decimal_precision as dp
 
-class purchase_order(osv.osv):
-    _inherit = 'purchase.order'
-    
-    def onchange_po_lines(self, cr, uid, ids, order_lines, context=None):
-        import ipdb; ipdb.set_trace()
-        return {}
-    
-purchase_order()
-
 class purchase_order_line(osv.osv):
     _inherit = 'purchase.order.line'
     
@@ -48,9 +39,9 @@ class purchase_order_line(osv.osv):
         for pol in self.browse(cr, uid, ids, context=context):
             for field_name in field_names:
                 if pol.product_id and hasattr(pol.product_id, field_name):
-                    res[id][field_name] = getattr(pol.product_id, field_name) or 0.0
+                    res[pol.id][field_name] = getattr(pol.product_id, field_name) or 0.0
                 else:
-                    res[id][field_name] = 0.0
+                    res[pol.id][field_name] = 0.0
         
         return res
     
@@ -95,8 +86,6 @@ class purchase_order_line(osv.osv):
     _columns = {
         'incoming_qty': fields.function(_get_product_qty, method=True, type='float', string='Incoming Stock', digits_compute=dp.get_precision('Product UoM'), help='Incoming Product Stock', multi='_get_product_qty',),
         'qty_available': fields.function(_get_product_qty, method=True, type='float', string='On Hand Stock', digits_compute=dp.get_precision('Product UoM'), help='Product Stock on hand', multi='_get_product_qty',),
-        'incoming_qty_dummy': fields.function(_get_product_qty, method=True, type='float', string='Incoming Stock', digits_compute=dp.get_precision('Product UoM'), help='Incoming Product Stock', multi='_get_product_qty',),
-        'qty_available_dummy': fields.function(_get_product_qty, method=True, type='float', string='On Hand Stock', digits_compute=dp.get_precision('Product UoM'), help='Product Stock on hand', multi='_get_product_qty',),
         }
     
 purchase_order_line()
