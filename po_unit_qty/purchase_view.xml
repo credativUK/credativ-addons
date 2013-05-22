@@ -17,7 +17,7 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
                     <attribute name="string">Quantity of UOMs</attribute>
                 </field>
                 <field name="product_uom" position="attributes">
-                    <attribute name="domain">['|', ('product_ids','in', [product_id]), ('product_ids', '!=', [])]</attribute>
+                    <attribute name="domain">['|', ('product_ids','in', [product_id]), ('product_ids', 'not in', [])]</attribute>
                 </field>
             </field>
         </record>
