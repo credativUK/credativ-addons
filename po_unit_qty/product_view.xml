@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+-->
+<openerp>
+    <data>
+        <record id="product_uom_form_case" model="ir.ui.view">
+            <field name="name">product.uom.form.case</field>
+            <field name="model">product.uom</field>
+            <field name="inherit_id" ref="product.product_uom_form_view" />
+            <field name="arch" type="xml">
+                <group>
+                    <field name="product_ids" colspan="4"/>
+                </group>
+            </field>
+        </record>
+    </data>
+</openerp>
+
