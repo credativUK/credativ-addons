@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data noupdate="1">
+
+        <!-- Sequences for deferred.action.instance -->
+        <record id="seq_type_base_deferred_action_instance" model="ir.sequence.type">
+            <field name="name">Deferred Action Instance</field>
+            <field name="code">deferred.action.instance</field>
+        </record>
+
+        <record id="seq_base_deferred_action_instance" model="ir.sequence">
+            <field name="name">Deferred Action Instance</field>
+            <field name="code">deferred.action.instance</field>
+            <field name="prefix">ACT</field>
+            <field name="padding">8</field>
+        </record>
+
+    </data>
+</openerp>
