@@ -23,6 +23,11 @@
 from osv import osv, fields
 import decimal_precision as dp
 
+def rounding(f, r):
+    if not r:
+        return f
+    return round(f / r) * r
+
 class purchase_order_line(osv.osv):
     _inherit = 'purchase.order.line'
     
@@ -58,6 +63,8 @@ class purchase_order_line(osv.osv):
             res.setdefault('domain', {}).setdefault('product_uom', []).extend(['|', ('product_ids','in', [product_id]), ('product_ids', '!=', [])])
         return res
 
+    product_id_change = onchange_product_id
+
     def onchange_unit_qty(self, cr, uid, ids, pricelist_id, product_id, qty, uom_id,
             partner_id, date_order=False, fiscal_position_id=False, date_planned=False,
             name=False, price_unit=False, notes=False, unit_qty=0.0, qty_per_uom=0.0, context=None):
@@ -66,9 +73,9 @@ class purchase_order_line(osv.osv):
         """
         res = {}
         if product_id and uom_id:
-            value={
-                'product_qty': float(unit_qty) / qty_per_uom,
-                   }
+            uom = self.pool.get('product.uom').browse(cr, uid, uom_id, context=context)
+            product_qty = rounding(qty_per_uom and (float(unit_qty) / qty_per_uom) or 0.0, uom.rounding)
+            value = {'product_qty': product_qty, 'unit_qty': product_qty * qty_per_uom}
             res['value'] = value
         return res
 
