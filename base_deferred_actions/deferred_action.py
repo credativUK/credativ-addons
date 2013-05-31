@@ -48,7 +48,19 @@ class deferred_action(osv.osv):
             'deferred_action_id',
             string='Phases',
             help='The phases of a deferred action define the procedure that must be carried out in order to perform the action. Each phase is independently loggable and reportable and may be implemented as a wrapper around a model class method, a stored Python code object, or another deferred action.'),
+        'instances': fields.one2many(
+            'deferred.action.instance',
+            'deferred_action_id',
+            string='Instances',
+            readonly=True,
+            help='Shows current and past instances of this deferred action in use.'),
     }
+
+    def update_model_action(self, cr, uid, ids, context=None):
+        '''
+        Alters 'model'.'action_method' associated action record to call
+        this deferred action instead.
+        '''
 
 deferred_action()
 
@@ -78,6 +90,7 @@ class deferred_action_phase(osv.osv):
             required=True),
         'deferred_action_id': fields.many2one(
             'deferred.action',
+            string='Deferred action',
             required=True),
         'sequence': fields.integer(
             'Sequence',
@@ -96,12 +109,11 @@ class deferred_action_phase(osv.osv):
             help='A description of the work done in this phase.'),
         'step_size': fields.integer(
             'Step size',
-            required=True,
             help='For iteration phases, this property determines how many resources will be processed by the iteration step at a time. The default is 1.'),
         'proc_type': fields.selection(
-            [('method', 'Method',
-              'fnct', 'Function',
-              'action', 'Deferred action')],
+            [('method', 'Method'),
+             ('fnct', 'Function'),
+             ('action', 'Deferred action')],
             required=True,
             string='Procedure type'),
         'proc_method': fields.char(
@@ -116,17 +128,17 @@ class deferred_action_phase(osv.osv):
             string='Procedure',
             help='Use this setting to assign another deferred action object as the procedure for this phase.'),
         'verify_type': fields.selection(
-            [('none', 'No verification',
-              'method', 'Method',
-              'function', 'Function')],
+            [('none', 'No verification'),
+             ('method', 'Method'),
+             ('fnct', 'Function')],
             required=True,
             string='Verification type'),
         'verify_method': fields.char(
-            'Initialisation verification',
+            'Verification',
             size=128,
             help='Use this setting to assign a method on the model as the verification procedure for this phase. The method should return a dict: {"success": bool, "message": str}.'),
         'verify_fnct': fields.text(
-            'Initialisation verification',
+            'Verification',
             help='Use this setting to define a function to be used as the verification procedure for this phase. The function should return a dict: {"success": bool, "message": str}.'),
         'notify_success': fields.many2one(
             'poweremail.templates',
@@ -173,6 +185,15 @@ class deferred_action_instance(osv.osv):
     _name = 'deferred.action.instance'
     _description = 'An executing workflow action'
 
+    def _show_action_args(self, cr, uid, ids, field_name, arg, context=None):
+        '''
+        The action arguments are stored in a fields.serialized type
+        column. This method is used to create a printable
+        representation of the argument list.
+        '''
+        return dict([(id, str(instance.action_args))
+                     for instance in self.browse(self, cr, uid, ids, context=context)])
+
     _columns = {
         'name': fields.char(
             'Name',
@@ -181,7 +202,8 @@ class deferred_action_instance(osv.osv):
             readonly=True),
         'deferred_action_id': fields.many2one(
             'deferred.action',
-            string='Deferred action'),
+            string='Deferred action',
+            readonly=True),
         'state': fields.selection(
             [('draft', 'Draft'),
              ('started', 'Started'),
@@ -200,6 +222,11 @@ class deferred_action_instance(osv.osv):
             'Action arguments',
             required=True,
             readonly=True),
+        'show_action_args': fields.function(
+            _show_action_args,
+            type='char',
+            readonly=True,
+            string='Action arguments'),
         'start_time': fields.datetime(
             'Start time',
             required=True,
@@ -207,7 +234,6 @@ class deferred_action_instance(osv.osv):
         'end_time': fields.datetime(
             'End time',
             readonly=True),
-        
     }
 
     _defaults = {

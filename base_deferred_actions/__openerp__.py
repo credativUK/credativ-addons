@@ -35,6 +35,7 @@ It provides the models deferred.action, deferred.action.phase, and deferred.acti
     ],
     'update_xml': [
         'deferred_action_data.xml',
+        'deferred_action_view.xml',
     ],
     'demo_xml': [],
     'installable': True,
