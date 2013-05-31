@@ -24,10 +24,15 @@
     'version': '0.1',
     'category': 'Generic Modules/Base',
     'description': """
-This addon provides facilities for breaking down long running background procedures, reporting on their progress, and re-doing failed parts of them.
+This addon provides facilities for breaking down long running procedures, running them in the background, reporting on their progress, and re-doing failed parts of them.
+
+It provides the models deferred.action, deferred.action.phase, and deferred.action.instance. deferred.action encpasulates a workflow action method on some model. Each deferred.action may have any number of deferred.action.phases associated with it. These will be executed in order and can also be iterable. Developers will make alterations to an action on a model to break it down into distinct phases and create a new deferred.action.phase record for each of those phases. Each phase may also generate logging and email reporting feedback. A deferred.action.instance represents a deferred.action in progress, implementing a queue of actions and preventing the same action being executed more than once.
     """,
     'author': 'credativ',
-    'depends': ['base'],
+    'depends': [
+        'base',
+        'poweremail',
+    ],
     'update_xml': [
         'deferred_action_data.xml',
     ],
