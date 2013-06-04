@@ -116,7 +116,7 @@ class sale_order_claim(osv.osv):
             ids = [ids]
         return dict([(claim.id, claim.order_total - self._prev_compensation(cr, uid, claim.id,
                                                                             compensation_type=['refund','voucher'],
-                                                                            claim_state=('open-vouchers','open-refunds','rejected','processed'),
+                                                                            claim_state=('open-vouchers','open-refunds','processed'),
                                                                             context=context)[claim.id])
                      for claim in self.browse(cr, uid, ids, context=context)])
 
@@ -152,12 +152,12 @@ class sale_order_claim(osv.osv):
             'prev_voucher':
                 so_total_compensation(sale_order_id, ['voucher'], claim_state=('processed',)),
             'pending_refund':
-                so_total_compensation(sale_order_id, ['refund'], claim_state=('open-vouchers','open-refunds','rejected')),
+                so_total_compensation(sale_order_id, ['refund'], claim_state=('open-vouchers','open-refunds')),
             'pending_voucher':
-                so_total_compensation(sale_order_id, ['voucher'], claim_state=('open-vouchers','open-refunds','rejected')),
+                so_total_compensation(sale_order_id, ['voucher'], claim_state=('open-vouchers','open-refunds')),
             'max_refundable':
                 sale_order.amount_total - so_total_compensation(sale_order_id, ['refund','voucher'],
-                                                                claim_state=('open-vouchers','open-refunds','rejected','processed')),
+                                                                claim_state=('open-vouchers','open-refunds','processed')),
             }
 
     def _get_claims_from_issues(self, cr, uid, ids, context=None):
@@ -324,7 +324,7 @@ class sale_order_issue(osv.osv):
                 res[issue.id] = 0.0
             else:
                 issue_ids = order_issues_pool.search(cr, uid, [('resource','=',issue.resource),
-                                                               ('state','not in',['draft']),
+                                                               ('state','not in',['draft','rejected']),
                                                                ('id','<>',issue.id)], context=context)
                 res[issue.id] = float(sum([float(sum([getattr(issue, comp_type)
                                                       for comp_type in compensation_type]))
