@@ -8,23 +8,50 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
             <field name="name">sale.order.form</field>
             <field name="model">sale.order</field>
             <field name="type">form</field>
-            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="inherit_id" ref="sale_layout.view_order_form_inherit_1"/>
             <field name="arch" type="xml">
                 <data>
                     <field name="origin" position="after">
                         <field name="original_order" />
                         <field name="edited_order" />
                     </field>
-                    <xpath expr="//field[@name='order_line']/tree/field[@name='product_uom_qty']" position="after">
+                    <xpath expr="//field[@name='abstract_line_ids']/tree/field[@name='product_uom_qty']" position="after">
                         <field name="original_done" invisible="1" />
                     </xpath>
-                    <xpath expr="//field[@name='order_line']/tree" position="attributes">
+                    <xpath expr="//field[@name='abstract_line_ids']/tree" position="attributes">
                         <attribute name="colors">gray:original_done == True</attribute>
                     </xpath>
-                    <xpath expr="//field[@name='order_line']/form/notebook" position="attributes">
-                        <attribute name="attrs">{'readonly': [('state', '!=', 'draft')]}</attribute>
+                    <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='product_id']" position="attributes">
+                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
                     </xpath>
-                    <xpath expr="//field[@name='order_line']/form/notebook/page/group/group[button/@string='Make Invoices']" position="attributes">
+                    <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='product_uom_qty']" position="attributes">
+                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                    </xpath>
+                    <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='product_uom']" position="attributes">
+                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                    </xpath>
+                    <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='product_packaging']" position="attributes">
+                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                    </xpath>
+                    <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='name']" position="attributes">
+                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                    </xpath>
+                    <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='price_unit']" position="attributes">
+                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                    </xpath>
+                    <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='discount']" position="attributes">
+                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                    </xpath>
+                    <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='type']" position="attributes">
+                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                    </xpath>
+                    <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='delay']" position="attributes">
+                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                    </xpath>
+                    <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='tax_id']" position="attributes">
+                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                    </xpath>
+                    <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page/group[button/@string='Make Invoice']" position="attributes">
                         <attribute name="attrs">{'invisible': ['|', ('invoiced','=',True), ('parent.state', '=', 'draft')]}</attribute>
                     </xpath>
                 </data>

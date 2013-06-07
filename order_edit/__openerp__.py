@@ -34,6 +34,7 @@
     'depends': [
         'sale',
         'stock',
+        'sale_layout',
         ],
     'init_xml': [
         ],
