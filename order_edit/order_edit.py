@@ -253,12 +253,16 @@ class sale_order(osv.osv):
             order = self.browse(cr, uid, order.id, context=context) # Refresh order
             for line in order.order_line:
                 moves_done = []
+                moves_assigned = []
                 moves_other = []
                 for move in line.move_ids:
-                    if move.state in ('done', 'assigned'):
+                    if move.state in ('done',):
                         moves_done.append(move)
+                    elif move.state in ('assigned',):
+                        moves_assigned.append(move)
                     else:
                         moves_other.append(move)
+                moves_other.extend(moves_assigned)
                 qty_uom_done = sum([x.product_qty for x in moves_done])
                 qty_uom_notdone = sum([x.product_qty for x in moves_other])
 
