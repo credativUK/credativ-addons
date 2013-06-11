@@ -44,6 +44,7 @@ class deferred_action(osv.osv):
             'ir.model',
             required=True,
             string='Model',
+            ondelete='cascade',
             help='This is the model on which the action to be managed is defined.'),
         'action_method': fields.char(
             'Action',
@@ -53,6 +54,12 @@ class deferred_action(osv.osv):
         'start_message': fields.text(
             'Start message',
             help='This text is displayed in a dialoge box when the action is initiated. Please use this message to advise the user that the action is being carried out in the background and, if you have configured it, that email notification will follow once the action has completed.'),
+        'max_queue_size': fields.integer(
+            'Maximum queue size',
+            help='Determines the maximum number of instances of this action that may be put in the queue for processing.'),
+        'queue_limit_message': fields.text(
+            'Queue limit message',
+            help='This text is displayed if a user attempts to start a deferred action when the maximum number of queued actions are already in progress.'),
         'phases': fields.one2many(
             'deferred.action.phase',
             'deferred_action_id',
@@ -64,6 +71,10 @@ class deferred_action(osv.osv):
             string='Instances',
             readonly=True,
             help='Shows current and past instances of this deferred action in use.'),
+    }
+
+    _defaults = {
+        'max_queue_size': 1,
     }
 
     def update_model_action(self, cr, uid, ids, context=None):
@@ -97,15 +108,21 @@ class deferred_action(osv.osv):
                                                       'action_args': action_args,
                                                       'res_ids': res_ids},
                                             context=context)
+        import pdb; pdb.set_trace()
         if instance_id:
             instance_model.start(cr, uid, instance_id, context=context)
+            instance = instance_model.browse(cr, uid, instance_id, context=context)
+            instance_info = {'name': action.name,
+                             'model': action.model,
+                             'start_time': instance.start_time,
+                             'owner_name': instance.start_uid.name,
+                             'owner_email': instance.start_uid.user_email}
             return {'warning': {'title': 'Action started in background',
-                                'message': action.start_message or 'The action "%s" has been started in the background on the model "%s".' %\
-                                (action.name, action.model)}}
+                                'message': action.start_message and action.start_message % instance_info or\
+                                'The action "%(action_name)s" has been started in the background on the model "%(action_model)s".' % instance_info}}
         else:
             return {'warning': {'title': 'Action failed to start',
-                                'message': 'The action "%s" on the model "%s" failed to start in the background.' %\
-                                (action.name, action.model)}}
+                                'message': 'The action "%(action_name)s" on the model "%(action_model)s" failed to start in the background.' % instance_info}}
 
 deferred_action()
 
@@ -211,15 +228,21 @@ class deferred_action_phase(osv.osv):
                 res['error'] = traceback.format_exc()
 
         elif phase.proc_type == 'fnct':
-            # FIXME Implement this
-            raise NotImplementedError('Deferred action phase stored Python code not implemented.')
+            try:
+                ns = {'res_ids': res_ids, 'context': context}
+                fnct = compile(phase.proc_fnct)
+                exec fnct in ns
+                res['res'] = ns['res']
+            except Exception:
+                res['completed'] = False
+                res['error'] = traceback.format_exc()
         elif phase.proc_type == 'action':
             # FIXME Implement this
             raise NotImplementedError('Deferred action phase sub-deferred action not implemented.')
 
         return res
 
-    def _verify_proc(self, cr, uid, ids, action_instance_id, res, context=None):
+    def _verify_proc(self, cr, uid, ids, action_instance_id, proc_res, context=None):
         '''
         Executes the verification method to check the result of the procedure.
         '''
@@ -244,11 +267,17 @@ class deferred_action_phase(osv.osv):
                                      (phase.deferred_action_id.name, phase.deferred_action_id.model.name, phase.method))
 
             verify_method = getattr(model, phase.verify_method)
-            res['success'] = verify_method(model, cr, uid, res[phase.id], context=context)
+            res['success'] = verify_method(model, cr, uid, proc_res, context=context)
 
         elif phase.verify_type == 'fnct':
-            # FIXME Implement this
-            raise NotImplementedError('Deferred action phase verification stored Python code not implemented.')
+            try:
+                ns = {'proc_res': proc_res, 'context': context}
+                fnct = compile(phase.verify_fnct)
+                exec fnct in ns
+                res = ns['res']
+            except Exception:
+                res = {'success': False,
+                       'message': 'Verification function failed:\n\n%s' % (traceback.format_exc(),)}
         elif phase.verify_type == 'none':
             # FIXME Implement this
             raise NotImplementedError('Deferred action phase verification sub-deferred action not implemented.')
@@ -325,18 +354,16 @@ class deferred_action_phase(osv.osv):
         return res
 
     _columns = {
-        'name': fields.char(
-            'Name',
-            size=64,
-            required=True),
         'deferred_action_id': fields.many2one(
             'deferred.action',
+            ondelete='cascade',
             string='Deferred action',
             required=True),
         'cron_id': fields.many2one(
             'ir.cron',
             required=True,
             readonly=True,
+            ondelete='cascade',
             string='Cron task',
             help='This is the cron task that is used to execute this phase in the background.'),
         'sequence': fields.integer(
@@ -374,7 +401,7 @@ class deferred_action_phase(osv.osv):
             help='Use this setting to assign a method on the model as the procedure for this phase.'),
         'proc_fnct': fields.text(
             'Procedure',
-            help='Use this setting to define a function to be used as the procedure for this phase.'),
+            help='Use this setting to define a code fragment to be used as the procedure for this phase. The execution environment for this fragment will include the res_ids being processed and the context. The code should assign a value to a variable called "res".'),
         'proc_action': fields.many2one(
             'deferred.action',
             string='Procedure',
@@ -391,7 +418,7 @@ class deferred_action_phase(osv.osv):
             help='Use this setting to assign a method on the model as the verification procedure for this phase. The method should return a dict: {"success": bool, "message": str}.'),
         'verify_fnct': fields.text(
             'Verification',
-            help='Use this setting to define a function to be used as the verification procedure for this phase. The function should return a dict: {"success": bool, "message": str}.'),
+            help='Use this setting to define a code fragment to be used as the verification procedure for this phase. The execution environment for this fragment will include the result of the phase procedure (proc_res) and the context. The code should assign a dict of the form {"success": bool, "message": str} to a variable called "res".'),
         'notify_success': fields.many2one(
             'poweremail.templates',
             string='Success email',
@@ -438,7 +465,7 @@ class deferred_action_phase(osv.osv):
             # FIXME This shouldn't happen
             return False
 
-        cron_name = self._make_cron_task_name(cr, uid, dict(deferred_action._data.items() + vals.items()), context=context)
+        cron_name = self._make_cron_task_name(cr, uid, dict([('model', deferred_action.model), ('action_method', deferred_action.action_method)] + vals.items()), context=context)
         cron_id = cron_pool.search(cr, uid, [('model','=','deferred.action.phase'),
                                              ('name','=',cron_name)],
                                    context=context)
@@ -702,9 +729,9 @@ class deferred_action_instance(osv.osv):
         Calculate how far through the execution of the phases this action
         instance has progressed.
         '''
-
         # FIXME To be implemented
-        return 0.0
+        return dict([(id, instance.state in ('draft','started','paused') and 0.0 or 100.0)
+                     for instance in self.browse(self, cr, uid, ids, context=context)])
 
     _columns = {
         'name': fields.char(
@@ -714,6 +741,7 @@ class deferred_action_instance(osv.osv):
             readonly=True),
         'deferred_action_id': fields.many2one(
             'deferred.action',
+            ondelete='cascade',
             string='Deferred action',
             readonly=True),
         'state': fields.selection(
@@ -769,19 +797,25 @@ class deferred_action_instance(osv.osv):
 
     def create(self, cr, uid, vals, context=None):
         '''
-        Ensure that this action is not already on the queue. If so, just
-        return its ID.
+        Ensure that no more than max_queue_size instances of this action
+        are on the queue already.
         '''
-        queued = self.search(cr, uid, [('deferred_action_id','=',vals['deferred_action_id']),
+        deferred_action_pool = self.pool.get('deferred.action')
+        deferred_action = deferred_action_pool.browse(cr, uid, vals['deferred_action_id'], context=context)
+
+        queued = self.search(cr, uid, [('deferred_action_id','=',deferred_action.id),
                                        ('state','in',['draft','started','paused'])],
-                             context=context)
-        if len(queued) > 1:
-            action = self.pool.get('deferred.action').browse(cr, uid, vals['deferred_action_id'], context=context)
+                             order='start_time DESC', context=context)
+        if len(queued) > deferred_action.max_queue_size:
+            recent_instance = self.browse(cr, uid, queued[0], context=context)
+            limit_info = {'action_name': deferred_action.name,
+                          'queue_size': len(queued),
+                          'queue_limit': deferred_action.max_queue_size,
+                          'recent_owner_name': recent_instance.start_uid.name,
+                          'recent_start_time': recent_instance.start_time}
             osv.except_osv('Integrity error',
-                           'The deferred action "%s" has %d active instances. Only one instance should be active at a time.' %\
-                           (action.name, len(queued)))
-        elif len(queued) == 1:
-            return queued[0]
+                           deferred_action.queue_limit_message and deferred_action.queue_limit_message % limit_info or
+                           'The deferred action "%(action_name)s" has %(queue_size)s active instances. Only %(queue_limit)s instance(s) should be active at a time.' % limit_info)
         else:
             return super(deferred_action_instance, self).create(cr, uid, vals, context=context)
 
@@ -854,11 +888,10 @@ class deferred_action_instance(osv.osv):
 deferred_action_instance()
 
 
-class deferred_action_phase_instance():
+class deferred_action_phase_instance(osv.osv):
     '''
     Represents an instance of a deferred.action.phase in execution.
     '''
-
     _name = 'deferred.action.phase.instance'
     _description = 'An instance of a deferred.action.phase in execution'
 
@@ -866,10 +899,12 @@ class deferred_action_phase_instance():
         'phase_id': fields.many2one(
             'deferred.action.phase',
             required=True,
+            ondelete='cascade',
             string='Deferred action phase'),
         'action_instance': fields.many2one(
             'deferred.action.instance',
             required=True,
+            ondelete='cascade',
             string='Deferred action instance',
             help='Points to the deferred action instance in which this phase instance is running.'),
         'state': fields.selection(

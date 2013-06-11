@@ -16,6 +16,8 @@
                     </group>
                     <group col="2" colspan="4">
                         <field name="start_message" />
+                        <field name="max_queue_size" />
+                        <field name="queue_limit_message" />
                     </group>
                     <notebook>
                         <page string="Phases">
@@ -23,9 +25,8 @@
                                 <field name="phases" nolabel="1">
                                     <form string="Deferred Action Phase">
                                         <separator string="Phase details" />
-                                        <group col="6" colspan="4">
+                                        <group col="4" colspan="4">
                                             <field name="deferred_action_id" />
-                                            <field name="name" />
                                             <field name="sequence" />
                                         </group>
                                         <group col="2" colspan="4">
@@ -62,7 +63,6 @@
                                         </group>
                                     </form>
                                     <tree string="Phases">
-                                        <field name="name" />
                                         <field name="sequence" />
                                         <field name="usage" />
                                         <field name="description" />
@@ -141,9 +141,8 @@
             <field name="arch" type="xml">
                 <form string="Deferred Action Phase">
                     <separator string="Phase details" />
-                    <group col="6" colspan="4">
+                    <group col="4" colspan="4">
                         <field name="deferred_action_id" />
-                        <field name="name" />
                         <field name="sequence" />
                     </group>
                     <group col="2" colspan="4">
