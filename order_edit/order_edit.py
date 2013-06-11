@@ -248,6 +248,8 @@ class sale_order(osv.osv):
             if moves_to_move:
                 move_obj.write(cr, uid, [x.id for x in moves_to_move], {'picking_id': order.picking_ids[0].id}, context=context)
             for picking in pickings_to_cancel:
+                # running twice because 1st will transfer to "confirmed" state and 2nd will transfer to "cancelled" - workflow needs fixing (FIXME)
+                wf_service.trg_validate(uid, 'stock.picking', picking.id, 'button_cancel', cr)
                 wf_service.trg_validate(uid, 'stock.picking', picking.id, 'button_cancel', cr)
 
             order = self.browse(cr, uid, order.id, context=context) # Refresh order
