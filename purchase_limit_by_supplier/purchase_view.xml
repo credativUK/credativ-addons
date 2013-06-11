@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="purchase_order_line_form" model="ir.ui.view">
+            <field name="name">purchase.order.line.from.inheritsupplier</field>
+            <field name="model">purchase.order.line</field>
+            <field name="inherit_id" ref="purchase.purchase_order_line_form"/>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <data>
+                    <field name="product_id" position="attributes">
+                        <attribute name="domain">[('active', '=', True), '|', ('seller_ids.name', '=', parent.partner_id), ('active', '=', list_all_products)]</attribute>
+                        <attribute name="colspan">2</attribute>
+                    </field>
+                    <field name="product_id" position="after">
+                        <field name="list_all_products" colspan="2"/>
+                    </field>
+                </data>
+            </field>
+        </record>
+    </data>
+</openerp>
