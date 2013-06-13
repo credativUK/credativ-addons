@@ -30,13 +30,14 @@
     ],
     'category' : 'Generic Modules/Purchases',
     'description': '''
-Amalgamate new Purchase Orders with existing ones of the same product and company.
-
+1. Adds new scheduler which search for purchase order in draft state and merge with same supplier.
+2. Amalgamate new Purchase Orders with existing ones of the same product and company.
 ''',
     'init_xml' : [
     ],
     'demo_xml' : [],
     'update_xml' : [
+        'planned_purchase_cron.xml'
     ],
     'active': False,
     'installable': True

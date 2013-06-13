@@ -25,15 +25,39 @@ import time
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from osv import osv
+from collections import defaultdict
+
+class purchase_order(osv.osv):
+    _inherit='purchase.order'
+    
+    def merge_po(self,cr,uid,ids=[],context=None):
+        '''Auto merge Purchase orders with same supplier and in draft state '''
+        
+        if context is None:
+            context={}
+        po_group_obj = self.pool.get('purchase.order.group')
+
+        #Search for po which are in draft state
+        if not ids:
+            ids = self.search(cr,uid,[('state', '=', 'draft')], context=context)
+
+        #assign ids to active_ids in context
+        context['active_ids'] = ids
+        
+        #Call merge_orders method from purchase.order.group object to merge PO
+        return po_group_obj.merge_orders(cr,uid,[],context=context)
+
+purchase_order()
+
 
 class procurement_order(osv.osv):
-    _inherit = 'procurement.order'    
+    _inherit = 'procurement.order'
 
     def make_po(self, cr, uid, ids, context=None):
         """ Make purchase order from procurement
         @return: New created Purchase Orders procurement wise
         """
-               
+
         res = {}
         if context is None:
             context = {}
@@ -45,6 +69,8 @@ class procurement_order(osv.osv):
         acc_pos_obj = self.pool.get('account.fiscal.position')
         po_obj = self.pool.get('purchase.order')
         po_line_obj = self.pool.get('purchase.order.line')
+        #Merge all PO in draft state
+        self.pool.get('purchase.order').merge_po(cr,uid,[],context=context)
         for procurement in self.browse(cr, uid, ids, context=context):
             res_id = procurement.move_id and procurement.move_id.id or False
             partner = procurement.product_id.seller_id # Taken Main Supplier of Product of Procurement.
@@ -67,7 +93,7 @@ class procurement_order(osv.osv):
             newdate = (newdate - relativedelta(days=company.po_lead)) - relativedelta(days=seller_delay)
 
             res_onchange = po_line_obj.product_id_change(cr, uid, ids, pricelist_id, procurement.product_id.id, qty, uom_id,
-                partner_id, time.strftime('%Y-%m-%d'), fiscal_position=fiscal_position, date_planned=datetime.now() + relativedelta(days=seller_delay or 0.0),
+                partner_id, time.strftime('%Y-%m-%d'), fiscal_position_id=fiscal_position, date_planned=datetime.now() + relativedelta(days=seller_delay or 0.0),
             name=procurement.name, price_unit=procurement.product_id.list_price, notes=procurement.product_id.description_purchase)
 
             #Passing partner_id to context for purchase order line integrity of Line name
