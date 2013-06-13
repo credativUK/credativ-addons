@@ -22,34 +22,34 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
                         <attribute name="colors">gray:original_done == True</attribute>
                     </xpath>
                     <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='product_id']" position="attributes">
-                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                        <attribute name="attrs">{'readonly': [('original_done', '=', True)]}</attribute>
                     </xpath>
                     <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='product_uom_qty']" position="attributes">
-                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                        <attribute name="attrs">{'readonly': [('original_done', '=', True)]}</attribute>
                     </xpath>
                     <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='product_uom']" position="attributes">
-                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                        <attribute name="attrs">{'readonly': [('original_done', '=', True)]}</attribute>
                     </xpath>
                     <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='product_packaging']" position="attributes">
-                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                        <attribute name="attrs">{'readonly': [('original_done', '=', True)]}</attribute>
                     </xpath>
                     <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='name']" position="attributes">
-                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                        <attribute name="attrs">{'readonly': [('original_done', '=', True)]}</attribute>
                     </xpath>
                     <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='price_unit']" position="attributes">
-                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                        <attribute name="attrs">{'readonly': [('original_done', '=', True)]}</attribute>
                     </xpath>
                     <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='discount']" position="attributes">
-                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                        <attribute name="attrs">{'readonly': [('original_done', '=', True)]}</attribute>
                     </xpath>
                     <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='type']" position="attributes">
-                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                        <attribute name="attrs">{'readonly': [('original_done', '=', True)]}</attribute>
                     </xpath>
                     <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='delay']" position="attributes">
-                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                        <attribute name="attrs">{'readonly': [('original_done', '=', True)]}</attribute>
                     </xpath>
                     <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page[@string='Order Line']/field[@name='tax_id']" position="attributes">
-                        <attribute name="attrs">{'readonly': ['|', ('state', '!=', 'draft'), ('layout_type','!=','article')]}</attribute>
+                        <attribute name="attrs">{'readonly': [('original_done', '=', True)]}</attribute>
                     </xpath>
                     <xpath expr="//field[@name='abstract_line_ids']/form/notebook/page/group[button/@string='Make Invoice']" position="attributes">
                         <attribute name="attrs">{'invisible': ['|', ('invoiced','=',True), ('parent.state', '=', 'draft')]}</attribute>
