@@ -48,14 +48,23 @@ class sale_order_claim(osv.osv):
     _name = 'sale.order.claim'
     _description = 'Claim against a sale order'
 
-    def _sum_items(self, cr, uid, sale_order_id, context=None):
+    def _item_lines(self, cr, uid, sale_order_id, context=None):
+        '''Returns all item lines of the given sale order; excludes shipping
+        and discount lines.
+        '''
         product_pool = self.pool.get('product.product')
         shipping_ids = product_pool.search(cr, uid, [('full_name', 'ilike', '%shipping%')], context=context)
+        discount_ids = product_pool.search(cr, uid, [('name', 'ilike', '%discount%')], context=context)
+        exclude_ids = list(set(shipping_ids) | set(discount_ids))
 
         ol_pool = self.pool.get('sale.order.line')
-        line_ids = ol_pool.search(cr, uid, [('order_id','=',sale_order_id),
-                                            ('product_id','not in',shipping_ids)], context=context)
-        return sum([ol['price_unit'] for ol in ol_pool.read(cr, uid, line_ids, ['price_unit'], context=context)])
+        return ol_pool.search(cr, uid, [('order_id','=',sale_order_id),
+                                        ('product_id','not in',exclude_ids)], context=context)
+
+    def _sum_items(self, cr, uid, sale_order_id, context=None):
+        ol_pool = self.pool.get('sale.order.line')
+        line_ids = self._item_lines(cr, uid, sale_order_id, context=context)
+        return sum([ol.price_unit * ol.product_uom_qty for ol in ol_pool.browse(cr, uid, line_ids, context=context)])
         
     def _get_items_total(self, cr, uid, ids, field_name, arg, context=None):
         return dict([(claim.id, self._sum_items(cr, uid, claim.sale_order_id.id, context=context))
@@ -69,7 +78,7 @@ class sale_order_claim(osv.osv):
         shipping_ids = ol_pool.search(cr, uid, [('order_id','=',sale_order_id),
                                                 ('product_id','in',shipping_ids)],
                                       context=context)
-        return sum([ol['price_unit'] for ol in ol_pool.read(cr, uid, shipping_ids, ['price_unit'], context=context)])
+        return sum([ol.price_subtotal for ol in ol_pool.browse(cr, uid, shipping_ids, context=context)])
         
     def _get_shipping_charge(self, cr, uid, ids, field_name, arg, context=None):
         return dict([(claim.id, self._sum_shipping(cr, uid, claim.sale_order_id.id, context=context))
@@ -77,9 +86,23 @@ class sale_order_claim(osv.osv):
 
     def _sum_discounts(self, cr, uid, sale_order_id, context=None):
         ol_pool = self.pool.get('sale.order.line')
-        line_ids = ol_pool.search(cr, uid, [('order_id','=',sale_order_id)], context=context)
-        return -sum([ol['price_unit'] * (ol['discount'] / 100.0)
-                     for ol in ol_pool.read(cr, uid, line_ids, ['price_unit', 'discount'], context=context)])
+        line_ids = self._item_lines(cr, uid, sale_order_id, context=context)
+
+        # sub_total * discount% gives a positive number; we swap the
+        # sign as we need a negative discount amount
+        line_discount = -sum([(ol.price_unit * ol.product_uom_qty * (ol.discount or 0.0) / 100.0)
+                              for ol in ol_pool.browse(cr, uid, line_ids, context=context)])
+
+        # now search for any discount products in the order
+        product_pool = self.pool.get('product.product')
+        discount_ids = product_pool.search(cr, uid, [('name', 'ilike', '%discount%')], context=context)
+
+        discount_lines = ol_pool.search(cr, uid, [('order_id','=',sale_order_id),
+                                                  ('product_id','in',discount_ids)], context=context)
+
+        # the discount products already have negative amounts, so no
+        # need to swap the sign
+        return line_discount + sum([ol.price_subtotal for ol in ol_pool.browse(cr, uid, discount_lines, context=context)])
         
     def _get_order_discount(self, cr, uid, ids, field_name, arg, context=None):
         return dict([(claim.id, self._sum_discounts(cr, uid, claim.sale_order_id.id, context=context))
@@ -97,7 +120,8 @@ class sale_order_claim(osv.osv):
             'sale.order',
             'Sale order',
             domain=[('state','not in',('draft','cancel'))],
-            required=True),
+            required=True,
+            ondelete='cascade'),
         'issue_model': fields.selection(
             selection=_issue_model_selection,
             string='Issue type',
@@ -214,7 +238,6 @@ class sale_order_claim(osv.osv):
         }
 
     def onchange_sale_order(self, cr, uid, ids, sale_order_id, order_issue_ids, context=None):
-        #res = self.reread_issues(cr, uid, ids, sale_order_id, order_issue_ids, context=None)
         so_pool = self.pool.get('sale.order')
         sale_order = so_pool.browse(cr, uid, sale_order_id, context=context)
         if sale_order:
@@ -306,6 +329,7 @@ class sale_order_issue(osv.osv):
             'sale.order.claim',
             string='Claim',
             required=True,
+            ondelete='cascade',
             oldname='claim_id'),
         'select': fields.boolean(
             'Select',

@@ -120,6 +120,24 @@ class sale_order_claim(osv.osv):
                                                                             context=context)[claim.id])
                      for claim in self.browse(cr, uid, ids, context=context)])
 
+    def _sum_compensation(self, cr, uid, ids, refund, voucher, issue_ids, context=None):
+        '''
+        Returns a tuple: the sum of the manual refund and all the refunds in the
+        given issues, and the sum of the given voucher and all the vouchers in the
+        given issues.
+        '''
+        return (refund + sum([issue[2].get('refund', 0.0) for issue in issue_ids if issue[0] in [0,1]]),
+                voucher + sum([issue[2].get('voucher', 0.0) for issue in issue_ids if issue[0] in [0,1]]))
+
+    def _enforce_max_compensation(self, cr, uid, ids, context=None):
+        '''Implements the constraint that refunds/voucher amount must not
+        exceed maximum refundable amount.
+        '''
+        for claim in self.browse(cr, uid, ids, context=context):
+            if claim.total_refund + claim.total_voucher > claim.max_refundable:
+                return False
+        return True
+
     def _draft_amounts(self, cr, uid, sale_order_id, order_issue_ids, context=None):
         '''
         This method calculates the previous, pending, and maximum
@@ -171,6 +189,7 @@ class sale_order_claim(osv.osv):
             string='Total refunded',
             readonly=True,
             store={
+                'sale.order.claim': (lambda self, cr, uid, ids, ctx: ids, ['refund'], 10),
                 'sale.order.issue': (_get_claims_from_issues , ['refund'], 10)
                 }),
         'total_voucher': fields.function(
@@ -179,6 +198,7 @@ class sale_order_claim(osv.osv):
             string='Total vouchers',
             readonly=True,
             store={
+                'sale.order.claim': (lambda self, cr, uid, ids, ctx: ids, ['voucher'], 10),
                 'sale.order.issue': (_get_claims_from_issues , ['voucher'], 10)
                 }),
         'prev_refund': fields.function(
@@ -221,6 +241,10 @@ class sale_order_claim(osv.osv):
             size=128),
         }
 
+    _constraints = [
+        (_enforce_max_compensation, 'Compensation amount exceeds maximum allowed for this order.', ['total_refund', 'total_voucher']),
+    ]
+
     def onchange_sale_order(self, cr, uid, ids, sale_order_id, order_issue_ids, context=None):
         res = super(sale_order_claim, self).onchange_sale_order(cr, uid, ids, sale_order_id, order_issue_ids, context=context)
 
@@ -254,7 +278,7 @@ class sale_order_claim(osv.osv):
 
         return res
 
-    def on_change_claim_refund(self, cr, uid, ids, refund, context=None):
+    def on_change_claim_refund(self, cr, uid, ids, refund, issue_ids=[], context=None):
         if not ids:
             return {'value': {'total_refund': refund}}
             
@@ -264,11 +288,22 @@ class sale_order_claim(osv.osv):
             id = ids
 
         claim = self.browse(cr, uid, id, context=context)
+        total_refund, _ = self._sum_compensation(cr, uid, ids, refund, 0.0, issue_ids, context=context)
+        total_refund = round(float(total_refund), 2)
+        max_refundable = self._max_refundable(cr, uid, id, 'max_refundable', None, context=None)[id]
+        max_refundable = round(float(max_refundable), 2)
 
-        return {'value': {'total_refund': self._total_refund(cr, uid, id, 'total_refund', None, context=None)[id] + refund,
-                          'max_refundable': self._max_refundable(cr, uid, id, 'max_refundable', None, context=None)[id] - refund}}
+        if total_refund > max_refundable:
+            return {'warning': {'title': 'Maximum refund',
+                                'message': 'The maximum refundable amount for this order is %.2f. The refund %.2f exceeds this maximum.' %\
+                                (max_refundable, total_refund)},
+                    'value': {'total_refund': total_refund,
+                              'max_refundable': max_refundable}}
 
-    def on_change_claim_voucher(self, cr, uid, ids, voucher, context=None):
+        return {'value': {'total_refund': total_refund,
+                          'max_refundable': max_refundable}}
+
+    def on_change_claim_voucher(self, cr, uid, ids, voucher, issue_ids=[], context=None):
         if not ids:
             return {'value': {'total_voucher': voucher}}
 
@@ -278,6 +313,17 @@ class sale_order_claim(osv.osv):
             id = ids
 
         claim = self.browse(cr, uid, id, context=context)
+        _, total_voucher = self._sum_compensation(cr, uid, ids, 0.0, voucher, issue_ids, context=context)
+        total_voucher = round(float(total_voucher), 2)
+        max_refundable = self._max_refundable(cr, uid, id, 'max_refundable', None, context=None)[id]
+        max_refundable = round(float(max_refundable), 2)
+
+        if total_voucher > max_refundable:
+            return {'warning': {'title': 'Maximum voucher',
+                                'message': 'The maximum refundable amount for this order is %0.2d. The voucher %0.2d exceeds this maximum.' %\
+                                (max_refundable, total_voucher)},
+                    'value': {'total_voucher': total_voucher,
+                              'max_refundable': max_refundable}}
 
         return {'value': {'total_voucher': self._total_voucher(cr, uid, id, field_name='total_voucher', arg=None, context=None)[id] + voucher,
                           'max_refundable': self._max_refundable(cr, uid, id, field_name='max_refundable', arg=None, context=None)[id] - voucher}}
@@ -402,7 +448,7 @@ class sale_order_issue(osv.osv):
             # otherwise, re-calculate the amounts from the sale order
             # and issues
             amounts = claim_pool._draft_amounts(cr, uid, sale_order_id, order_issue_ids, context=context)
-            total_refund = amounts['total_voucher']
+            total_voucher = amounts['total_voucher']
             max_refundable = amounts['max_refundable']
 
         return {'value': {'total_voucher': total_voucher + voucher,

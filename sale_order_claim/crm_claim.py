@@ -213,7 +213,8 @@ class crm_claim_line(osv.osv):
         #         string='Item'),
         'claim_id': fields.many2one(
             'crm.claim',
-            string='Claim'),
+            string='Claim',
+            ondelete='cascade'),
         'category': fields.many2one(
             'crm.claim.line.category',
             string='Category'),
