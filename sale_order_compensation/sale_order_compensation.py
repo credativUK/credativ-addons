@@ -400,6 +400,18 @@ class sale_order_issue(osv.osv):
                                         claim_state=('processed',),
                                         context=context)
 
+    def _max_refundable(self, cr, uid, ids, field_name, args, context=None):
+        raise NotImplementedError('sale_order_issue._max_refundable must be provided for derived classes.')
+
+    def _sum_compensation(self, cr, uid, ids, refund, voucher, issue_ids, context=None):
+        '''
+        Returns a tuple: the sum of the manual refund and all the refunds in the
+        given issues, and the sum of the given voucher and all the vouchers in the
+        given issues.
+        '''
+        return (refund + sum([issue[2].get('refund', 0.0) for issue in issue_ids if issue[0] in [0,1]]),
+                voucher + sum([issue[2].get('voucher', 0.0) for issue in issue_ids if issue[0] in [0,1]]))
+
     _columns = {
         'refund': fields.float(
             'Refund',
@@ -412,47 +424,62 @@ class sale_order_issue(osv.osv):
             type='float',
             string='Compensated',
             readonly=True),
+        'max_refundable': fields.function(
+            _max_refundable,
+            type='float',
+            string='Maximum refund',
+            readonly=True),
         }
 
-    def on_change_refund(self, cr, uid, ids, refund, order_issue_ids, order_claim_id, sale_order_id, context=None):
+    def on_change_refund(self, cr, uid, ids, refund, order_issue_ids, context=None):
         if not ids:
             return {'value': {'total_refund': refund}}
 
-        claim_pool = self.pool.get('sale.order.claim')
-        if claim_pool.exists(cr, uid, order_claim_id, context=context):
-            # if the given claim exists use its function fields to get
-            # the amounts
-            total_refund = claim_pool._total_refund(cr, uid, order_claim_id, field_name='total_refund', arg=None, context=None)[order_claim_id]
-            max_refundable = claim_pool._max_refundable(cr, uid, order_claim_id, field_name='max_refundable', arg=None, context=None)[order_claim_id]
-        else:
-            # otherwise, re-calculate the amounts from the sale order
-            # and issues
-            amounts = claim_pool._draft_amounts(cr, uid, sale_order_id, order_issue_ids, context=context)
-            total_refund = amounts['total_refund']
-            max_refundable = amounts['max_refundable']
+        if isinstance(ids, (list, tuple)):
+            id = ids[0]
+        elif isinstance(ids, (int, long)):
+            id = ids
 
-        return {'value': {'total_refund': total_refund + refund,
-                          'max_refundable': max_refundable - refund}}
+        issue = self.browse(cr, uid, id, context=context)
+        refund, _ = self._sum_compensation(cr, uid, id, refund, 0.0, order_issue_ids, context=context)
+        refund = round(float(refund), 2)
 
-    def on_change_voucher(self, cr, uid, ids, voucher, order_issue_ids, order_claim_id, sale_order_id, context=None):
+        import pdb; pdb.set_trace()
+
+        if refund > round(float(issue.order_claim_id.max_refundable), 2):
+            return {'warning': {'title': 'Maximum compensation',
+                                'message': 'The maximum refundable amount for this order is %.2f. The refund %.2f exceeds this maximum.' %\
+                                (round(float(issue.order_claim_id.max_refundable), 2), refund)}}
+        if refund > round(float(issue.max_refundable), 2):
+            return {'warning': {'title': 'Maximum compensation',
+                                'message': 'The maximum refundable amount for this item is %.2f. The refund %.2f exceeds this maximum.' %\
+                                (round(float(issue.max_refundable), 2), refund)}}
+
+        return {'value': {'total_refund': issue.order_claim_id.total_refund + refund}}
+
+    def on_change_voucher(self, cr, uid, ids, voucher, order_issue_ids, context=None):
         if not ids:
             return {'value': {'total_voucher': voucher}}
 
-        claim_pool = self.pool.get('sale.order.claim')
-        if claim_pool.exists(cr, uid, order_claim_id, context=context):
-            # if the given claim exists use its function fields to get
-            # the amounts
-            total_voucher = claim_pool._total_voucher(cr, uid, order_claim_id, field_name='total_voucher', arg=None, context=None)[order_claim_id]
-            max_refundable = claim_pool._max_refundable(cr, uid, order_claim_id, field_name='max_refundable', arg=None, context=None)[order_claim_id]
-        else:
-            # otherwise, re-calculate the amounts from the sale order
-            # and issues
-            amounts = claim_pool._draft_amounts(cr, uid, sale_order_id, order_issue_ids, context=context)
-            total_voucher = amounts['total_voucher']
-            max_refundable = amounts['max_refundable']
+        if isinstance(ids, (list, tuple)):
+            id = ids[0]
+        elif isinstance(ids, (int, long)):
+            id = ids
 
-        return {'value': {'total_voucher': total_voucher + voucher,
-                          'max_refundable': max_refundable - voucher}}
+        issue = self.browse(cr, uid, id, context=context)
+        _, voucher = self._sum_compensation(cr, uid, id, 0.0, voucher, order_issue_ids, context=context)
+        voucher = round(float(voucher), 2)
+
+        if voucher > round(float(issue.order_claim_id.max_refundable), 2):
+            return {'warning': {'title': 'Maximum compensation',
+                                'message': 'The maximum refundable amount for this order is %.2f. The voucher %.2f exceeds this maximum.' %\
+                                (round(float(issue.order_claim_id.max_refundable), 2), voucher)}}
+        if voucher > round(float(issue.max_refundable), 2):
+            return {'warning': {'title': 'Maximum compensation',
+                                'message': 'The maximum refundable amount for this item is %.2f. The voucher %.2f exceeds this maximum.' %\
+                                (round(float(issue.max_refundable), 2), voucher)}}
+
+        return {'value': {'total_voucher': issue.order_claim_id.total_voucher + voucher}}
 
 sale_order_issue()
 
