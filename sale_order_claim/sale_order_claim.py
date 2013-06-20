@@ -223,8 +223,8 @@ class sale_order_claim(osv.osv):
             'order_claim_id',
             string='Claim Issues',
             oldname='claim_line_ids',
-            readonly=True,
-            states={'draft': [('readonly', False)]}),
+            states={'processed':[('readonly',True)],
+                    'cancelled':[('readonly',True)]}),
         }
 
     _defaults = {
