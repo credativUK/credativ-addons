@@ -26,6 +26,26 @@
             </field>
         </record>
 
+        <!-- sale.order.issue search view -->
+        <record model="ir.ui.view" id="view_sale_order_issue_search">
+            <field name="name">sale.order.issue.search</field>
+            <field name="model">sale.order.issue</field>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <search string="Search sale order issues">
+                    <group col="10" colspan="5">
+                        <field name="name" string="Issue" />
+                        <field name="category" />
+                        <field name="reason" />
+                    </group>
+                    <newline />
+                    <group expand="0" string="Group by..." colspan="4" col="4" groups="base.group_extended">
+                        <filter string="Category" icon="terp-stage" domain="[]" context="{'group_by': 'category'}" />
+                    </group>
+                </search>
+            </field>
+        </record>
+        
         <!-- sale.order.claim form view; although the model inherits
              from crm.claim, this form view will not inherit from
              crm.claim's form views -->
@@ -207,6 +227,21 @@
             </field>
         </record>
 
+        <record model="ir.ui.view" id="view_sale_order_issue_tree">
+            <field name="name">sale.order.issue.tree</field>
+            <field name="model">sale.order.issue</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Sale Order Issues" colors="blue:state=='processed'">
+                    <field name="name" string="Issue" />
+                    <field name="category" />
+                    <field name="reason" />
+                    <field name="voucher" />
+                    <field name="refund" />
+                </tree>
+            </field>
+        </record>
+
         <!-- Actions for sale.order.claim views -->
 
         <record id="action_sale_order_claim_tree" model="ir.actions.act_window">
@@ -230,6 +265,16 @@
             <field name="search_view_id" ref="view_sale_order_claim_search" />
         </record>
 
+        <record id="action_sale_order_issue_tree" model="ir.actions.act_window">
+            <field name="name">Sale Order Issues</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">sale.order.issue</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_sale_order_issue_tree" />
+            <field name="search_view_id" ref="view_sale_order_issue_search" />
+        </record>
+
         <!-- Menu for sale.order.claim views -->
 
         <menuitem
@@ -237,6 +282,11 @@
             id="menu_sale_order_claim"
             parent="base.menu_aftersale" />
 
+        <menuitem
+            action="action_sale_order_issue_tree"
+            id="menu_sale_order_issue"
+            parent="base.menu_aftersale" />
+            
         <!-- Add Claims item to right hand menu -->
 
 	<act_window
