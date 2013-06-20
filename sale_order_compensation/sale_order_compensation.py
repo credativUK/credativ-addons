@@ -110,12 +110,12 @@ class sale_order_claim(osv.osv):
     def _max_refundable(self, cr, uid, ids, field_name, arg, context=None):
         '''Calculates the maximum that may be refunded against this
         sale.order; defined as the difference between the sale.order
-        total and the sum of previous and pending refunds and
-        vouchers'''
+        total and the sum of previous and pending refunds (and not
+        vouchers)'''
         if isinstance(ids, (int, long)):
             ids = [ids]
         return dict([(claim.id, claim.order_total - self._prev_compensation(cr, uid, claim.id,
-                                                                            compensation_type=['refund','voucher'],
+                                                                            compensation_type=['refund'],
                                                                             claim_state=('open-vouchers','open-refunds','processed'),
                                                                             context=context)[claim.id])
                      for claim in self.browse(cr, uid, ids, context=context)])
@@ -174,7 +174,7 @@ class sale_order_claim(osv.osv):
             'pending_voucher':
                 so_total_compensation(sale_order_id, ['voucher'], claim_state=('open-vouchers','open-refunds')),
             'max_refundable':
-                sale_order.amount_total - so_total_compensation(sale_order_id, ['refund','voucher'],
+                sale_order.amount_total - so_total_compensation(sale_order_id, ['refund'],
                                                                 claim_state=('open-vouchers','open-refunds','processed')),
             }
 
