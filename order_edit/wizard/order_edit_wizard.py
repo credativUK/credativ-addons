@@ -78,6 +78,7 @@ class sale_order_wizard_order_edit(osv.osv_memory):
         sale_obj = self.pool.get('sale.order')
 
         for data in self.browse(cr, uid, ids, context=context):
+            import pdb; pdb.set_trace()
             new_id = sale_obj.copy_for_edit(cr, uid, data.sale_order_id.id, context=context)
 
         return {

@@ -35,7 +35,7 @@ import util
 
 class order_edit(object):
 
-    def _consolidate_edit_lines(self, cr, uid, original_ids, order, context):
+    def _consolidate_edit_lines(self, cr, uid, original_ids, order, context=None):
         """
         Given an original order, and an edit order:
          * Check that no done lines are reduced.
@@ -45,7 +45,7 @@ class order_edit(object):
            - one for unshipped items
          * Return a list of done lines.
         """
-        original = self.browse(cr, uid, original_ids[0], context)
+        original = self.browse(cr, uid, original_ids[0], context=context)
 
         done_totals = {}
         moves = []
@@ -83,12 +83,12 @@ class order_edit(object):
             if self._name == 'purchase.order':
                 new_vals[line.product_id.id].update({'date_planned': line.date_planned})
             if self._name == 'sale.order':
-                line.button_cancel()
-            line.unlink()
+                line.button_cancel(cr, uid, [line.id], context=context)
+            line.unlink(cr, uid, [line.id], context=context)
 
         def add_product_order_line(product_id, qty):
             line_obj = self.pool.get(order.order_line[0]._name)
-            product = self.pool.get('product.product').browse(cr, uid, product_id)
+            product = self.pool.get('product.product').browse(cr, uid, product_id, context=context)
 
             #type: make_to_stock is default in sale.order.line
             vals = {'order_id': order.id,
@@ -102,9 +102,9 @@ class order_edit(object):
 
             vals.update(new_vals[product.id])
 
-            line_id = line_obj.create(cr, uid, vals)
+            line_id = line_obj.create(cr, uid, vals, context=context)
             if self._name == 'sale.order':
-                line_obj.browse(cr, uid, line_id).button_confirm()
+                line_obj.browse(cr, uid, line_id, context=context).button_confirm()
             return line_id
 
         line_moves = {}
@@ -126,10 +126,10 @@ class order_edit(object):
         # need to change confirm button to run an action that warns user of the available move
         # and then trigger the workflow to continue the current behaviour
         line_moves = None
-        for order in self.browse(cr, uid, ids, context):
+        for order in self.browse(cr, uid, ids, context=context):
             original_ids = None
             if order.origin:
-                original_ids = self.search(cr, uid, [('name', '=', order.origin)], context)
+                original_ids = self.search(cr, uid, [('name', '=', order.origin)], context=context)
             if original_ids:
                 line_moves = self._consolidate_edit_lines(cr, uid, original_ids,
                                                           order, context)
@@ -145,7 +145,7 @@ class order_edit(object):
                 id_ = id[0]
         except TypeError:
             pass
-        order = self.browse(cr, uid, id_, context)
+        order = self.browse(cr, uid, id_, context=context)
 
         order_states = {
             'sale.order':     ('progress','manual'),
@@ -155,15 +155,15 @@ class order_edit(object):
         if order.state in order_states[self._name]:
             new_id = self.copy(cr, uid, id_, context=context)
             original_order_name = re.sub('-edit[0-9]+$', '', order.name)
-            similar_name_ids = self.search(cr, uid, [('name', 'like', original_order_name + '%')])
-            similar_names = set(similar_order['name'] for similar_order in self.read(cr, uid, similar_name_ids, ['name']))
+            similar_name_ids = self.search(cr, uid, [('name', 'like', original_order_name + '%')], context=context)
+            similar_names = set(similar_order['name'] for similar_order in self.read(cr, uid, similar_name_ids, ['name'], context=context))
             for i in itertools.count(1):
                 new_name = '%s-edit%d' % (original_order_name, i)
                 if new_name not in similar_names:
                     break
             vals = {'name': new_name, 'origin': order.name}
 
-            self.write(cr, uid, new_id, vals)
+            self.write(cr, uid, new_id, vals, context=context)
 
             if self._name == 'purchase.order':
                 wf_service = netsvc.LocalService('workflow')
@@ -229,7 +229,7 @@ class sale_order(osv.osv, order_edit):
                     _('Could not cancel sale order'),
                     _('There was a problem cancelling the associated stock moves.'))
 
-    def _refund_invoices(self, cr, uid, sale, invoices, refund_account_id):
+    def _refund_invoices(self, cr, uid, sale, invoices, refund_account_id, context=None):
         invoice_obj = self.pool.get('account.invoice')
         wf_service = netsvc.LocalService("workflow")
 
@@ -237,7 +237,7 @@ class sale_order(osv.osv, order_edit):
             if inv.type != 'out_invoice':
                 continue
             # Generate refund
-            refund_journal_ids = self.pool.get('account.journal').search(cr, uid, [('type','=','sale')])
+            refund_journal_ids = self.pool.get('account.journal').search(cr, uid, [('type','=','sale')], context=context)
             if refund_journal_ids:
                 refund_journal_id = refund_journal_ids[0]
             else:
@@ -246,14 +246,14 @@ class sale_order(osv.osv, order_edit):
             # Confirm invoice
             invoice_obj.button_compute(cr, uid, [refund_id])
             wf_service.trg_validate(uid, 'account.invoice', refund_id, 'invoice_open', cr)
-            refund = invoice_obj.browse(cr, uid, refund_id)
+            refund = invoice_obj.browse(cr, uid, refund_id, context=context)
             if inv.payment_ids:
                 # Generate refund accounting move
                 payment = inv.payment_ids[0]
                 refund_account_id = payment.account_id.id
                 refund_journal_id = payment.journal_id.id
             else:
-                ids = self.pool.get('account.journal').search(cr, uid, [('default_debit_account_id','=',refund_account_id)])
+                ids = self.pool.get('account.journal').search(cr, uid, [('default_debit_account_id','=',refund_account_id)], context=context)
                 if not ids:
                     raise osv.except_osv(
                         _('Could not cancel sale order'),
@@ -266,13 +266,13 @@ class sale_order(osv.osv, order_edit):
             break
 
     def refund(self, cr, uid, ids, description, cancel_assigned=False, accept_done=False, return_cois=False, context=None):
-        for sale in self.browse(cr, uid, ids, context):
+        for sale in self.browse(cr, uid, ids, context=context):
             self._refund_check_order(sale, cancel_assigned, accept_done)
             invoices = self._check_invoices(sale)
             self._cancel_pickings(cr, uid, sale, accept_done)
             if invoices:
                 refund_account_id = self._check_refund_account(sale)
-                self._refund_invoices(cr, uid, sale, invoices, refund_account_id)
+                self._refund_invoices(cr, uid, sale, invoices, refund_account_id, context=context)
             event_vals = {'subject': 'Sale Order Refunded: %s' % sale.name,
                       'body_text': 'Sale Order Refunded: %s' % sale.name,
                       'partner_id': sale.partner_id.id,
@@ -282,11 +282,11 @@ class sale_order(osv.osv, order_edit):
                       'user_id': uid,
                       'email_from': 'OpenERP <openerp@localhost>'}
             self.pool.get('mail.message').create(cr, uid, event_vals, context=context)
-            self.pool.get('sale.order.line').write(cr, uid, [line.id for line in sale.order_line], {'state': 'cancel'})
-            self.write(cr, uid, [sale.id], {'state': 'cancel'})
+            self.pool.get('sale.order.line').write(cr, uid, [line.id for line in sale.order_line], {'state': 'cancel'}, context=context)
+            self.write(cr, uid, [sale.id], {'state': 'cancel'}, context=context)
             util.log(self, 'Cancelled sale order %s' % sale.name, logging.INFO)
 
-    def _refund(self, cr, uid, original, order, context):
+    def _refund(self, cr, uid, original, order, context=None):
         acc_move_line_obj = self.pool.get('account.move.line')
         
         # 1. Grab old invoice and payments
@@ -305,9 +305,9 @@ class sale_order(osv.osv, order_edit):
             payments = [p for p in invoice_old.payment_ids]
             payment_ids = [p.id for p in payments]
             if payment_ids:
-                p_acc_id = acc_move_line_obj.browse(cr, uid, payment_ids[0]).account_id.id
+                p_acc_id = acc_move_line_obj.browse(cr, uid, payment_ids[0], context=context).account_id.id
         
-                recs = acc_move_line_obj.read(cr, uid, payment_ids, ['reconcile_id','reconcile_partial_id'])
+                recs = acc_move_line_obj.read(cr, uid, payment_ids, ['reconcile_id','reconcile_partial_id'], context=context)
                 unlink_ids = []
                 full_recs = filter(lambda x: x['reconcile_id'], recs)
                 rec_ids = [rec['reconcile_id'][0] for rec in full_recs]
@@ -316,15 +316,15 @@ class sale_order(osv.osv, order_edit):
                 unlink_ids += rec_ids
                 unlink_ids += part_rec_ids
                 if len(unlink_ids):
-                    self.pool.get('account.move.reconcile').unlink(cr, uid, unlink_ids)
+                    self.pool.get('account.move.reconcile').unlink(cr, uid, unlink_ids, context=context)
         
         # 3. Refund with credit note and reconcile with origional invoice
-        self.refund(cr, uid, [original.id], 'Edit Refund:%s' % original.name, context=context, accept_done=True, cancel_assigned=True)
+        self.refund(cr, uid, [original.id], 'Edit Refund:%s' % original.name, context=context, accept_done=True, cancel_assigned=True, context=context)
 
         if has_invoice:
             # 4. Create a new invoice and find difference between this and existing payment(s)
             payment_credit = reduce(lambda x,y: x+(y.credit-y.debit), payments, 0.0)
-            invoice_id = self.action_invoice_create(cr, uid, [order.id])
+            invoice_id = self.action_invoice_create(cr, uid, [order.id], context=context)
             invoice = self.pool.get('account.invoice').browse(cr, uid, [invoice_id], context=context)[0]
             wkf_service = netsvc.LocalService('workflow')
             wkf_service.trg_validate(uid, 'account.invoice', invoice.id, 'invoice_open', cr)
@@ -334,8 +334,8 @@ class sale_order(osv.osv, order_edit):
             
             # 5. If difference then generate a payment for the difference
             if payment_diff:
-                voucher_id = self.generate_payment_with_pay_code(cr, uid, 'paypal_standard', order.partner_id.id, payment_diff, order.name, order.name, order.date_order, True, context)
-                voucher = self.pool.get('account.voucher').browse(cr, uid, voucher_id)
+                voucher_id = self.generate_payment_with_pay_code(cr, uid, 'paypal_standard', order.partner_id.id, payment_diff, order.name, order.name, order.date_order, True, context=context)
+                voucher = self.pool.get('account.voucher').browse(cr, uid, voucher_id, context=context)
                 if payment_ids:
                     payment_ids.extend([pmnt.id for pmnt in voucher.move_id.line_id if pmnt.account_id.id == p_acc_id])
             
@@ -343,18 +343,18 @@ class sale_order(osv.osv, order_edit):
             if payment_ids:
                 acc_move_line_obj.reconcile(cr, uid, payment_ids, context=context)
 
-    def _unreconcile_refund_and_cancel(self, cr, uid, original_id, order, context):
+    def _unreconcile_refund_and_cancel(self, cr, uid, original_id, order, context=None):
         if context == None:
             context = {}
-        original = self.browse(cr, uid, original_id, context)
+        original = self.browse(cr, uid, original_id, context=context)
         try:
-            self._refund(cr, uid, original, order, context)
+            self._refund(cr, uid, original, order, context=context)
         except osv.except_osv, e:
             raise osv.except_osv('Error while refunding %s' % original.name, e.value)
 
-    def get_edit_original(self, cr, uid, order, context):
+    def get_edit_original(self, cr, uid, order, context=None):
         if order.origin:
-            original_ids = self.search(cr, uid, [('name', '=', order.origin)], context)
+            original_ids = self.search(cr, uid, [('name', '=', order.origin)], context=context)
             if len(original_ids) == 1:
                 return original_ids[0]
             elif len(original_ids) == 0:
@@ -372,15 +372,15 @@ class sale_order(osv.osv, order_edit):
 #        line_moves = self.check_consolidation(cr, uid, ids, context)
 
         # -    action: run original action
-        res = super(sale_order, self).action_ship_create(cr, uid, ids, context)
+        res = super(sale_order, self).action_ship_create(cr, uid, ids, context=context)
 
 #        # - post-action hook: replace new stuff generated in the action with old stuff
 #        self._fixup_created_picking(cr, uid, line_moves, context)
 
-        for order in self.browse(cr, uid, ids, context):
-            original_id = self.get_edit_original(cr, uid, order, context) 
+        for order in self.browse(cr, uid, ids, context=context):
+            original_id = self.get_edit_original(cr, uid, order, context=context)
             if original_id:
-                self._unreconcile_refund_and_cancel(cr, uid, original_id, order, context)
+                self._unreconcile_refund_and_cancel(cr, uid, original_id, order, context=context)
             
         return res
     
@@ -388,7 +388,7 @@ class sale_order(osv.osv, order_edit):
         if lines:
             for line in lines:
                 if line[0] == 2:
-                    sol = self.pool.get('sale.order.line').browse(cr, uid, line[1], context)
+                    sol = self.pool.get('sale.order.line').browse(cr, uid, line[1], context=context)
                     if sol.order_edit_original_line_id:
                         raise osv.except_osv("Can't delete line", 'Deleting existing lines disabled')
         return {}
@@ -409,7 +409,7 @@ class sale_order_line(osv.osv):
             if not default:
                 default = {}
             default['order_edit_original_line_id'] = id_
-        return super(sale_order_line, self).copy_data(cr, uid, id_, default, context)
+        return super(sale_order_line, self).copy_data(cr, uid, id_, default, context=context)
 
 
 sale_order_line()
