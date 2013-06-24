@@ -34,6 +34,19 @@
             <field name="arch" type="xml">
                 <search string="Search sale order issues">
                     <group col="10" colspan="5">
+                        <filter name="state"
+                                string="Draft"
+                                icon="terp-document-new"
+                                domain="[('state','=','draft')]" />
+                        <filter name="state"
+                                string="Confirmed"
+                                icon="terp-check"
+                                domain="[('state','=','confirm')]" />
+                        <filter name="state"
+                                string="Cancelled"
+                                icon="gtk-cancel"
+                                domain="[('state','=','cancel')]" />
+                        <separator orientation="vertical" />
                         <field name="name" string="Issue" />
                         <field name="category" />
                         <field name="reason" />
@@ -233,11 +246,12 @@
             <field name="type">tree</field>
             <field name="arch" type="xml">
                 <tree string="Sale Order Issues" colors="blue:state=='processed'">
-                    <field name="name" string="Issue" />
+                    <field name="order_claim_id" string="Claim" />
                     <field name="category" />
                     <field name="reason" />
                     <field name="voucher" />
                     <field name="refund" />
+                    <field name="state" />
                 </tree>
             </field>
         </record>
