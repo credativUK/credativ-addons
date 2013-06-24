@@ -140,7 +140,7 @@ class sale_order(osv.osv):
                 moves_done = []
                 moves_other = []
                 for move in line.original_line_id.move_ids:
-                    if move.state in ('done', 'assigned'):
+                    if move.state in ('done'):
                         moves_done.append(move)
                     else:
                         moves_other.append(move)
