@@ -23,6 +23,7 @@ from osv import osv, fields
 from tools.misc import DEFAULT_SERVER_DATETIME_FORMAT
 import time
 import traceback
+import ast
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -51,6 +52,18 @@ class deferred_action(osv.osv):
             size=128,
             required=True,
             help='This is the name of the method which defines the action to be managed. Typically, such methods begin "action_".'),
+        'commencement_state': fields.char(
+            'Commencement state',
+            size=64,
+            help='The resource on which the deferred action is running will have its state changed to this value when the deferred action starts.'),
+        'exception_state': fields.char(
+            'Exception state',
+            size=64,
+            help='The resource on which the deferred action is running will have its state changed to this value if any phase of the deferred action fails.'),
+        'completion_state': fields.char(
+            'Completion state',
+            size=64,
+            help='The resource on which the deferred action is running will have its state changed to this value once all the phases have completed successfully.'),
         'start_message': fields.text(
             'Start message',
             help='This text is displayed in a dialoge box when the action is initiated. Please use this message to advise the user that the action is being carried out in the background and, if you have configured it, that email notification will follow once the action has completed.'),
@@ -60,6 +73,9 @@ class deferred_action(osv.osv):
         'queue_limit_message': fields.text(
             'Queue limit message',
             help='This text is displayed if a user attempts to start a deferred action when the maximum number of queued actions are already in progress.'),
+        'max_retries': fields.integer(
+            'Maximum retry attempts',
+            help='Determines how many times this deferred action will be retried if failures are encountered.'),
         'phases': fields.one2many(
             'deferred.action.phase',
             'deferred_action_id',
@@ -100,23 +116,35 @@ class deferred_action(osv.osv):
         else:
             id = ids
 
-        instance_model = self.pool.get('deferred.action.instance')
+        instance_pool = self.pool.get('deferred.action.instance')
 
         action = self.browse(cr, uid, id, context=context)
-        instance_id = instance_model.create(cr, uid, {'deferred_action_id': action.id,
-                                                      'start_uid': uid,
-                                                      'action_args': action_args,
-                                                      'res_ids': res_ids},
-                                            context=context)
-        import pdb; pdb.set_trace()
+
+        # FIXME Check for exception-state instance and call retry;
+        # possibly dependent on uid?
+        failed_instance_ids =\
+            instance_pool.search(cr, uid, [('deferred_action_id','=',action.id),
+                                           ('start_uid','=',uid),
+                                           ('state','=','exception')], context=context)
+        if failed_instance_ids:
+            instance_pool.retry_failed_resources(cr, uid, failed_instance_ids, context=context)
+            return {'warning': {'title': 'Retrying',
+                                'message': 'Retrying failed action in background.'}}
+
+        instance_id = instance_pool.create(cr, uid, {'deferred_action_id': action.id,
+                                                     'start_uid': uid,
+                                                     'action_args': action_args,
+                                                     'res_ids': res_ids,
+                                                     'start_context': context},
+                                           context=context)
+        instance_info = {'action_name': action.name,
+                         'action_model': action.model.model}
         if instance_id:
-            instance_model.start(cr, uid, instance_id, context=context)
-            instance = instance_model.browse(cr, uid, instance_id, context=context)
-            instance_info = {'name': action.name,
-                             'model': action.model,
-                             'start_time': instance.start_time,
-                             'owner_name': instance.start_uid.name,
-                             'owner_email': instance.start_uid.user_email}
+            instance_pool.start(cr, uid, instance_id, context=context)
+            instance = instance_pool.browse(cr, uid, instance_id, context=context)
+            instance_info.update({'start_time': instance.start_time,
+                                  'owner_name': instance.start_uid.name,
+                                  'owner_email': instance.start_uid.user_email})
             return {'warning': {'title': 'Action started in background',
                                 'message': action.start_message and action.start_message % instance_info or\
                                 'The action "%(action_name)s" has been started in the background on the model "%(action_model)s".' % instance_info}}
@@ -163,14 +191,12 @@ class deferred_action_phase(osv.osv):
 
         phase = self.browse(cr, uid, id, context=context)
 
-        cron_pool = self.pool.get('ir.cron')
-
-        cron_task = cron_pool.browse(cr, uid, phase.cron_id, context=context)
+        cron_task = phase.cron_id
         if not cron_task:
             raise osv.except_osv('Deferred action phase error',
                                  'The phase "%s" of the deferred action "%s" on the model "%s" does not have an associated cron task. '
                                  'A cron entry should have been created when the phase was created.' %\
-                                 (phase.name, phase.deferred_action_id.name, phase.deferred_action_id.model.name))
+                                 (phase.id, phase.deferred_action_id.name, phase.deferred_action_id.model.model))
 
         return cron_task
 
@@ -185,13 +211,13 @@ class deferred_action_phase(osv.osv):
         phase_instance_pool = self.pool.get('deferred.action.phase.instance')
 
         phase_instance_ids = phase_instance_pool.search(cr, uid, [('phase_id','=',phase.id),
-                                                                  ('action_instance','=',action_instance_id),
+                                                                  ('action_instance_id','=',action_instance_id),
                                                                   ('state','in',states)],
                                                         context=context)
         if len(phase_instance_ids) > 1:
             raise osv.except_osv('Integrity Error',
                                  'Found multiple phase instances for phase "%s" (in "%s" state) of deferred action "%s" (instance #%s) on model "%s"' %\
-                                 (phase.name, states, phase.deferred_action_id.name, action_instance_id, phase.deferred_action_id.model.name))
+                                 (phase.id, states, phase.deferred_action_id.name, action_instance_id, phase.deferred_action_id.model.model))
 
         return phase_instance_pool.browse(cr, uid, phase_instance_ids[0], context=context)
 
@@ -208,17 +234,22 @@ class deferred_action_phase(osv.osv):
         res = {}
         phase = self.browse(cr, uid, id, context=context)
 
+        context['deferred_action'] = True
+        context['deferred_action_id'] = phase.deferred_action_id.id
+        context['deferred_action_phase_id'] = phase.id
+        context['deferred_action_instance_id'] = action_instance_id
+
         if phase.proc_type == 'method':
             model = self.pool.get(phase.deferred_action_id.model)
             if not model:
-                raise osv.except_osv('No such model "%s"' % (phase.deferred_action_id.model.name,),
+                raise osv.except_osv('No such model "%s"' % (phase.deferred_action_id.model.model,),
                                      'The deferred action "%s" attempted to call the method %s on %s, but this model does not exist.' %\
-                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.name, phase.method))
+                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.model, phase.method))
 
             if not hasattr(model, phase.method):
                 raise osv.except_osv('No such method "%s.%s"' % (phase.deferred_action_id.model, phase.method),
                                      'The deferred action "%s" attempted to call the method %s on %s, but this method does not exist.' %\
-                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.name, phase.method))
+                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.model, phase.method))
             method = getattr(model, phase.method)
             try:
                 res['res'] = method(model, cr, uid, res_ids, context=context)
@@ -226,6 +257,7 @@ class deferred_action_phase(osv.osv):
             except Exception:
                 res['completed'] = False
                 res['error'] = traceback.format_exc()
+                # FIXME What if only some resources fail?
 
         elif phase.proc_type == 'fnct':
             try:
@@ -257,14 +289,14 @@ class deferred_action_phase(osv.osv):
         if phase.verify_type == 'method':
             model = self.pool.get(phase.deferred_action_id.model)
             if not model:
-                raise osv.except_osv('No such model "%s"' % (phase.deferred_action_id.model.name,),
+                raise osv.except_osv('No such model "%s"' % (phase.deferred_action_id.model.model,),
                                      'The deferred action "%s" verification attempted to call the method %s on %s, but this model does not exist.' %\
-                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.name, phase.method))
+                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.model, phase.method))
 
             if not hasattr(model, phase.method):
-                raise osv.except_osv('No such method "%s.%s"' % (phase.deferred_action_id.model.name, phase.method),
+                raise osv.except_osv('No such method "%s.%s"' % (phase.deferred_action_id.model.model, phase.method),
                                      'The deferred action "%s" verification attempted to call the method %s on %s, but this method does not exist.' %\
-                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.name, phase.method))
+                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.model, phase.method))
 
             verify_method = getattr(model, phase.verify_method)
             res['success'] = verify_method(model, cr, uid, proc_res, context=context)
@@ -325,18 +357,30 @@ class deferred_action_phase(osv.osv):
             res[phase.id] = self._exec_proc(cr, uid, phase.id, next_res_ids, context=context)
 
             if res[phase.id]['completed']:
-                # flag the phase instance as 'finished'
-                phase_instance_pool = self.pool.get('deferred.action.phase.instance')
-                instance_id = phase_instance_pool.search(cr, uid, [('action_instance','=',action_instance_id),
-                                                                   ('phase_id','=',phase.id)], context=context)
-                phase_instance_pool.write(cr, uid, instance_id, {'state': 'finished'}, context=context)
-
                 # verify the procedure's result
                 res[phase.id].update(self._verify_proc(cr, uid, phase.id, action_instance_id, res[phase.id]['res'], context=context))
-
             else:
                 # if the phase did not complete, it cannot succeed.
                 res[phase.id]['success'] = False
+
+            # update the phase instance state
+            phase_instance_pool = self.pool.get('deferred.action.phase.instance')
+            instance_id = phase_instance_pool.search(cr, uid, [('action_instance_id','=',action_instance_id),
+                                                               ('phase_id','=',phase.id)], context=context)
+            phase_instance_pool.write(cr, uid, instance_id, {'state': 'finished'}, context=context)
+
+            # store any failed resources
+            if not res[phase.id]['success']:
+                log_pool = self.pool.get('deferred.action.failed.resource')
+                for r in next_res_ids:
+                    log_pool.create(cr, uid, {'phase_id': phase.id,
+                                              'action_instance_id': action_instance_id,
+                                              'res_id': r,
+                                              'failure_time': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
+                                              'traceback': res[phase.id]['error']},
+                                    context=context)
+
+                failed_res_ids = next_res_ids
 
             # notify the owner
             self._notify_owner(cr, uid, phase.id, action_instance_id, res[phase.id], context=context)
@@ -346,10 +390,17 @@ class deferred_action_phase(osv.osv):
             if phase.usage == 'iteration' and phase.step_size:
                 remaining_res_ids = res_ids[phase.step_size:]
                 if remaining_res_ids:
-                    self.iterate(cr, uid, [phase.id], action_instance_id, remaining_res_ids, context=None)
+                    if phase.iteration_type == 'scheduled':
+                        self.iterate_scheduled(cr, uid, [phase.id], action_instance_id, remaining_res_ids, context=None)
+                    elif phase.iteration_type == 'immediate':
+                        self.iterate_immediate(cr, uid, [phase.id], action_instance_id, remaining_res_ids, context=None)
 
             if phase.usage != 'iteration' or not remaining_res_ids:
-                self.next_phase(cr, uid, [phase.id], action_instance_id, res_ids, context=context)
+                # start the next phase, passing on only non-failed
+                # resources
+                self.next_phase(cr, uid, [phase.id], action_instance_id,
+                                res[phase.id]['success'] and res_ids or list(set(res_ids) - set(failed_res_ids)),
+                                context=context)
 
         return res
 
@@ -376,6 +427,11 @@ class deferred_action_phase(osv.osv):
              ('other', 'Other')],
             string='Usage',
             help='Use this setting to define the purpose of this phase within the deferred action. Phases defined as "iteration" can be repeated for a list of resources.'),
+        'iteration_type': fields.selection(
+            [('scheduled', 'Scheduled'),
+             ('immediate', 'Immediate')],
+            string='Iteration type',
+            help='For iteration phases, determines whether each repetition should run as a separate scheduled task, or sequentially within a single scheduled task.'),
         'execution': fields.selection(
             [('serial', 'Serial'),
              ('parallel', 'Parallel')],
@@ -449,8 +505,6 @@ class deferred_action_phase(osv.osv):
         if context.get('active_model') == 'deferred.action' and context.get('active_id', False):
             res['deferred_action_id'] = context.get('active_id')
 
-        import pdb; pdb.set_trace()
-
         return res
 
     def create(self, cr, uid, vals, context=None):
@@ -465,11 +519,11 @@ class deferred_action_phase(osv.osv):
             # FIXME This shouldn't happen
             return False
 
-        cron_name = self._make_cron_task_name(cr, uid, dict([('model', deferred_action.model), ('action_method', deferred_action.action_method)] + vals.items()), context=context)
+        cron_name = self._make_cron_task_name(cr, uid, dict([('model', deferred_action.model.model), ('action_method', deferred_action.action_method)] + vals.items()), context=context)
         cron_id = cron_pool.search(cr, uid, [('model','=','deferred.action.phase'),
                                              ('name','=',cron_name)],
                                    context=context)
-
+        import pdb; pdb.set_trace()
         if not cron_id:
             cron_id = cron_pool.create(cr, uid, {'name': cron_name,
                                                  'active': False,
@@ -477,6 +531,7 @@ class deferred_action_phase(osv.osv):
                                                  'interval_number': 1,
                                                  'interval_type': 'minutes',
                                                  'numbercall': 1,
+                                                 'doall': False,
                                                  'model': 'deferred.action.phase',
                                                  'function': '_do_phase',
                                                  'args': ()},
@@ -487,9 +542,12 @@ class deferred_action_phase(osv.osv):
         return phase_id
 
     def start(self, cr, uid, ids, action_instance_id, res_ids, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         cron_pool = self.pool.get('ir.cron')
         phase_instance_pool = self.pool.get('deferred.action.phase.instance')
-        action_instance_pool = self.pool.get('defereed.action.instance')
+        action_instance_pool = self.pool.get('deferred.action.instance')
 
         res = {}
 
@@ -507,9 +565,9 @@ class deferred_action_phase(osv.osv):
             # activate the cron task associated with this phase and
             # schedule it to call immediately
             cron_task = self._get_cron_task(cr, uid, phase.id, context=context)
-            cron_pool.write(cr, uid, cron_task.id, {'active': True,
-                                                    'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
-                                                    'args': (action_instance_id, res_ids)},
+            cron_pool.write(cr, uid, [cron_task.id], {'active': True,
+                                                      'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
+                                                      'args': (phase.id, action_instance_id, res_ids)},
                             context=context)
 
             res[phase.id] = True
@@ -517,6 +575,9 @@ class deferred_action_phase(osv.osv):
         return res
 
     def pause(self, cr, uid, ids, action_instance_id, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         cron_pool = self.pool.get('ir.cron')
         phase_instance_pool = self.pool.get('deferred.action.phase.instance')
 
@@ -528,13 +589,16 @@ class deferred_action_phase(osv.osv):
 
             # deactivate the cron task associated with this phase
             cron_task = self._get_cron_task(cr, uid, ids, context=context)
-            cron_pool.write(cr, uid, cron_task.id, {'active': False}, context=context)
+            cron_pool.write(cr, uid, [cron_task.id], {'active': False}, context=context)
 
             res[phase.id] = True
 
         return res
 
     def resume(self, cr, uid, ids, action_instance_id, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         cron_pool = self.pool.get('ir.cron')
         phase_instance_pool = self.pool.get('deferred.action.phase.instance')
 
@@ -546,21 +610,24 @@ class deferred_action_phase(osv.osv):
 
             # re-activate the cron task associated with this phase
             cron_task = self._get_cron_task(cr, uid, ids, context=context)
-            cron_pool.write(cr, uid, cron_task.id, {'active': True,
-                                                    'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)},
+            cron_pool.write(cr, uid, [cron_task.id], {'active': True,
+                                                      'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)},
                             context=context)
 
             res[phase.id] = True
 
         return res
 
-    def iterate(self, cr, uid, ids, action_instance_id, res_ids, context=None):
+    def iterate_scheduled(self, cr, uid, ids, action_instance_id, res_ids, context=None):
         '''
         For iterable phases, alters the cron task to execute again with
         another batch of res_ids. The res_ids supplied to this method
         must be the correct list of IDs for this batch (_do_phase
         arranges for this argument to be correct).
         '''
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         cron_pool = self.pool.get('ir.cron')
 
         res = {}
@@ -568,6 +635,10 @@ class deferred_action_phase(osv.osv):
         for phase in self.browse(cr, uid, ids, context=context):
             if phase.usage != 'iteration':
                 continue
+            if phase.iteration_type != 'scheduled':
+                raise osv.except_osv('Programming error',
+                                     'iterate_scheduled called on phase with iteration type "%s": "%s"' %\
+                                     (phase.iteration_type, phase.id))
 
             cron_task = self._get_cron_task(cr, uid, phase.id, context=context)
 
@@ -575,18 +646,51 @@ class deferred_action_phase(osv.osv):
                 # FIXME Or maybe this should just be considered an
                 # error and we should raise an exception?
                 _logger.warn('Iteration of phase "%s" of action "%s" has been called with the same arguments as previous iteration.' %\
-                             (phase.name, phase.deferred_action_id.name))
+                             (phase.id, phase.deferred_action_id.name))
 
-            cron_pool.write(cr, uid, cron_task.id, {'active': True,
-                                                    'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
-                                                    'args': (action_instance_id, res_ids)},
+            cron_pool.write(cr, uid, [cron_task.id], {'active': True,
+                                                      'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
+                                                      'args': (phase.id, action_instance_id, res_ids)},
                             context=context)
 
             res[phase.id] = True
 
         return res
 
+    def iterate_immediate(self, cr, uid, ids, action_instance_id, res_ids, context=None):
+        '''
+        For iterable phases, continues processing the next batch of
+        res_ids immediately (cf. iterate_scheduled). The res_ids
+        supplied to this method must be the correct list of IDs for
+        this batch (_do_phase arranges for this argument to be
+        correct).
+        '''
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
+        res = {}
+
+        for phase in self.browse(cr, uid, ids, context=context):
+            if phase.usage != 'iteration':
+                continue
+            if phase.iteration_type != 'immediate':
+                raise osv.except_osv('Programming error',
+                                     'iterate_immediate called on phase with iteration type "%s": "%s"' %\
+                                     (phase.iteration_type, phase.id))
+
+            # this is effectively a recursive call; _do_phase is
+            # responsible for recursively calling iterate_immediate,
+            # truncating the res_ids list each time, and halting
+            # recursion once res_ids is empty
+            self._do_phase(cr, uid, [phase.id], action_instance_id, res_ids, context=context)
+            res[phase.id] = True
+
+        return res
+
     def retry(self, cr, uid, ids, action_instance_id, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         cron_pool = self.pool.get('ir.cron')
         phase_instance_pool = self.pool.get('deferred.action.phase.instance')
 
@@ -598,8 +702,8 @@ class deferred_action_phase(osv.osv):
 
             # re-activate the cron task associated with this phase
             cron_task = self._get_cron_task(cr, uid, ids, context=context)
-            cron_pool.write(cr, uid, cron_task.id, {'active': True,
-                                                    'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)},
+            cron_pool.write(cr, uid, [cron_task.id], {'active': True,
+                                                      'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)},
                             context=context)
 
             res[phase.id] = True
@@ -614,10 +718,13 @@ class deferred_action_phase(osv.osv):
         res.update(self.next_phase(cr, uid, ids, action_instance_id, res_ids, context=context))
         return res
 
-    def abort(self, cr, uid, ids, action_instance_id, res_ids, context=None):
+    def abort(self, cr, uid, ids, action_instance_id, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         cron_pool = self.pool.get('ir.cron')
         phase_instance_pool = self.pool.get('deferred.action.phase.instance')
-        action_instance_pool = self.pool.get('defereed.action.instance')
+        action_instance_pool = self.pool.get('deferred.action.instance')
 
         res = {}
 
@@ -630,8 +737,8 @@ class deferred_action_phase(osv.osv):
 
             # deactivate the cron task associated with this phase
             cron_task = self._get_cron_task(cr, uid, ids, context=context)
-            cron_pool.write(cr, uid, cron_task.id, {'active': False,
-                                                    'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)},
+            cron_pool.write(cr, uid, [cron_task.id], {'active': False,
+                                                      'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)},
                             context=context)
 
             res[phase.id] = True
@@ -642,8 +749,11 @@ class deferred_action_phase(osv.osv):
         '''
         Clean up completed instances.
         '''
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         phase_instance_pool = self.pool.get('deferred.action.phase.instance')
-        action_instance_pool = self.pool.get('defereed.action.instance')
+        action_instance_pool = self.pool.get('deferred.action.instance')
 
         res = {}
         for phase in self.browse(cr, uid, ids, context=context):
@@ -651,7 +761,7 @@ class deferred_action_phase(osv.osv):
             action_instance_pool.write(cr, uid, action_instance_id, {'current_phase': False}, context=context)
 
             instance_ids = phase_instance_pool.search(cr, uid, [('phase_id','=',phase.id),
-                                                                ('action_instance','=',action_instance_id),
+                                                                ('action_instance_id','=',action_instance_id),
                                                                 ('state','in',('finished','aborted'))],
                                                       context=context)
             phase_instance_pool.unlink(cr, uid, instance_ids, context=context)
@@ -669,6 +779,8 @@ class deferred_action_phase(osv.osv):
         work out the next phase). This method also initiates closing
         any actions for which this was the last phase.
         '''
+        if isinstance(ids, (int, long)):
+            ids = [ids]
 
         next_phases = []
         finished_phases = []
@@ -715,23 +827,14 @@ class deferred_action_instance(osv.osv):
     _description = 'An executing workflow action'
     _order = 'start_time desc'
 
-    def _show_action_args(self, cr, uid, ids, field_name, arg, context=None):
-        '''
-        The action arguments are stored in a fields.serialized type
-        column. This method is used to create a printable
-        representation of the argument list.
-        '''
-        return dict([(id, str(instance.action_args))
-                     for instance in self.browse(self, cr, uid, ids, context=context)])
-
     def _get_action_progress(self, cr, uid, ids, field_name, arg, context=None):
         '''
         Calculate how far through the execution of the phases this action
         instance has progressed.
         '''
         # FIXME To be implemented
-        return dict([(id, instance.state in ('draft','started','paused') and 0.0 or 100.0)
-                     for instance in self.browse(self, cr, uid, ids, context=context)])
+        return dict([(instance.id, instance.state in ('draft','started','paused') and 0.0 or 100.0)
+                     for instance in self.browse(cr, uid, ids, context=context)])
 
     _columns = {
         'name': fields.char(
@@ -748,6 +851,7 @@ class deferred_action_instance(osv.osv):
             [('draft', 'Draft'),
              ('started', 'Started'),
              ('paused', 'Paused'),
+             ('exception', 'Exception'),
              ('aborted', 'Aborted'),
              ('finished', 'Finished')],
             string='State',
@@ -763,36 +867,44 @@ class deferred_action_instance(osv.osv):
             string='Owner',
             required=True,
             readonly=True),
-        'action_args': fields.serialized(
+        'action_args': fields.text(
             'Action arguments',
             required=True,
             readonly=True),
-        'res_ids': fields.serialized(
+        'res_ids': fields.text(
             'Actioned resources',
             required=True,
             readonly=True),
-        'show_action_args': fields.function(
-            _show_action_args,
-            type='char',
-            readonly=True,
-            string='Action arguments'),
+        'start_context': fields.serialized(
+            'Context',
+            readonly=True),
         'start_time': fields.datetime(
             'Start time',
-            required=True,
             readonly=True),
         'end_time': fields.datetime(
             'End time',
             readonly=True),
+        'attempts': fields.integer(
+            'Attempts',
+            readonly=True,
+            help='The number of times this action instance has been retried.'),
         'progress': fields.function(
             _get_action_progress,
             store=False,
             method=True,
             string='Progress',
-            help='Indicates what proportion of the phases have been completed so far. The accuracy of this progress is dependent on the granularity of the phases that make up the action.')
+            help='Indicates what proportion of the phases have been completed so far. The accuracy of this progress is dependent on the granularity of the phases that make up the action.'),
+        'failure_logs': fields.one2many(
+            'deferred.action.failed.resource',
+            'action_instance_id',
+            string='Failed resources',
+            readonly=True,
+            help='Log entries for resources which have failed to be processed successfully.'),
     }
 
     _defaults = {
         'name': lambda self, cr, uid, ctx: self.pool.get('ir.sequence').next_by_code(cr, uid, 'deferred.action.instance'),
+        'state': 'draft',
     }
 
     def create(self, cr, uid, vals, context=None):
@@ -806,20 +918,23 @@ class deferred_action_instance(osv.osv):
         queued = self.search(cr, uid, [('deferred_action_id','=',deferred_action.id),
                                        ('state','in',['draft','started','paused'])],
                              order='start_time DESC', context=context)
-        if len(queued) > deferred_action.max_queue_size:
+        if len(queued) >= deferred_action.max_queue_size:
             recent_instance = self.browse(cr, uid, queued[0], context=context)
             limit_info = {'action_name': deferred_action.name,
                           'queue_size': len(queued),
                           'queue_limit': deferred_action.max_queue_size,
                           'recent_owner_name': recent_instance.start_uid.name,
                           'recent_start_time': recent_instance.start_time}
-            osv.except_osv('Integrity error',
-                           deferred_action.queue_limit_message and deferred_action.queue_limit_message % limit_info or
-                           'The deferred action "%(action_name)s" has %(queue_size)s active instances. Only %(queue_limit)s instance(s) should be active at a time.' % limit_info)
+            raise osv.except_osv('Integrity error',
+                                 deferred_action.queue_limit_message and deferred_action.queue_limit_message % limit_info or
+                                 'The deferred action "%(action_name)s" has %(queue_size)s active instances. Only %(queue_limit)s instance(s) should be active at a time.' % limit_info)
         else:
             return super(deferred_action_instance, self).create(cr, uid, vals, context=context)
 
     def start(self, cr, uid, ids, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         phase_pool = self.pool.get('deferred.action.phase')
 
         res = {}
@@ -829,11 +944,16 @@ class deferred_action_instance(osv.osv):
                 first_phase = instance.deferred_action_id.phases[0]
                 # note: phase start method schedules the phase to
                 # start and returns immediately
-                res[instance.id] = all(phase_pool.start(cr, uid, [first_phase.id], action_instance_id=instance.id, res_ids=instance.res_ids, context=context).values())
+                res[instance.id] = all(phase_pool.start(cr, uid, [first_phase.id], action_instance_id=instance.id, res_ids=ast.literal_eval(instance.res_ids), context=context).values())
                 if res[instance.id]:
                     self.write(cr, uid, instance.id, {'state': 'started',
                                                       'start_time': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)},
                                context=context)
+
+                    # update the action's model's state
+                    if instance.deferred_action_id.commencement_state:
+                        model_pool = self.pool.get(instance.deferred_action_id.model.model)
+                        model_pool.write(cr, uid, ast.literal_eval(instance.res_ids), {'state': instance.deferred_action_id.commencement_state}, context=context)
                 else:
                     raise osv.except_osv('Operational error',
                                          'The deferred action "%s" failed to start.' %\
@@ -842,6 +962,9 @@ class deferred_action_instance(osv.osv):
         return res
 
     def pause(self, cr, uid, ids, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         phase_pool = self.pool.get('deferred.action.phase')
 
         res = {}
@@ -856,6 +979,9 @@ class deferred_action_instance(osv.osv):
         return res
 
     def resume(self, cr, uid, ids, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         phase_pool = self.pool.get('deferred.action.phase')
 
         res = {}
@@ -869,10 +995,106 @@ class deferred_action_instance(osv.osv):
 
         return res
 
-    def retry(self, cr, uid, ids, context=None):
-        pass
+    def retry_entire(self, cr, uid, ids, context=None):
+        '''
+        Re-execute the whole instance, all phases and all resources.
+        '''
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
+        phase_pool = self.pool.get('deferred.action.phase')
+
+        res = {}
+
+        for instance in self.browse(cr, uid, ids, context=context):
+            if instance.attempts <= instance.deferred_action_id.max_retries:
+                first_phase = instance.deferred_action_id.phases[0]
+                res[instance.id] = all(phase_pool.start(cr, instance.start_uid, [first_phase.id], action_instance_id=instance.id,
+                                                        res_ids=ast.literal_eval(instance.res_ids), context=instance.start_context).values())
+                if res[instance.id]:
+                    self.write(cr, uid, instance.id, {'state': 'started',
+                                                      'start_time': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)},
+                               context=context)
+
+                    # update the action's model's state
+                    if instance.deferred_action_id.commencement_state:
+                        model_pool = self.pool.get(instance.deferred_action_id.model.model)
+                        model_pool.write(cr, uid, ast.literal_eval(instance.res_ids), {'state': instance.deferred_action_id.commencement_state}, context=context)
+                else:
+                    raise osv.except_osv('Operational error',
+                                         'The deferred action "%s" failed to start.' %\
+                                         (instance.deferred_action_id.name,))
+                
+                self.write(cr, uid, instance.id, {'attempts': instance.attempts + 1}, context=context)
+
+        return res
+
+    def retry_failed_resources(self, cr, uid, ids, context=None):
+        '''
+        Re-execute all phases; process only those resources in the
+        corresponding deferred.action.failed.resource records.
+        '''
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
+        phase_pool = self.pool.get('deferred.action.phase')
+        log_pool = self.pool.get('deferred.action.failed.resource')
+
+        res = {}
+
+        for instance in self.browse(cr, uid, ids, context=context):
+            # find the failed resources
+            failed_ids = log_pool.search(cr, uid, [('action_instance_id','=',instance.action_instance_id),
+                                                   ('phase_id','=',instance.id)],
+                                         context=context)
+            failed_res_ids = [l['res_id'] for l in log_pool.read(cr, uid, failed_ids, ['res_id'], context=context)]
+
+            if failed_res_ids and instance.attempts <= instance.deferred_action_id.max_retries:
+                # remove the failure logs
+                log_pool.unlink(cr, uid, failed_ids, context=context)
+
+                first_phase = instance.deferred_action_id.phases[0]
+                res[instance.id] = all(phase_pool.start(cr, instance.start_uid, [first_phase.id], action_instance_id=instance.id,
+                                                        res_ids=failed_res_ids, context=instance.start_context).values())
+                if res[instance.id]:
+                    self.write(cr, uid, instance.id, {'state': 'started',
+                                                      'start_time': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)},
+                               context=context)
+
+                    # update the action's model's state
+                    if instance.deferred_action_id.commencement_state:
+                        model_pool = self.pool.get(instance.deferred_action_id.model.model)
+                        model_pool.write(cr, uid, failed_res_ids, {'state': instance.deferred_action_id.commencement_state}, context=context)
+                else:
+                    raise osv.except_osv('Operational error',
+                                         'The deferred action "%s" failed to start.' %\
+                                         (instance.deferred_action_id.name,))
+                
+                self.write(cr, uid, instance.id, {'attempts': instance.attempts + 1}, context=context)
+
+        return res
+
+    def abort(self, cr, uid, ids, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
+        phase_pool = self.pool.get('deferred.action.phase')
+
+        res = {}
+
+        for instance in self.browse(cr, uid, ids, context=context):
+            if instance.state in ['started','paused']:
+                active_phase_id = instance.current_phase.id
+                res[instance.id] = phase_pool.abort(cr, uid, active_phase_id, instance.id, context=context)
+                if res[instance.id]:
+                    self.write(cr, uid, instance.id, {'state': 'aborted'}, context=context)
+
+        return res
 
     def finish(self, cr, uid, ids, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         res = {}
 
         for instance in self.browse(cr, uid, ids, context=context):
@@ -880,6 +1102,12 @@ class deferred_action_instance(osv.osv):
                 # FIXME Consider adding an integrity to check to
                 # ensure that all the phases have been executed and
                 # that all the res_ids have been consumed.
+
+                # update the action's model's state
+                if instance.deferred_action_id.completion_state:
+                    model_pool = self.pool.get(instance.deferred_action_id.model.model)
+                    model_pool.write(cr, uid, ast.literal_eval(instance.res_ids), {'state': instance.deferred_action_id.completion_state}, context=context)
+
                 self.write(cr, uid, instance.id, {'state': 'finished'}, context=context)
                 res[instance.id] = True
 
@@ -901,7 +1129,7 @@ class deferred_action_phase_instance(osv.osv):
             required=True,
             ondelete='cascade',
             string='Deferred action phase'),
-        'action_instance': fields.many2one(
+        'action_instance_id': fields.many2one(
             'deferred.action.instance',
             required=True,
             ondelete='cascade',
@@ -918,7 +1146,6 @@ class deferred_action_phase_instance(osv.osv):
             readonly=True),
         'start_time': fields.datetime(
             'Start time',
-            required=True,
             readonly=True),
         'end_time': fields.datetime(
             'End time',
@@ -930,3 +1157,81 @@ class deferred_action_phase_instance(osv.osv):
     }
 
 deferred_action_phase_instance()
+
+
+class deferred_action_failed_resource(osv.osv):
+    '''
+    Represents a resource for which a deferred action phase resulted
+    in failure.
+    '''
+    _name = 'deferred.action.failed.resource'
+    _description = 'Deferred action failed resources'
+
+    def _get_res_name(self, cr, uid, ids, field_name, arg, context=None):
+        if not ids:
+            return {}
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+        if len(ids) == 1:
+            # deal with the case where only one resource name is
+            # requested separately
+            log = self.browse(cr, uid, ids[0], context=context)
+            model_pool = self.pool.get(log.action_instance_id.deferred_action_id.model)
+            if model_pool:
+                res = model_pool.search(cr, uid, [('id','=',log.res_id)], context=context)
+                return {ids[0]: res.name or False}
+            else:
+                return {ids[0]: False}
+
+        # in this case, multiple resource names are requested, but
+        # they are still only ever from one model
+        log = self.browse(cr, uid, ids[0], context=context)
+        model_pool = self.pool.get(log.action_instance_id.deferred_action_id.model)
+        if model_pool:
+            res_ids = self.read(cr, uid, ids, ['id','res_id'], context=context)
+            resources = model_pool.read(cr, uid, [r['res_id'] for r in res_ids], ['id','name'], context=context)
+            res = {}
+            for r in res_ids:
+                try:
+                    res[r['id']] = filter(lambda s: s['id'] == r['res_id'], resources)[0]['name']
+                except (IndexError, AttributeError):
+                    res[r['id']] = False
+
+            return res
+        else:
+            return dict([(id, False) for id in ids])
+            
+    _columns = {
+        'phase_id': fields.many2one(
+            'deferred.action.phase',
+            required=True,
+            ondelete='cascade',
+            string='Deferred action phase'),
+        'action_instance_id': fields.many2one(
+            'deferred.action.instance',
+            required=True,
+            ondelete='cascade',
+            string='Deferred action instance',
+            help='Points to the deferred action instance in which the phase instance is running.'),
+        'res_id': fields.integer(
+            'Resource',
+            required=True,
+            readonly=True,
+            help='The ID of the resource which failed'),
+        'res_name': fields.function(
+            _get_res_name,
+            store=False,
+            method=True,
+            string='Resource name'),
+        'failure_time': fields.datetime(
+            'Failure time',
+            required=True,
+            readonly=True),
+        'traceback': fields.text(
+            'Traceback',
+            required=True,
+            readonly=True)
+    }
+
+
+deferred_action_failed_resource()

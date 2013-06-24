@@ -55,6 +55,7 @@ def defer_action(single_phase=False, name=None, start_message=None):
     object if a method is marked as deferred, but an object does not
     already exist.
     '''
+    _logger.debug('Defer action decorator called.')
     def wrap(action):
         _logger.debug('Making %s into a deferred action' % (action.__name__,))
         def new_action(self, cr, uid, ids, *args, **kwargs):
@@ -74,6 +75,9 @@ def defer_action(single_phase=False, name=None, start_message=None):
                         'Please consult your system administrator.\n\nAction: "%s"' % (deferred_action.name,)}
 
             return action_pool.action_wrapper(cr, uid, deferred_action.id, ids, tuple(args), **kwargs)
+
+        new_action.__name__ = action.__name__
+        new_action.__doc__ = action.__doc__
 
         return new_action
 

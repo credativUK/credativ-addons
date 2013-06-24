@@ -21,3 +21,4 @@
 
 import deferred_action
 import deferred_action_osv
+import sale

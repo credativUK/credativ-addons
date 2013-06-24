@@ -9,15 +9,24 @@
             <field name="type">form</field>
             <field name="arch" type="xml">
                 <form string="Deferred Action">
+                    <separator string="Model/action" />
                     <group col="6" colspan="4">
                         <field name="name" />
                         <field name="model" />
                         <field name="action_method" />
                     </group>
+                    <separator string="Queue and retry" />
                     <group col="2" colspan="4">
                         <field name="start_message" />
                         <field name="max_queue_size" />
                         <field name="queue_limit_message" />
+                        <field name="max_retries" />
+                    </group>
+                    <separator string="States" />
+                    <group col="6" colspan="4">
+                        <field name="commencement_state" />
+                        <field name="exception_state" />
+                        <field name="completion_state" />
                     </group>
                     <notebook>
                         <page string="Phases">
@@ -32,9 +41,11 @@
                                         <group col="2" colspan="4">
                                             <field name="description" />
                                         </group>
-                                        <group col="4" colspan="6">
+                                        <group col="4" colspan="8">
                                             <field name="usage" />
                                             <field name="execution" />
+                                            <field name="iteration_type"
+                                                   attrs="{'invisible':[('usage','!=','iteration')],'required':[('usage','=','iteration')]}" />
                                             <field name="step_size"
                                                    attrs="{'invisible':[('usage','!=','iteration')],'required':[('usage','=','iteration')]}" />
                                         </group>
@@ -77,7 +88,7 @@
                                     <tree>
                                         <field name="name" />
                                         <field name="state" />
-                                        <field name="show_action_args" />
+                                        <field name="action_args" />
                                         <field name="start_uid" />
                                         <field name="start_time" />
                                         <field name="progress"
@@ -93,10 +104,15 @@
                                                 string="Pause"
                                                 states="started"
                                                 icon="gtk-media-pause" />
+                                        <button name="retry_failed_resources"
+                                                type="object"
+                                                string="Retry (for failed resources)"
+                                                states="exception"
+                                                icon="gtk-jump-to" />
                                         <button name="abort"
                                                 type="object"
                                                 string="Abort"
-                                                states="started,paused"
+                                                states="started,paused,exception"
                                                 icon="gtk-cancel" />
                                     </tree>
                                 </field>
@@ -200,13 +216,21 @@
                         <field name="end_time" />
                     </group>
                     <group col="2" colspan="4">
-                        <field name="show_action_args" />
+                        <field name="action_args" />
                     </group>
-                    <group col="5" colspan="4">
+                    <group col="1" colspan="4">
+                        <field name="failure_logs">
+                            <tree string="Failed Resources">
+                                <field name="res_name" />
+                                <field name="failure_time" />
+                                <field name="traceback" />
+                            </tree>
+                        </field>
+                    </group>
+                    <group col="6" colspan="4">
                         <field name="state"
                                widget="statusbar"
-                               statusbar_visible="draft,started,paused,aborted,finished"
-                               statusbar_colors="{'aborted':'red','paused':'blue'}" />
+                               statusbar_visible="draft,started,paused,aborted,finished" />
                         <button name="start"
                                 type="object"
                                 string="Start"
@@ -217,6 +241,11 @@
                                 string="Pause"
                                 states="started"
                                 icon="gtk-media-pause" />
+                        <button name="retry_failed_resources"
+                                type="object"
+                                string="Retry (for failed resources)"
+                                states="exception"
+                                icon="gtk-jump-to" />
                         <button name="abort"
                                 type="object"
                                 string="Abort"
