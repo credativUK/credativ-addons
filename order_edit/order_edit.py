@@ -319,7 +319,7 @@ class sale_order(osv.osv, order_edit):
                     self.pool.get('account.move.reconcile').unlink(cr, uid, unlink_ids, context=context)
         
         # 3. Refund with credit note and reconcile with origional invoice
-        self.refund(cr, uid, [original.id], 'Edit Refund:%s' % original.name, context=context, accept_done=True, cancel_assigned=True, context=context)
+        self.refund(cr, uid, [original.id], 'Edit Refund:%s' % original.name, accept_done=True, cancel_assigned=True, context=context)
 
         if has_invoice:
             # 4. Create a new invoice and find difference between this and existing payment(s)
