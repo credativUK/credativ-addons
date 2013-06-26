@@ -71,8 +71,9 @@ def defer_action(single_phase=False, name=None, start_message=None):
                                                                single_phase=single_phase, context={})
 
             if not deferred_action.phases:
-                return {'warning': 'This action is marked as deferred, but the corresponding deferred.action object is not fully configured. '
-                        'Please consult your system administrator.\n\nAction: "%s"' % (deferred_action.name,)}
+                raise osv.except_osv('Configuration error',
+                                     'This action is marked as deferred, but the corresponding deferred.action object is not fully configured. '
+                                     'Please consult your system administrator.\n\nAction: "%s"' % (deferred_action.name,))
 
             # try and find the context
             candidates = filter(lambda a: isinstance(a, dict) and 'lang' in a, list(args)) +\
@@ -81,7 +82,8 @@ def defer_action(single_phase=False, name=None, start_message=None):
                 # if multiple candidates are found, sort them by
                 # number of keys; then we'll take the longest one
                 candidates.sort(cmp=lambda a, b: cmp(len(b), len(a)))
-            kwargs['context'] = candidates and candidates[0] or {}
+            ctx = candidates and candidates[0] or {}
+            kwargs['context'] = isinstance(ctx, dict) and ctx or ctx[1]
 
             _logger.debug('Calling deferred action "%s" (ID %s) with args: %s; kwargs: %s; context=%s' %\
                           (deferred_action.name, deferred_action.id, args, kwargs, kwargs.get('context', None)))

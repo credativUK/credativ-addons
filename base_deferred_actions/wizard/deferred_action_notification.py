@@ -19,6 +19,26 @@
 #
 ##############################################################################
 
-import deferred_action
-import deferred_action_osv
-import wizard
+from osv import osv, fields
+
+class deferred_action_notification(osv.osv_memory):
+    '''
+    This class implements a wizard used to display notifications at
+    the start of deferred actions.
+    '''
+    _name = 'deferred.action.notification'
+
+    _columns = {
+        'title': fields.char(
+            'Title',
+            size=255,
+            readonly=True),
+        'message': fields.text(
+            'Message',
+            readonly=True),
+    }
+
+    def ok_button(self, cr, uid, ids, context=None):
+        return {'type': 'ir.actions.act_window_close'}
+
+deferred_action_notification()

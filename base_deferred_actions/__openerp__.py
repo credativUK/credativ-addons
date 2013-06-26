@@ -37,6 +37,7 @@ Views are included in Settings | Customisation | Deferred Actions for creating, 
     'update_xml': [
         'deferred_action_data.xml',
         'deferred_action_view.xml',
+        'wizard/deferred_action_notification_view.xml',
     ],
     'demo_xml': [],
     'installable': True,

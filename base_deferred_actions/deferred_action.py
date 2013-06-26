@@ -36,6 +36,29 @@ class deferred_action(osv.osv):
     _name = 'deferred.action'
     _description = 'Manage a long-running workflow action'
 
+    def _message(self, cr, uid, ids, title=None, message=None, context=None):
+        '''
+        This method uses the deferred.action.notification wizard to
+        display notifications to users when deferred actions are
+        started.
+        '''
+        if not title and not message:
+            return False
+        title = title or 'Deferred action notification'
+
+        notify_pool = self.pool.get('deferred.action.notification')
+
+        notify_id = notify_pool.create(cr, uid, {'title': title, 'message': message}, context=context)
+
+        return {'name': title,
+                'view_type': 'form',
+                'view_mode': 'form,tree',
+                'res_model': 'deferred.action.notification',
+                'view_id': False,
+                'res_id': notify_id,
+                'target': 'new',
+                'type': 'ir.actions.act_window'}
+
     _columns = {
         'name': fields.char(
             'Name',
@@ -128,8 +151,10 @@ class deferred_action(osv.osv):
                                            ('state','=','exception')], context=context)
         if failed_instance_ids:
             instance_pool.retry_failed_resources(cr, uid, failed_instance_ids, context=context)
-            return {'warning': {'title': 'Retrying',
-                                'message': 'Retrying failed action in background.'}}
+            return self._message(cr, uid, id,
+                                 title='Retrying',
+                                 message='Retrying failed action in background.',
+                                 context=context)
 
         instance_id = instance_pool.create(cr, uid, {'deferred_action_id': action.id,
                                                      'start_uid': uid,
@@ -145,12 +170,14 @@ class deferred_action(osv.osv):
             instance_info.update({'start_time': instance.start_time,
                                   'owner_name': instance.start_uid.name,
                                   'owner_email': instance.start_uid.user_email})
-            return {'warning': {'title': 'Action started in background',
-                                'message': action.start_message and action.start_message % instance_info or\
-                                'The action "%(action_name)s" has been started in the background on the model "%(action_model)s".' % instance_info}}
+            return self._message(cr, uid, id,
+                                 title='Action started in background',
+                                 message=action.start_message and action.start_message % instance_info or\
+                                 'The action "%(action_name)s" has been started in the background on the model "%(action_model)s".' % instance_info)
         else:
-            return {'warning': {'title': 'Action failed to start',
-                                'message': 'The action "%(action_name)s" on the model "%(action_model)s" failed to start in the background.' % instance_info}}
+            return self._message(cr, uid, id,
+                                 title='Action failed to start',
+                                 message='The action "%(action_name)s" on the model "%(action_model)s" failed to start in the background.' % instance_info)
 
 deferred_action()
 
