@@ -240,17 +240,17 @@ class deferred_action_phase(osv.osv):
         context['deferred_action_instance_id'] = action_instance_id
 
         if phase.proc_type == 'method':
-            model = self.pool.get(phase.deferred_action_id.model)
+            model = self.pool.get(phase.deferred_action_id.model.model)
             if not model:
                 raise osv.except_osv('No such model "%s"' % (phase.deferred_action_id.model.model,),
                                      'The deferred action "%s" attempted to call the method %s on %s, but this model does not exist.' %\
-                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.model, phase.method))
+                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.model, phase.proc_method))
 
-            if not hasattr(model, phase.method):
-                raise osv.except_osv('No such method "%s.%s"' % (phase.deferred_action_id.model, phase.method),
+            if not hasattr(model, phase.proc_method):
+                raise osv.except_osv('No such method "%s.%s"' % (phase.deferred_action_id.model, phase.proc_method),
                                      'The deferred action "%s" attempted to call the method %s on %s, but this method does not exist.' %\
-                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.model, phase.method))
-            method = getattr(model, phase.method)
+                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.model, phase.proc_method))
+            method = getattr(model, phase.proc_method)
             try:
                 res['res'] = method(model, cr, uid, res_ids, context=context)
                 res['completed'] = True
@@ -287,16 +287,16 @@ class deferred_action_phase(osv.osv):
         phase = self.browse(cr, uid, id, context=context)
 
         if phase.verify_type == 'method':
-            model = self.pool.get(phase.deferred_action_id.model)
+            model = self.pool.get(phase.deferred_action_id.model.model)
             if not model:
                 raise osv.except_osv('No such model "%s"' % (phase.deferred_action_id.model.model,),
                                      'The deferred action "%s" verification attempted to call the method %s on %s, but this model does not exist.' %\
-                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.model, phase.method))
+                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.model, phase.proc_method))
 
-            if not hasattr(model, phase.method):
-                raise osv.except_osv('No such method "%s.%s"' % (phase.deferred_action_id.model.model, phase.method),
+            if not hasattr(model, phase.proc_method):
+                raise osv.except_osv('No such method "%s.%s"' % (phase.deferred_action_id.model.model, phase.proc_method),
                                      'The deferred action "%s" verification attempted to call the method %s on %s, but this method does not exist.' %\
-                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.model, phase.method))
+                                     (phase.deferred_action_id.name, phase.deferred_action_id.model.model, phase.proc_method))
 
             verify_method = getattr(model, phase.verify_method)
             res['success'] = verify_method(model, cr, uid, proc_res, context=context)
@@ -330,9 +330,9 @@ class deferred_action_phase(osv.osv):
 
         if res['completed'] and res['success'] and phase.notify_success:
             self.pool.get('poweremail.templates').generate_mail(cr, uid, phase.notify_success, phase.id, context=context)
-        if (not res['completed'] or not res['success']) and phase.notify_failure:
+        if (not res['completed'] or not res['success']) and phase.notify_fail:
             context.update({'completed': res['completed'], 'success': res['success']})
-            self.pool.get('poweremail.templates').generate_mail(cr, uid, phase.notify_failure, phase.id, context=context)
+            self.pool.get('poweremail.templates').generate_mail(cr, uid, phase.notify_fail, phase.id, context=context)
 
         return True
 
@@ -342,6 +342,9 @@ class deferred_action_phase(osv.osv):
         executing the phase's procedure, carrying out the
         verification, and processing the notification.
         '''
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
         res = {}
 
         for phase in self.browse(cr, uid, ids, context=context):
@@ -354,7 +357,7 @@ class deferred_action_phase(osv.osv):
 
             # execute the phase's procedure; this will return the
             # result, a completed flag, and possibly a stack trace
-            res[phase.id] = self._exec_proc(cr, uid, phase.id, next_res_ids, context=context)
+            res[phase.id] = self._exec_proc(cr, uid, phase.id, action_instance_id, next_res_ids, context=context)
 
             if res[phase.id]['completed']:
                 # verify the procedure's result
@@ -523,7 +526,6 @@ class deferred_action_phase(osv.osv):
         cron_id = cron_pool.search(cr, uid, [('model','=','deferred.action.phase'),
                                              ('name','=',cron_name)],
                                    context=context)
-        import pdb; pdb.set_trace()
         if not cron_id:
             cron_id = cron_pool.create(cr, uid, {'name': cron_name,
                                                  'active': False,
@@ -564,10 +566,12 @@ class deferred_action_phase(osv.osv):
 
             # activate the cron task associated with this phase and
             # schedule it to call immediately
+            action_instance = action_instance_pool.browse(cr, uid, action_instance_id, context=context)
             cron_task = self._get_cron_task(cr, uid, phase.id, context=context)
             cron_pool.write(cr, uid, [cron_task.id], {'active': True,
+                                                      'numbercall': 1,
                                                       'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
-                                                      'args': (phase.id, action_instance_id, res_ids)},
+                                                      'args': (phase.id, action_instance_id, res_ids, action_instance.start_context)},
                             context=context)
 
             res[phase.id] = True
@@ -611,6 +615,7 @@ class deferred_action_phase(osv.osv):
             # re-activate the cron task associated with this phase
             cron_task = self._get_cron_task(cr, uid, ids, context=context)
             cron_pool.write(cr, uid, [cron_task.id], {'active': True,
+                                                      'numbercall': 1,
                                                       'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)},
                             context=context)
 
@@ -629,6 +634,7 @@ class deferred_action_phase(osv.osv):
             ids = [ids]
 
         cron_pool = self.pool.get('ir.cron')
+        action_instance_pool = self.pool.get('deferred.action.instance')
 
         res = {}
 
@@ -648,9 +654,11 @@ class deferred_action_phase(osv.osv):
                 _logger.warn('Iteration of phase "%s" of action "%s" has been called with the same arguments as previous iteration.' %\
                              (phase.id, phase.deferred_action_id.name))
 
+            action_instance = action_instance_pool.browse(cr, uid, action_instance_id, context=context)
             cron_pool.write(cr, uid, [cron_task.id], {'active': True,
+                                                      'numbercall': 1,
                                                       'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
-                                                      'args': (phase.id, action_instance_id, res_ids)},
+                                                      'args': (phase.id, action_instance_id, res_ids, action_instance.start_context)},
                             context=context)
 
             res[phase.id] = True
@@ -668,6 +676,8 @@ class deferred_action_phase(osv.osv):
         if isinstance(ids, (int, long)):
             ids = [ids]
 
+        action_instance_pool = self.pool.get('deferred.action.instance')
+
         res = {}
 
         for phase in self.browse(cr, uid, ids, context=context):
@@ -682,7 +692,8 @@ class deferred_action_phase(osv.osv):
             # responsible for recursively calling iterate_immediate,
             # truncating the res_ids list each time, and halting
             # recursion once res_ids is empty
-            self._do_phase(cr, uid, [phase.id], action_instance_id, res_ids, context=context)
+            action_instance = action_instance_pool.browse(cr, uid, action_instance_id, context=context)
+            self._do_phase(cr, uid, [phase.id], action_instance_id, res_ids, context=action_instance.start_context)
             res[phase.id] = True
 
         return res
@@ -703,6 +714,7 @@ class deferred_action_phase(osv.osv):
             # re-activate the cron task associated with this phase
             cron_task = self._get_cron_task(cr, uid, ids, context=context)
             cron_pool.write(cr, uid, [cron_task.id], {'active': True,
+                                                      'numbercall': 1,
                                                       'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)},
                             context=context)
 
@@ -738,6 +750,7 @@ class deferred_action_phase(osv.osv):
             # deactivate the cron task associated with this phase
             cron_task = self._get_cron_task(cr, uid, ids, context=context)
             cron_pool.write(cr, uid, [cron_task.id], {'active': False,
+                                                      'numbercall': 1,
                                                       'nextcall': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)},
                             context=context)
 

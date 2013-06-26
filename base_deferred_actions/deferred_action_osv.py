@@ -74,6 +74,17 @@ def defer_action(single_phase=False, name=None, start_message=None):
                 return {'warning': 'This action is marked as deferred, but the corresponding deferred.action object is not fully configured. '
                         'Please consult your system administrator.\n\nAction: "%s"' % (deferred_action.name,)}
 
+            # try and find the context
+            candidates = filter(lambda a: isinstance(a, dict) and 'lang' in a, list(args)) +\
+                         filter(lambda a: a[0] == 'context' or isinstance(a[1], dict) and 'lang' in a[1], kwargs.items())
+            if len(candidates) > 1:
+                # if multiple candidates are found, sort them by
+                # number of keys; then we'll take the longest one
+                candidates.sort(cmp=lambda a, b: cmp(len(b), len(a)))
+            kwargs['context'] = candidates and candidates[0] or {}
+
+            _logger.debug('Calling deferred action "%s" (ID %s) with args: %s; kwargs: %s; context=%s' %\
+                          (deferred_action.name, deferred_action.id, args, kwargs, kwargs.get('context', None)))
             return action_pool.action_wrapper(cr, uid, deferred_action.id, ids, tuple(args), **kwargs)
 
         new_action.__name__ = action.__name__
