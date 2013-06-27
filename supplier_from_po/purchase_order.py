@@ -31,12 +31,15 @@ class purchase_order(osv.osv):
         res = super(purchase_order, self).wkf_approve_order(cr, uid, ids, context=context)
         supplier_pool = self.pool.get('product.supplierinfo')
         for order in self.browse(cr, uid, ids, context=context):
-            for po_line in order.order_line:
+            partner_id = order.partner_id.id
+            # list of unique products to prevent duplication of same supplier when multiple lines added for same product
+            unique_products = set([order_line.product_id for order_line in order.order_line])
+            for product in unique_products:
                 # check if supplier already exists in the supplier list for this product
-                if order.partner_id.id not in [x.name.id for x in po_line.product_id.seller_ids]:
+                if partner_id not in [x.name.id for x in product.seller_ids]:
                     # add supplier to supplierinfo for product
-                    supplier_vals = {'name': order.partner_id.id,
-                                    'product_id': po_line.product_id.id,
+                    supplier_vals = {'name': partner_id,
+                                    'product_id': product.id,
                                     'min_qty': 0,
                                     'delay': 0,
                                     }

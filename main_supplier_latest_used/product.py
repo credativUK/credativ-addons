@@ -40,7 +40,8 @@ class product_template(osv.osv):
             cr.execute('''SELECT partner_id FROM purchase_order_line
                         WHERE product_id = %s
                         AND partner_id IN %s
-                        ORDER BY write_date DESC''', (product.id, tuple(seller_ids)))
+                        ORDER BY COALESCE(write_date, create_date) DESC''', (product.id, tuple(seller_ids)))
+                        # Use coalesce for cases where write_date field is not populated
             seller_id = cr.fetchone()
             seller = [seller_info for seller_info in product.seller_ids if seller_info.name.id == seller_id[0]]
             return seller and seller[0] or False
