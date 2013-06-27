@@ -43,8 +43,14 @@ class product_template(osv.osv):
                         ORDER BY COALESCE(write_date, create_date) DESC''', (product.id, tuple(seller_ids)))
                         # Use coalesce for cases where write_date field is not populated
             seller_id = cr.fetchone()
-            seller = [seller_info for seller_info in product.seller_ids if seller_info.name.id == seller_id[0]]
-            return seller and seller[0] or False
+            if seller_id:
+                seller = [seller_info for seller_info in product.seller_ids if seller_info.name.id == seller_id[0]]
+                return seller and seller[0] or False
+            else:
+                # Take first supplier ordered by sequence - if no purchase orders for product
+                sellers_by_sequence = [(seller_info.sequence, seller_info) for seller_info in product.seller_ids or []]
+                sellers_by_sequence.sort()
+                return sellers_by_sequence and sellers_by_sequence[0][1] or False
         return False
 
     def _calc_seller(self, cr, uid, ids, fields, arg, context=None):
