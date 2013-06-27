@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+    
+    <!-- Damage Log Form View -->
+    
+        <record id="view_sale_damagelog_form" model="ir.ui.view">
+            <field name="name">sale.damagelog.form</field>
+            <field name="model">sale.damagelog</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Sale Issue Log">
+                    <field name="name" select="2" invisible="True"/>
+                    <group colspan="4">
+                        <field name="ticket_id" select="2"/>
+                        <field name="partner_id" select="1"/>
+                    </group>
+                    <group colspan="4">
+                        <separator colspan="4"/>
+                        <field name="stock_move_id" domain="[('sale_line_id','!=',False)]" on_change="onchange_stock_move(stock_move_id)" select="2"/>
+                        <field name="sale_order_id" select="1" readonly="1"/>
+                        <field name="dispatch_date" select="1"/>
+                        <field name="sale_line_id" select="2"/>
+                        <field name="category" select="2"/>
+                    </group> 
+                    <separator colspan="4"/>
+                        <notebook colspan="4">
+                            <page string="Issue Details">
+                                <group colspan="4">
+                                    <field name="product_sku" select="1"/>
+                                    <field name="product_id" select="1" readonly="1"/>
+                                </group>
+                                <group colspan="2">
+                                    <field name="product_qty" select="2"/>
+                                    <field name="product_uom" select="2"/>
+                                </group>
+                                <group colspan="2">
+                                    <field name="product_supplier" select="1"/>
+                                    <field name="num_attachments" select="2"/>
+                                </group>
+                                <separator string="Comments:" colspan="4"/>
+                                <field name="issue_description" colspan="4" nolabel="1"/>
+                            </page>
+                            <page string="Claims Details">
+                                <field name="claim_ids" colspan="4" nolabel="1" context="{'default_partner_id':partner_id}"/>
+                            </page>
+                            <page string="Compensation Requests">
+                                <field name="comprequest_ids" colspan="4" nolabel="1" context="{'default_damagelog_id':active_id}">
+                                    <tree string="Sale Compensation Requests">
+                                        <field name="name"/>
+                                        <field name="refund_type"/>
+                                        <field name="refund_value"/>
+                                        <field name="state"/>
+                                        <field name="notes"/>
+                                        <field name="repl_order_ref"/>
+                                        <field name="write_date"/>
+                                        <field name="write_uid"/>
+                                    </tree>
+                                </field>
+                            </page>
+                            <page string="Other Info">
+                                <separator string="Log Details:" colspan="4"/>
+                                <field name="log_date" select="2"/>
+                                <field name="log_uid" select="2"/>
+                            </page>
+                    </notebook>
+                </form>
+            </field>
+        </record>
+        
+        <!-- Damage Log Tree View -->
+        
+        <record id="view_sale_damagelog_tree" model="ir.ui.view">
+            <field name="name">sale.damagelog.tree</field>
+            <field name="model">sale.damagelog</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Sale Issue Log">
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="sale_order_id"/>
+                    <field name="dispatch_date"/>
+                    <field name="log_date"/>
+                    <field name="log_uid"/>
+                    <field name="ticket_id"/>
+                    <field name="product_id"/>
+                    <field name="product_sku"/>
+                    <field name="product_supplier"/>
+                    <field name="category"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_sale_damagelog_search" model="ir.ui.view">
+            <field name="name">sale.damagelog.search</field>
+            <field name="model">sale.damagelog</field>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <search string="Search Issue Log">
+                    <group col="10" colspan="4">
+                        <field name="name"/>
+                        <field name="product_supplier"/>
+                        <field name="product_sku" filter_domain="['|', ('product_id.name','ilike',self),('product_id.default_code','ilike',self)]" string="Product"/>
+                        <field name="date_order"/>
+                    </group>
+                    <newline/>
+                    <group expand="0" string="Group By..." colspan="4" col="4" groups="base.group_extended">
+                        <filter string="Product" icon="terp-stock_effects-object-colorize" domain="[]" context="{'group_by':'product_id'}"/>
+                        <filter string="Dispatch Date" icon="terp-go-month" domain="[]" context="{'group_by':'dispatch_date'}"/>
+                        <filter string="Supplier" icon="terp-personal" domain="[]" context="{'group_by':'product_supplier'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Action for the view -->
+            
+        <record id="action_sale_damagelog_tree" model="ir.actions.act_window">
+            <field name="name">Sale Issue Log</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">sale.damagelog</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_sale_damagelog_tree"/>
+        </record>
+        
+        <record id="action_sale_damagelog_form" model="ir.actions.act_window">
+            <field name="name">Sale Issue Log</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">sale.damagelog</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_sale_damagelog_form"/>
+        </record>
+        
+        <!-- Menu for Damage Log -->
+        
+        <menuitem action="action_sale_damagelog_tree" id="menu_sale_damagelog" parent="base.menu_sales"/>
+
+        <!-- Link from Products to Damage Log -->
+
+        <act_window domain="[('product_id', '=', active_id)]" id="act_product_sale_damagelog" name="Product Items" res_model="sale.damagelog" src_model="product.product"/>
+    
+        <!-- Link from Sale Orders to Damage Log -->
+    
+        <act_window domain="[('sale_order_id', '=', active_id)]" id="act_sale_order_sale_damagelog" name="Issue Log" res_model="sale.damagelog" src_model="sale.order"/>
+    
+    </data>
+</openerp>

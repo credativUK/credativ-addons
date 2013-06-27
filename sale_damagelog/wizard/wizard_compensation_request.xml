@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_wizard_sale_damagelog_compensation_request" model="ir.ui.view">
+            <field name="name">Confirm Compensation Requests</field>
+            <field name="model">sale.damagelog.compensation.request</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Confirm Compensation Requests">
+                    <group col="2" colspan="2">
+                        <button special="cancel" string="_Cancel" icon="gtk-cancel"/>
+                        <button name="confirm_compensation" string="_Confirm" type="object" icon="terp-gtk-go-back-rtl" groups="base.group_sale_manager"/>
+                    </group>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_wizard_sale_damagelog_compensation_request" model="ir.actions.act_window">
+            <field name="name">Confirm Compensation Requests</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">wizard_compensation_request</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_wizard_sale_damagelog_compensation_request"/>
+            <field name="target">new</field>
+        </record>
+
+        <record model="ir.values" id="wizard_sale_damagelog_compensation_request">
+            <field name="model_id" ref="model_sale_comprequest"/>
+            <field name="object" eval="1"/>
+            <field name="name">Confirm Compensation Requests</field>
+            <field name="key2">client_action_multi</field>
+            <field name="value" eval="'ir.actions.act_window,' + str(ref('action_wizard_sale_damagelog_compensation_request'))"/>
+            <field name="key">action</field>
+            <field name="model">sale.comprequest</field>
+        </record>
+    </data>
+</openerp>

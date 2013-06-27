@@ -1,0 +1,8 @@
+"id","name","model_id:id","group_id:id","perm_read","perm_write","perm_create","perm_unlink"
+"access_sale_damagelog","sale.damagelog","model_sale_damagelog","base.group_sale_salesman",1,1,1,1
+"access_sale_comprequest","sale.comprequest","model_sale_comprequest","base.group_sale_salesman",1,1,1,1
+"access_sale_comprequest_comment","sale.comprequest.comment","model_sale_comprequest_comment","base.group_sale_salesman",1,1,1,1
+"access_sale_create_damagelog_from_product","sale.create.damagelog.from.product","model_sale_create_damagelog_from_product","base.group_sale_salesman",1,1,1,1
+"access_sale_create_damagelog_from_outgoing","sale.create.damagelog.from.outgoing","model_sale_create_damagelog_from_outgoing","base.group_sale_salesman",1,1,1,1
+"access_sale_create_damagelog_from_saleorder","sale.create.damagelog.from.saleorder","model_sale_create_damagelog_from_saleorder","base.group_sale_salesman",1,1,1,1
+"access_wizard_compensation_request","wizard_compensation_request","model_wizard_compensation_request","base.group_sale_manager",1,1,1,1
