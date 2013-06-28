@@ -32,7 +32,6 @@ Views are included in Settings | Customisation | Deferred Actions for creating, 
     'depends': [
         'base',
         'poweremail',
-        'sale',
     ],
     'update_xml': [
         'deferred_action_data.xml',

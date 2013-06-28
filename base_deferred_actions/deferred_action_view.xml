@@ -208,9 +208,10 @@
                         <field name="name" />
                         <field name="deferred_action_id" />
                     </group>
-                    <group col="8" colspan="4">
+                    <group col="10" colspan="4">
                         <field name="start_uid" />
                         <field name="start_time" />
+                        <field name="current_phase" />
                         <field name="progress"
                                widget="progressbar" />
                         <field name="end_time" />
@@ -218,9 +219,14 @@
                     <group col="2" colspan="4">
                         <field name="action_args" />
                     </group>
+                    <group col="2" colspan="4">
+                        <field name="status_message" />
+                    </group>
                     <group col="1" colspan="4">
-                        <field name="failure_logs">
+                        <field name="failure_logs" nolabel="1">
                             <tree string="Failed Resources">
+                                <field name="phase_id"
+                                       string="Phase" />
                                 <field name="res_name" />
                                 <field name="failure_time" />
                                 <field name="traceback" />
