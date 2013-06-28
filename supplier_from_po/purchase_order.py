@@ -38,10 +38,12 @@ class purchase_order(osv.osv):
                 # check if supplier already exists in the supplier list for this product
                 if partner_id not in [x.name.id for x in product.seller_ids]:
                     # add supplier to supplierinfo for product
+                    next_sequence = max([sup.sequence for sup in product.seller_ids]) + 1
                     supplier_vals = {'name': partner_id,
                                     'product_id': product.id,
                                     'min_qty': 0,
                                     'delay': 0,
+                                    'sequence': next_sequence,
                                     }
                     supplier_pool.create(cr, uid, supplier_vals, context=context)
 
