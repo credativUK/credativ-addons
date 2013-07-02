@@ -1,0 +1,18 @@
+<t t-extend="filter_advanced_default_all" t-name="filter_advanced_default_all">
+    <t t-name="SearchView.extended_search.group" t-operation="replace">
+        <div t-att-id="widget.element_id" class="searchview_extended_group">
+            <select class="searchview_extended_group_choice">
+                <option value="all">All the following conditions must match</option>
+                <option value="any">Any of the following conditions must match</option>
+                <option value="none">None of the following conditions must match</option>
+            </select>
+            <a class="searchview_extended_delete_group" 
+                    href="javascript:void(0)"><span></span></a>
+            <div class="searchview_extended_propositions_list">
+            </div>
+            <a class="searchview_extended_add_proposition" href="javascript:void(0)">
+                <span>Add condition</span></a>
+            <div class="oe_adv_filters_and"><span>and</span></div>
+        </div>
+    </t>
+</t>
