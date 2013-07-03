@@ -91,6 +91,7 @@ def defer_action(single_phase=False, name=None, start_message=None):
 
         new_action.__name__ = action.__name__
         new_action.__doc__ = action.__doc__
+        new_action.orig_action = action
 
         return new_action
 

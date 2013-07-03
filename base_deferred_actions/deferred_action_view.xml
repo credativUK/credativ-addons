@@ -52,8 +52,10 @@
                                         <separator string="Procedure" />
                                         <group col="2" colspan="4">
                                             <field name="proc_type" />
+                                            <field name="proc_model"
+                                                   attrs="{'invisible':[('proc_type','!=','method')],'required':[('proc_type','=','method')]}" />
                                             <field name="proc_method"
-                                                   attrs="{'invisible':[('proc_type','!=','method')]}" />
+                                                   attrs="{'invisible':[('proc_type','!=','method')],'required':[('proc_type','=','method')]}" />
                                             <field name="proc_fnct"
                                                    attrs="{'invisible':[('proc_type','!=','fnct')]}" />
                                             <field name="proc_action"
@@ -62,8 +64,10 @@
                                         <separator string="Verification" />
                                         <group col="2" colspan="4">
                                             <field name="verify_type" />
+                                            <field name="verify_model"
+                                                   attrs="{'invisible':[('verify_type','!=','method')],'required':[('verify_type','=','method')]}" />
                                             <field name="verify_method"
-                                                   attrs="{'invisible':[('verify_type','!=','method')]}" />
+                                                   attrs="{'invisible':[('verify_type','!=','method')],'required':[('verify_type','=','method')]}" />
                                             <field name="verify_fnct"
                                                    attrs="{'invisible':[('verify_type','!=','fnct')]}" />
                                         </group>
@@ -112,7 +116,7 @@
                                         <button name="abort"
                                                 type="object"
                                                 string="Abort"
-                                                states="started,paused,exception"
+                                                states="started,paused,retrying,exception"
                                                 icon="gtk-cancel" />
                                     </tree>
                                 </field>
@@ -149,55 +153,6 @@
             </field>
         </record>
 
-        <!--
-        <record id="view_deferred_action_phase_form" model="ir.ui.view">
-            <field name="name">deferred.action.phase.form</field>
-            <field name="model">deferred.action.phase</field>
-            <field name="type">form</field>
-            <field name="arch" type="xml">
-                <form string="Deferred Action Phase">
-                    <separator string="Phase details" />
-                    <group col="4" colspan="4">
-                        <field name="deferred_action_id" />
-                        <field name="sequence" />
-                    </group>
-                    <group col="2" colspan="4">
-                        <field name="description" />
-                    </group>
-                    <group col="4" colspan="6">
-                        <field name="usage" />
-                        <field name="execution" />
-                        <field name="step_size"
-                               attrs="{'invisible':[('usage','!=','iteration')],'required':[('usage','=','iteration')]}" />
-                    </group>
-                    <separator string="Procedure" />
-                    <group col="2" colspan="4">
-                        <field name="proc_type" />
-                        <field name="proc_method"
-                               attrs="{'invisible':[('proc_type','!=','method')]}" />
-                        <field name="proc_fnct"
-                               attrs="{'invisible':[('proc_type','!=','fnct')]}" />
-                        <field name="proc_action"
-                               attrs="{'invisible':[('proc_type','!=','action')]}" />
-                    </group>
-                    <separator string="Verification" />
-                    <group col="2" colspan="4">
-                        <field name="verify_type" />
-                        <field name="verify_method"
-                               attrs="{'invisible':[('verify_type','!=','method')]}" />
-                        <field name="verify_fnct"
-                               attrs="{'invisible':[('verify_type','!=','fnct')]}" />
-                    </group>
-                    <separator string="Notification" />
-                    <group col="4" colspan="4">
-                        <field name="notify_success" />
-                        <field name="notify_fail" />
-                    </group>
-                </form>
-            </field>
-        </record>
-        -->
-
         <record id="view_deferred_action_instance_form" model="ir.ui.view">
             <field name="name">deferred.action.instance.form</field>
             <field name="model">deferred.action.instance</field>
@@ -208,25 +163,38 @@
                         <field name="name" />
                         <field name="deferred_action_id" />
                     </group>
-                    <group col="10" colspan="4">
+                    <separator string="Status" />
+                    <group col="6" colspan="4">
                         <field name="start_uid" />
                         <field name="start_time" />
+                        <field name="end_time" />
+                    </group>
+                    <group col="8" colspan="4">
                         <field name="current_phase" />
                         <field name="progress"
                                widget="progressbar" />
-                        <field name="end_time" />
+                        <field name="attempts_progress"
+                               widget="progressbar" />
+                        <button type="object"
+                                name="button_reset_attempts"
+                                attrs="{'invisible':[('attempts_progress','&lt;',100.0)]}"
+                                string="Reset attempts"
+                                icon="gtk-execute" />
                     </group>
-                    <group col="2" colspan="4">
-                        <field name="action_args" />
+                    <group col="1" colspan="4">
+                        <separator string="Arguments" />
+                        <field name="action_args" nolabel="1" />
                     </group>
-                    <group col="2" colspan="4">
-                        <field name="status_message" />
+                    <group col="1" colspan="4">
+                        <separator string="Current status" />
+                        <field name="status_message" nolabel="1" />
                     </group>
                     <group col="1" colspan="4">
                         <field name="failure_logs" nolabel="1">
                             <tree string="Failed Resources">
                                 <field name="phase_id"
                                        string="Phase" />
+                                <field name="model" />
                                 <field name="res_name" />
                                 <field name="failure_time" />
                                 <field name="traceback" />
@@ -236,7 +204,7 @@
                     <group col="6" colspan="4">
                         <field name="state"
                                widget="statusbar"
-                               statusbar_visible="draft,started,paused,aborted,finished" />
+                               statusbar_visible="draft,started,paused,exception,aborted,finished" />
                         <button name="start"
                                 type="object"
                                 string="Start"
@@ -255,7 +223,7 @@
                         <button name="abort"
                                 type="object"
                                 string="Abort"
-                                states="started,paused"
+                                states="started,paused,retrying,exception"
                                 icon="gtk-cancel" />
                     </group>
                 </form>
@@ -286,10 +254,15 @@
                             string="Pause"
                             states="started"
                             icon="gtk-media-pause" />
+                    <button name="retry_failed_resources"
+                            type="object"
+                            string="Retry (for failed resources)"
+                            states="exception"
+                            icon="gtk-jump-to" />
                     <button name="abort"
                             type="object"
                             string="Abort"
-                            states="started,paused"
+                            states="started,paused,retrying,exception"
                             icon="gtk-cancel" />
                 </tree>
             </field>
@@ -304,7 +277,7 @@
                     <group>
                         <filter name="today"
                                 icon="terp-go-today"
-                                domain="[('date','=',time.strftime('%%Y-%%m-%%d'))]"
+                                domain="[('start_time','&lt;',time.strftime('%%Y-%%m-%%d 23:59:59')),('start_time','&gt;=',time.strftime('%%Y-%%m-%%d 00:00:00'))]"
                                 string="Today" />
                         <separator orientation="vertical" />
                         <filter icon="terp-document-new"
@@ -312,10 +285,13 @@
                                 domain="[('state','=','draft')]" />
                         <filter icon="gtk-media-play"
                                 string="Started"
-                                domain="[('state','=','started')]" />
+                                domain="[('state','in',('started','retrying'))]" />
                         <filter icon="gtk-media-pause"
                                 string="Paused"
                                 domain="[('state','=','paused')]" />
+                        <filter icon="gtk-cancel"
+                                string="Exception"
+                                domain="[('state','=','exception')]" />
                         <filter icon="gtk-cancel"
                                 string="Aborted"
                                 domain="[('state','=','aborted')]" />
