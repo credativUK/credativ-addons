@@ -95,7 +95,7 @@ class sale_order_claim(osv.osv):
         processed)'''
         return self._prev_compensation(cr, uid, ids,
                                        compensation_type=['refund'],
-                                       claim_state=('open-vouchers','open-refunds','processed'),
+                                       claim_state=('open-vouchers','open-refunds','rejected'),
                                        context=context)
 
     def _pending_voucher(self, cr, uid, ids, field_name, arg, context=None):
@@ -104,7 +104,7 @@ class sale_order_claim(osv.osv):
         yet processed)'''
         return self._prev_compensation(cr, uid, ids,
                                        compensation_type=['voucher'],
-                                       claim_state=('open-vouchers','open-refunds','processed'),
+                                       claim_state=('open-vouchers','open-refunds','rejected'),
                                        context=context)
 
     def _max_refundable(self, cr, uid, ids, field_name, arg, context=None):
@@ -116,7 +116,7 @@ class sale_order_claim(osv.osv):
             ids = [ids]
         return dict([(claim.id, claim.order_total - self._prev_compensation(cr, uid, claim.id,
                                                                             compensation_type=['refund'],
-                                                                            claim_state=('open-vouchers','open-refunds','processed'),
+                                                                            claim_state=('open-vouchers','open-refunds','rejected','processed'),
                                                                             context=context)[claim.id])
                      for claim in self.browse(cr, uid, ids, context=context)])
 
@@ -272,7 +272,7 @@ class sale_order_claim(osv.osv):
                     'prev_refund': self._prev_refund(cr, uid, id, field_name='prev_refund', arg=None, context=None)[id],
                     'prev_voucher': self._prev_voucher(cr, uid, id, field_name='prev_voucher', arg=None, context=None)[id],
                     'pending_refund': self._pending_refund(cr, uid, id, field_name='pending_refund', arg=None, context=None)[id],
-                    'pending_voucher': self._prev_voucher(cr, uid, id, field_name='pending_voucher', arg=None, context=None)[id],
+                    'pending_voucher': self._pending_voucher(cr, uid, id, field_name='pending_voucher', arg=None, context=None)[id],
                     'max_refundable': self._max_refundable(cr, uid, id, field_name='max_refundable', arg=None, context=None)[id],
                     })
 
@@ -363,19 +363,14 @@ class sale_order_issue(osv.osv):
         state(s).'''
         res = {}
 
-        order_issues_pool = self.pool.get('sale.order.issue')
-
         for issue in self.browse(cr, uid, ids, context=context):
-            if issue.claim_id.state not in claim_state:
-                res[issue.id] = 0.0
-            else:
-                issue_ids = order_issues_pool.search(cr, uid, [('resource','=',issue.resource),
-                                                               ('state','not in',['draft','rejected']),
-                                                               ('id','<>',issue.id)], context=context)
-                res[issue.id] = float(sum([float(sum([getattr(issue, comp_type)
-                                                      for comp_type in compensation_type]))
-                                           for issue in order_issues_pool.browse(cr, uid, issue_ids, context)]))
-
+            issue_ids = self.search(cr, uid, [('resource','=','%s,%s' % (issue.resource._table._name, issue.resource.id)),
+                                              ('state','not in',['draft','rejected']),
+                                              ('id','<>',issue.id)], context=context)
+            res[issue.id] = float(sum([float(sum([getattr(iss, comp_type)
+                                                  for comp_type in compensation_type]))
+                                       for iss in self.browse(cr, uid, issue_ids, context)
+                                       if iss.order_claim_id.state in claim_state]))
         return res
 
     def _prev_compensation(self, cr, uid, ids, field_name, arg, context=None):
@@ -423,6 +418,8 @@ class sale_order_issue(osv.osv):
             _prev_compensation,
             type='float',
             string='Compensated',
+            method=True,
+            store=False,
             readonly=True),
         'max_refundable': fields.function(
             _max_refundable,
