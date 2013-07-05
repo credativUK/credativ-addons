@@ -76,8 +76,8 @@ class purchase_order(osv.osv):
         
         for move in move_pool.browse(cr, uid, all_move_ids, context=ctx):
             
-            if move.location_dest_id.id != po.warehouse_id.lot_input_id.id:
-                continue # We only want stock entering the input location, ie cross-dock
+            if move.picking_id.type != 'in':
+                continue # We only want stock from 'in' pickings
             
             rec_check_ids = data_pool.search(cr, uid, [('model', '=', 'stock.move'), ('res_id', '=', move.id), ('module', 'ilike', 'extref'), ('external_referential_id', '=', po.warehouse_id.referential_id.id)])
             
