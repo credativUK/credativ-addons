@@ -59,6 +59,19 @@ class deferred_action(osv.osv):
                 'target': 'new',
                 'type': 'ir.actions.act_window'}
 
+    def _check_action_method_unique(self, cr, uid, ids, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+
+        for action in self.browse(cr, uid, ids, context=context):
+            if self.search(cr, uid, [('id','!=',action.id),
+                                     ('model','=',action.model.model),
+                                     ('action_method','=',action.action_method)],
+                           limit=1, context=context):
+                return False
+
+        return True
+
     _columns = {
         'name': fields.char(
             'Name',
@@ -115,6 +128,10 @@ class deferred_action(osv.osv):
     _defaults = {
         'max_queue_size': 1,
     }
+
+    _constraints = [
+        (_check_action_method_unique, 'An action method may have only one deferred action applied to it.', ['model','action_method']),
+    ]
 
     def update_model_action(self, cr, uid, ids, context=None):
         '''
@@ -394,10 +411,10 @@ class deferred_action_phase(osv.osv):
         phase = self.browse(cr, uid, id, context=context)
 
         if res['completed'] and res['success'] and phase.notify_success:
-            self.pool.get('poweremail.templates').generate_mail(cr, uid, phase.notify_success, phase.id, context=context)
+            self.pool.get('poweremail.templates').generate_mail(cr, uid, phase.notify_success.id, [action_instance_id], context=context)
         if (not res['completed'] or not res['success']) and phase.notify_fail:
             context.update({'completed': res['completed'], 'success': res['success']})
-            self.pool.get('poweremail.templates').generate_mail(cr, uid, phase.notify_fail, phase.id, context=context)
+            self.pool.get('poweremail.templates').generate_mail(cr, uid, phase.notify_fail.id, [action_instance_id], context=context)
 
         return True
 
@@ -1151,6 +1168,14 @@ class deferred_action_instance(osv.osv):
         return dict([(instance.id, 100.0 * (float(instance.attempts) / (instance.deferred_action_id.max_retries or instance.attempts or 1.0)))
                      for instance in self.browse(cr, uid, ids, context=context)])
 
+    def _get_resource_names(self, cr, uid, ids, field_name, arg, context=None):
+        res = {}
+        for instance in self.browse(cr, uid, ids, context=context):
+            model_pool = self.pool.get(instance.deferred_action_id.model.model)
+            res[instance.id] = ' '.join(['[%s] %s' % (r.id, (r and hasattr(r, 'name')) and r.name or '')
+                                         for r in model_pool.browse(cr, uid, ast.literal_eval(instance.res_ids), context=context)])
+        return res
+
     _columns = {
         'name': fields.char(
             'Name',
@@ -1191,6 +1216,12 @@ class deferred_action_instance(osv.osv):
             'Actioned resources',
             required=True,
             readonly=True),
+        'resource_names': fields.function(
+            _get_resource_names,
+            type='char',
+            store=False,
+            method=True,
+            string='Resources'),
         'start_context': fields.serialized(
             'Context',
             readonly=True),
@@ -1455,6 +1486,11 @@ class deferred_action_instance(osv.osv):
 
         for instance in self.browse(cr, uid, ids, context=context):
             if instance.state in ['started','paused','retrying','exception']:
+                # update the action's model's state
+                if instance.deferred_action_id.exception_state:
+                    model_pool = self.pool.get(instance.deferred_action_id.model.model)
+                    model_pool.write(cr, uid, ast.literal_eval(instance.res_ids), {'state': instance.deferred_action_id.exception_state}, context=context)
+
                 self.write(cr, uid, instance.id, {'state': 'exception',
                                                   'status_message': reason or False}, context=context)
                 res[instance.id] = True
