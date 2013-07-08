@@ -44,10 +44,6 @@ from osv import osv
 from openerp import SUPERUSER_ID
 import inspect
 
-import logging
-_logger = logging.getLogger(__name__)
-_logger.setLevel(logging.DEBUG)
-
 def defer_action(single_phase=False, name=None, start_message=None):
     '''
     This is a decorator which is used to mark an action method as
@@ -55,11 +51,8 @@ def defer_action(single_phase=False, name=None, start_message=None):
     object if a method is marked as deferred, but an object does not
     already exist.
     '''
-    _logger.debug('Defer action decorator called.')
     def wrap(action):
-        _logger.debug('Making %s into a deferred action' % (action.__name__,))
         def new_action(self, cr, uid, ids, *args, **kwargs):
-            _logger.debug('Calling decorated deferred action on %s' % (str(self),))
             if not 'context' in kwargs:
                 kwargs['context'] = {}
 
@@ -85,8 +78,6 @@ def defer_action(single_phase=False, name=None, start_message=None):
             ctx = candidates and candidates[0] or {}
             kwargs['context'] = isinstance(ctx, dict) and ctx or ctx[1]
 
-            _logger.debug('Calling deferred action "%s" (ID %s) with args: %s; kwargs: %s; context=%s' %\
-                          (deferred_action.name, deferred_action.id, args, kwargs, kwargs.get('context', None)))
             return action_pool.action_wrapper(cr, uid, deferred_action.id, ids, tuple(args), **kwargs)
 
         new_action.__name__ = action.__name__
