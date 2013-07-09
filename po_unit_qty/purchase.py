@@ -101,4 +101,34 @@ class purchase_order_line(osv.osv):
                 'unit_qty': fields.function(_get_unit_qty, type='float', string='Unit Quantity', digits_compute=dp.get_precision('Product UoM'), required=True),
     }
     
+    def _search_replace_uom(self,cr,uid,val,context=None):
+        '''Search and replace base reference of product uom and product '''
+        
+        if 'product_uom' in val:
+            product_uom = self.pool.get('product.uom')
+            cat_id = product_uom.browse(cr,uid,val['product_uom'],context=context).category_id.id
+            #Search uom base reference.
+            val['product_uom'] = product_uom.search(cr,uid,[('category_id','=', cat_id), ('factor', '=', 1), ('uom_type','=','reference')],context=context)[0]
+            val['product_qty'] = val['unit_qty']
+        
+        return True
+    
+    def create(self,cr,uid,vals,context=None):
+        ''' Purchase order line create method overide to set product uom '''
+        
+        if not context:
+            context={}
+        
+        self._search_replace_uom(cr, uid, vals, context=context)
+        return super(purchase_order_line,self).create(cr,uid,vals,context=context)
+        
+    def write(self, cr, uid, ids, vals, context=None):
+        ''' Purchase order line write method overide to set product uom '''
+        
+        if not context:
+            context = {}
+        
+        self._search_replace_uom(cr, uid, vals, context=context)
+        return super(purchase_order_line,self).write(cr, uid, ids, vals, context)
+    
 purchase_order_line()
