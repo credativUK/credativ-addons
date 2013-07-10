@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<openerp>
+    <data>
+
+        <record id="view_deferred_action_form" model="ir.ui.view">
+            <field name="name">deferred.action.form"</field>
+            <field name="model">deferred.action</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Deferred Action">
+                    <separator string="Model/action" />
+                    <group col="6" colspan="4">
+                        <field name="name" />
+                        <field name="model" />
+                        <field name="action_method" />
+                    </group>
+                    <separator string="Queue and retry" />
+                    <group col="2" colspan="4">
+                        <field name="start_message" />
+                        <field name="max_queue_size" />
+                        <field name="queue_limit_message" />
+                        <field name="max_retries" />
+                    </group>
+                    <separator string="States" />
+                    <group col="6" colspan="4">
+                        <field name="commencement_state" />
+                        <field name="exception_state" />
+                        <field name="completion_state" />
+                    </group>
+                    <notebook>
+                        <page string="Phases">
+                            <group col="1" colspan="4">
+                                <field name="phases" nolabel="1">
+                                    <form string="Deferred Action Phase">
+                                        <separator string="Phase details" />
+                                        <group col="4" colspan="4">
+                                            <field name="deferred_action_id" />
+                                            <field name="sequence" />
+                                        </group>
+                                        <group col="2" colspan="4">
+                                            <field name="description" />
+                                        </group>
+                                        <group col="4" colspan="8">
+                                            <field name="usage" />
+                                            <field name="execution" />
+                                            <field name="iteration_type"
+                                                   attrs="{'invisible':[('usage','!=','iteration')],'required':[('usage','=','iteration')]}" />
+                                            <field name="step_size"
+                                                   attrs="{'invisible':[('usage','!=','iteration')],'required':[('usage','=','iteration')]}" />
+                                        </group>
+                                        <separator string="Procedure" />
+                                        <group col="2" colspan="4">
+                                            <field name="proc_type" />
+                                            <field name="proc_model"
+                                                   attrs="{'invisible':[('proc_type','!=','method')],'required':[('proc_type','=','method')]}" />
+                                            <field name="proc_method"
+                                                   attrs="{'invisible':[('proc_type','!=','method')],'required':[('proc_type','=','method')]}" />
+                                            <field name="proc_fnct"
+                                                   attrs="{'invisible':[('proc_type','!=','fnct')]}" />
+                                            <field name="proc_action"
+                                                   attrs="{'invisible':[('proc_type','!=','action')]}" />
+                                        </group>
+                                        <separator string="Verification" />
+                                        <group col="2" colspan="4">
+                                            <field name="verify_type" />
+                                            <field name="verify_model"
+                                                   attrs="{'invisible':[('verify_type','!=','method')],'required':[('verify_type','=','method')]}" />
+                                            <field name="verify_method"
+                                                   attrs="{'invisible':[('verify_type','!=','method')],'required':[('verify_type','=','method')]}" />
+                                            <field name="verify_fnct"
+                                                   attrs="{'invisible':[('verify_type','!=','fnct')]}" />
+                                        </group>
+                                        <separator string="Notification" />
+                                        <group col="4" colspan="4">
+                                            <field name="notify_success" />
+                                            <field name="notify_fail" />
+                                        </group>
+                                    </form>
+                                    <tree string="Phases">
+                                        <field name="sequence" />
+                                        <field name="usage" />
+                                        <field name="description" />
+                                        <field name="proc_type" />
+                                    </tree>
+                                </field>
+                            </group>
+                        </page>
+                        <page string="Instances">
+                            <group col="1" colspan="4">
+                                <field name="instances" nolabel="1">
+                                    <tree>
+                                        <field name="name" />
+                                        <field name="state" />
+                                        <field name="action_args" />
+                                        <field name="start_uid" />
+                                        <field name="start_time" />
+                                        <field name="progress"
+                                               widget="progressbar" />
+                                        <field name="end_time" />
+                                        <button name="start"
+                                                type="object"
+                                                string="Start"
+                                                states="draft,paused"
+                                                icon="gtk-media-play" />
+                                        <button name="pause"
+                                                type="object"
+                                                string="Pause"
+                                                states="started"
+                                                icon="gtk-media-pause" />
+                                        <button name="retry_failed_resources"
+                                                type="object"
+                                                string="Retry (for failed resources)"
+                                                states="exception"
+                                                icon="gtk-jump-to" />
+                                        <button name="abort"
+                                                type="object"
+                                                string="Abort"
+                                                states="started,paused,retrying,exception"
+                                                icon="gtk-cancel" />
+                                    </tree>
+                                </field>
+                            </group>
+                        </page>
+                    </notebook>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_deferred_action_tree" model="ir.ui.view">
+            <field name="name">deferred.action.tree</field>
+            <field name="model">deferred.action</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Deferred Actions">
+                    <field name="name" />
+                    <field name="model" />
+                    <field name="action_method" />
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_deferred_action_search" model="ir.ui.view">
+            <field name="name">deferred.action.search</field>
+            <field name="model">deferred.action</field>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <search string="Search Deferred Actions">
+                    <group>
+                        <field name="model" />
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="view_deferred_action_instance_form" model="ir.ui.view">
+            <field name="name">deferred.action.instance.form</field>
+            <field name="model">deferred.action.instance</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Deferred Action Instance">
+                    <group col="4" colspan="4">
+                        <field name="name" />
+                        <field name="deferred_action_id" />
+                    </group>
+                    <separator string="Status" />
+                    <group col="6" colspan="4">
+                        <field name="start_uid" />
+                        <field name="start_time" />
+                        <field name="end_time" />
+                    </group>
+                    <group col="8" colspan="4">
+                        <field name="current_phase" />
+                        <field name="progress"
+                               widget="progressbar" />
+                        <field name="attempts_progress"
+                               widget="progressbar" />
+                        <button type="object"
+                                name="button_reset_attempts"
+                                attrs="{'invisible':[('attempts_progress','&lt;',100.0)]}"
+                                string="Reset attempts"
+                                icon="gtk-execute" />
+                    </group>
+                    <group col="1" colspan="4">
+                        <separator string="Arguments" />
+                        <field name="action_args" nolabel="1" />
+                    </group>
+                    <group col="1" colspan="4">
+                        <separator string="Current status" />
+                        <field name="status_message" nolabel="1" />
+                    </group>
+                    <group col="1" colspan="4">
+                        <field name="failure_logs" nolabel="1">
+                            <tree string="Failed Resources">
+                                <field name="phase_id"
+                                       string="Phase" />
+                                <field name="model" />
+                                <field name="res_name" />
+                                <field name="failure_time" />
+                                <field name="traceback" />
+                            </tree>
+                        </field>
+                    </group>
+                    <group col="6" colspan="4">
+                        <field name="state"
+                               widget="statusbar"
+                               statusbar_visible="draft,started,paused,exception,aborted,finished" />
+                        <button name="start"
+                                type="object"
+                                string="Start"
+                                states="draft,paused"
+                                icon="gtk-media-play" />
+                        <button name="pause"
+                                type="object"
+                                string="Pause"
+                                states="started"
+                                icon="gtk-media-pause" />
+                        <button name="retry_failed_resources"
+                                type="object"
+                                string="Retry (for failed resources)"
+                                states="exception"
+                                icon="gtk-jump-to" />
+                        <button name="abort"
+                                type="object"
+                                string="Abort"
+                                states="started,paused,retrying,exception"
+                                icon="gtk-cancel" />
+                    </group>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_deferred_action_instance_tree" model="ir.ui.view">
+            <field name="name">deferred.action.instance.tree</field>
+            <field name="model">deferred.action.instance</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Deferred Action Instances">
+                    <field name="deferred_action_id" />
+                    <field name="name" />
+                    <field name="start_uid" />
+                    <field name="start_time" />
+                    <field name="progress"
+                           widget="progressbar" />
+                    <field name="end_time" />
+                    <field name="state" />
+                    <button name="start"
+                            type="object"
+                            string="Start"
+                            states="draft,paused"
+                            icon="gtk-media-play" />
+                    <button name="pause"
+                            type="object"
+                            string="Pause"
+                            states="started"
+                            icon="gtk-media-pause" />
+                    <button name="retry_failed_resources"
+                            type="object"
+                            string="Retry (for failed resources)"
+                            states="exception"
+                            icon="gtk-jump-to" />
+                    <button name="abort"
+                            type="object"
+                            string="Abort"
+                            states="started,paused,retrying,exception"
+                            icon="gtk-cancel" />
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_deferred_action_instance_search" model="ir.ui.view">
+            <field name="name">deferred.action.instance.search</field>
+            <field name="model">deferred.action.instance</field>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <search string="Search Deferred Action Instances">
+                    <group>
+                        <filter name="today"
+                                icon="terp-go-today"
+                                domain="[('start_time','&lt;',time.strftime('%%Y-%%m-%%d 23:59:59')),('start_time','&gt;=',time.strftime('%%Y-%%m-%%d 00:00:00'))]"
+                                string="Today" />
+                        <separator orientation="vertical" />
+                        <filter icon="terp-document-new"
+                                string="Draft"
+                                domain="[('state','=','draft')]" />
+                        <filter icon="gtk-media-play"
+                                string="Started"
+                                domain="[('state','in',('started','retrying'))]" />
+                        <filter icon="gtk-media-pause"
+                                string="Paused"
+                                domain="[('state','=','paused')]" />
+                        <filter icon="gtk-cancel"
+                                string="Exception"
+                                domain="[('state','=','exception')]" />
+                        <filter icon="gtk-cancel"
+                                string="Aborted"
+                                domain="[('state','=','aborted')]" />
+                        <filter icon="terp-check"
+                                string="Finished"
+                                domain="[('state','=','finished')]" />
+                        <separator orientation="vertical" />
+                        <field name="deferred_action_id" />
+                        <field name="start_uid" />
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!--
+        <record id="view_deferred_action_instance_calendar" model="ir.ui.view">
+
+        </record>
+        -->
+
+        <record id="action_deferred_action_tree" model="ir.actions.act_window">
+            <field name="name">Deferred Actions</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">deferred.action</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_deferred_action_tree" />
+            <field name="search_view_id" ref="view_deferred_action_search" />
+            <field name="help">Deferred actions allow you to manage workflow action methods that take a long time to execute by running them in the background and providing notification to users. Each deferred action refers to one action method on a model (i.e., if your workflow is made up of multiple actions, and you want more than one of those actions to be deferred, you must create a deferred action for each action method). The deferred action is split into 'phases'; each phase can be defined as either a method on the model, some Python code stored in a field on the phase, or another deferred action resource (allowing trees of deferred actions). From here you can also see the 'instances' of your deferred actions. These are deferred actions that are currently running.</field>
+        </record>
+
+        <record id="action_deferred_action_form" model="ir.actions.act_window">
+            <field name="name">Deferred Action</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">deferred.action</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_deferred_action_form" />
+            <field name="help">Deferred actions allow you to manage workflow action methods that take a long time to execute by running them in the background and providing notification to users. Each deferred action refers to one action method on a model (i.e., if your workflow is made up of multiple actions, and you want more than one of those actions to be deferred, you must create a deferred action for each action method). The deferred action is split into 'phases'; each phase can be defined as either a method on the model, some Python code stored in a field on the phase, or another deferred action resource (allowing trees of deferred actions). From here you can also see the 'instances' of your deferred actions. These are deferred actions that are currently running.</field>
+        </record>
+
+        <record id="action_deferred_action_instance_tree" model="ir.actions.act_window">
+            <field name="name">Deferred Action Instances</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">deferred.action.instance</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_deferred_action_instance_tree" />
+            <field name="search_view_id" ref="view_deferred_action_instance_search" />
+            <field name="help">These resources represent deferred actions that are currently running or that have previously completed. From here you can manage running deferred actions.</field>
+        </record>
+
+        <!--
+        <record id="action_deferred_action_instance_form" model="ir.actions.act_window">
+            <field name="name">Deferred Action Instance</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">deferred.action.instance</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_deferred_action_instance_form" />
+        </record>
+        -->
+
+        <!-- This isn't actually used anywhere
+        <record id="action_deferred_action_phase_form" model="ir.actions.act_window">
+            <field name="name">Deferred Action Phase</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">deferred.action.phase</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_deferred_action_phase_form" />
+            <field name="help">A phase of a deferred action. Phases are executed in sequence and may also be iterable. Each phase can log its activity and report via email to users. The phase must include some code to execute. This can either be a method on the model on which the action is defined, a Python function stored in a field on the phase object, or another deferred action.</field>
+        </record>
+        -->
+
+        <menuitem
+            id="menu_deferred_actions"
+            name="Deferred Actions"
+            parent="base.menu_custom" />
+
+        <menuitem
+            action="action_deferred_action_tree"
+            id="menu_deferred_action_tree"
+            parent="menu_deferred_actions" />
+
+        <menuitem
+            action="action_deferred_action_instance_tree"
+            id="menu_deferred_action_instance_tree"
+            parent="menu_deferred_actions" />
+
+    </data>
+</openerp>
