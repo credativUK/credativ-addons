@@ -170,9 +170,9 @@ class sale_order_claim(osv.osv):
             'prev_voucher':
                 so_total_compensation(sale_order_id, ['voucher'], claim_state=('processed',)),
             'pending_refund':
-                so_total_compensation(sale_order_id, ['refund'], claim_state=('open-vouchers','open-refunds')),
+                so_total_compensation(sale_order_id, ['refund'], claim_state=('open-vouchers','open-refunds','rejected')),
             'pending_voucher':
-                so_total_compensation(sale_order_id, ['voucher'], claim_state=('open-vouchers','open-refunds')),
+                so_total_compensation(sale_order_id, ['voucher'], claim_state=('open-vouchers','open-refunds','rejected')),
             'max_refundable':
                 sale_order.amount_total - so_total_compensation(sale_order_id, ['refund'],
                                                                 claim_state=('open-vouchers','open-refunds','processed')),
