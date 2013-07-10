@@ -178,8 +178,9 @@ class poweremail_templates(osv.osv):
     def generate_mail(self, cursor, user, template_id, record_ids, context=None):
         if context is None:
             context = {}
-        context.update({'frag_func': self.pool.get('poweremail.template_fragments_lines').render_message_wrapper})
-        return super(poweremail_templates, self).generate_mail(cursor, user, template_id, record_ids, context=context)
+        ctx = context.copy()
+        ctx.update({'frag_func': self.pool.get('poweremail.template_fragments_lines').render_message_wrapper})
+        return super(poweremail_templates, self).generate_mail(cursor, user, template_id, record_ids, context=ctx)
     
 poweremail_templates()
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
