@@ -364,6 +364,11 @@ class sale_order_issue(osv.osv):
         res = {}
 
         for issue in self.browse(cr, uid, ids, context=context):
+            if not issue.resource:
+                # Non-item issues do not relate to a resource
+                res[issue.id] = 0.0
+                continue
+
             issue_ids = self.search(cr, uid, [('resource','=','%s,%s' % (issue.resource._table._name, issue.resource.id)),
                                               ('state','not in',['draft','rejected']),
                                               ('id','<>',issue.id)], context=context)
