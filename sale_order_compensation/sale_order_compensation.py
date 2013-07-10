@@ -170,9 +170,9 @@ class sale_order_claim(osv.osv):
             'prev_voucher':
                 so_total_compensation(sale_order_id, ['voucher'], claim_state=('processed',)),
             'pending_refund':
-                so_total_compensation(sale_order_id, ['refund'], claim_state=('open-vouchers','open-refunds')),
+                so_total_compensation(sale_order_id, ['refund'], claim_state=('open-vouchers','open-refunds','rejected')),
             'pending_voucher':
-                so_total_compensation(sale_order_id, ['voucher'], claim_state=('open-vouchers','open-refunds')),
+                so_total_compensation(sale_order_id, ['voucher'], claim_state=('open-vouchers','open-refunds','rejected')),
             'max_refundable':
                 sale_order.amount_total - so_total_compensation(sale_order_id, ['refund'],
                                                                 claim_state=('open-vouchers','open-refunds','processed')),
@@ -364,6 +364,11 @@ class sale_order_issue(osv.osv):
         res = {}
 
         for issue in self.browse(cr, uid, ids, context=context):
+            if not issue.resource:
+                # Non-item issues do not relate to a resource
+                res[issue.id] = 0.0
+                continue
+
             issue_ids = self.search(cr, uid, [('resource','=','%s,%s' % (issue.resource._table._name, issue.resource.id)),
                                               ('state','not in',['draft','rejected']),
                                               ('id','<>',issue.id)], context=context)
