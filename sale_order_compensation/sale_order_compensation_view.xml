@@ -36,6 +36,7 @@
                            on_change="on_change_refund(refund, order_claim_id, sale_order_id)" />
                     <field name="voucher"
                            on_change="on_change_voucher(voucher, order_claim_id, sale_order_id)" />
+                    
                     <field name="prev_compensation" />
                 </xpath>
             </field>
@@ -51,7 +52,22 @@
             <field name="arch" type="xml">
                 <field name="amount_total" position="after">
                     <field name="total_refund" />
-                    <field name="total_voucher" />
+                    <field name="total_voucher" />   
+                </field>
+            </field>
+        </record>
+        
+		<!-- Add the compensation totals to the sale order claim issue tree view -->
+
+        <record id="view_sale_order_issue_tree_compensations" model="ir.ui.view">
+            <field name="name">Compensations</field>
+            <field name="model">sale.order.issue</field>
+            <field name="type">tree</field>
+            <field name="inherit_id" ref="sale_order_claim.view_sale_order_issue_tree" />
+            <field name="arch" type="xml">
+                <field name="refund" position="after">
+                    <field name="total_compensated" />
+                    <field name="create_date" />
                 </field>
             </field>
         </record>

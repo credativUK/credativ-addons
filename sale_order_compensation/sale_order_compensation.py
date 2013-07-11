@@ -411,6 +411,12 @@ class sale_order_issue(osv.osv):
         '''
         return (refund + sum([issue[2].get('refund', 0.0) for issue in issue_ids if issue[0] in [0,1]]),
                 voucher + sum([issue[2].get('voucher', 0.0) for issue in issue_ids if issue[0] in [0,1]]))
+    
+    def _compute_total_compensated(self, cr, uid, ids, field_name=None, arg=None, context=None):
+        '''Calculates the sum of voucher and refund issued in a sale order claim '''
+        
+        return dict([(issue.id, issue.refund + issue.voucher)
+                     for issue in self.browse(cr,uid,ids,context=context)])
 
     _columns = {
         'refund': fields.float(
@@ -431,6 +437,15 @@ class sale_order_issue(osv.osv):
             type='float',
             string='Maximum refund',
             readonly=True),
+        'total_compensated':fields.function(
+            _compute_total_compensated,
+            type='float',
+            method=True,
+            readonly=True,
+            string='Total Compensated'),
+        'create_date' : fields.datetime(
+            'Issue Create Date',
+            readonly=True)
         }
 
     def on_change_refund(self, cr, uid, ids, refund, order_issue_ids, context=None):
