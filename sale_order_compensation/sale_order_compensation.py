@@ -444,7 +444,7 @@ class sale_order_issue(osv.osv):
             readonly=True,
             string='Total Compensated'),
         'create_date' : fields.datetime(
-            'Issue Create Date',
+            'Issue Creation Date',
             readonly=True)
         }
 
