@@ -152,10 +152,10 @@ class report_result(osv.osv):
             i = 0
             for f in report.field_ids:
                 if f.field_id.model:
-                    arch += '<field name="%s"/>' % ('field' + str(i),)
+                    arch += '<field name="%s" string="%s"/>' % ('field' + str(i), f.field_name or f.field_id.field_description)
                     i += 1
                 else:
-                    arch += '<field name="%s"/>' % ('column_count',)
+                    arch += '<field name="%s" string="%s"/>' % ('column_count', f.field_name or f.field_id.field_description)
         arch += '</%s>' % (view_type,)
         result = {
             'arch': arch,
