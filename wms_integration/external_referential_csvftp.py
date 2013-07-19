@@ -387,12 +387,6 @@ class Connection(object):
         try:
             self._export_ready = False
             self._write_export_cache()
-            if self.debug:
-                self.logger.debug('CSV export: About to execute FTP command: STOR %s; sending %s' % (self._export_remote_fn, self._export_tmp_fn))
-            result = self._ftp_client.storbinary('STOR %s' % (self._export_remote_fn,), open(self._export_tmp_fn, 'rU'))
-            if self.debug:
-                self.logger.debug('CSV export: Command returned: %s' % (result))
-            self._clean_up_export()
         except IOError, X:
             if self.debug:
                 self.logger.debug('CSV export: Got IOError')
@@ -403,17 +397,32 @@ class Connection(object):
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg, context=context)
             self._clean_up_export()
             raise X
-        except ftplib.all_errors, X:
-            if self.debug:
-                self.logger.debug('CSV export: Got FTP Error')
-            msg = 'CSV export: Could not send %s (local) to %s (remote): %s' %\
-                (self._export_tmp_fn, self._export_remote_fn, X.message)
-            self.logger.error(msg)
+        if self.debug:
+            self.logger.debug('CSV export: About to execute FTP command: STOR %s; sending %s' % (self._export_remote_fn, self._export_tmp_fn))
+        attempts = 0
+        while attempts < 3:
+            attempts += 1
+            try:
+                result = self._ftp_client.storbinary('STOR %s' % (self._export_remote_fn,), open(self._export_tmp_fn, 'rU'))
+                if self.debug:
+                    self.logger.debug('CSV export: Command returned: %s' % (result))
+            except ftplib.all_errors, X:
+                if self.debug:
+                    self.logger.debug('CSV export: Got FTP Error')
+                msg = 'CSV export: Could not send %s (local) to %s (remote): %s' %\
+                    (self._export_tmp_fn, self._export_remote_fn, X.message)
+                self.logger.error(msg)
+                self._disconnect()
+                self._connect()
+                continue
+            break
+        else:
             if self.reporter:
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg, context=context)
             self._clean_up_export()
             self._export_ready = False
             raise X
+        self._clean_up_export()
 
     def _write_export_cache(self):
         try:
