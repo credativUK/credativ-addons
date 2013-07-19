@@ -52,6 +52,11 @@ class purchase_order_line(osv.osv):
         res = super(purchase_order_line, self).onchange_product_id(cr,uid,ids,pricelist_id, product_id, qty, uom_id,
             partner_id, date_order=date_order, fiscal_position_id=fiscal_position_id, date_planned=date_planned,
             name=name, price_unit=price_unit, notes=notes, context=context)
+        
+        # Remove warning message restricting a supplier to a single UoM
+        if res.get('warning', False) and res['warning'].get('message', False) and res['warning']['message'][0:48] == 'The selected supplier only sells this product by':
+            del res['warning']
+        
         if product_id and uom_id:
             uom = self.pool.get('product.uom').browse(cr,uid,uom_id,context=context)
             qty_per_uom = 1.0 / uom.factor
