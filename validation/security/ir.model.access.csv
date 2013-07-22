@@ -1,0 +1,3 @@
+"id","name","model_id:id","group_id:id","perm_read","perm_write","perm_create","perm_unlink"
+"access_ir_validation_group_erp_manager","ir.validation","model_ir_validation","base.group_erp_manager",1,1,1,1
+"access_ir_validation_group_user","ir.validation","model_ir_validation",base.group_erp_manager,1,0,0,0

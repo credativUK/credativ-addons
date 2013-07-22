@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_validation_form" model="ir.ui.view">
+            <field name="name">Record Validation</field>
+            <field name="model">ir.validation</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Record Validation">
+                    <group col="2" colspan="2">
+                        <separator colspan="2" string="General"/>
+                        <field colspan="4" name="name"/>
+                        <field name="model_id"/>
+                    </group>
+                    <group col="4" colspan="2">
+                        <separator colspan="4" string="Access Rights"/>
+                        <field name="perm_pre_write"/>
+                        <field name="perm_post_write"/>
+                        <field name="perm_post_create"/>
+                        <field name="perm_pre_unlink"/>
+                    </group>
+                    <separator colspan="4" string="Validation definition (domain filter)"/>
+                    <group colspan="4">
+                        <field name="domain_force" colspan="4" nolabel="1"/>
+                    </group>
+                    <separator colspan="4" string="Message to show on validation failure"/>
+                    <group colspan="4">
+                        <field name="message" colspan="4" nolabel="1"/>
+                    </group>
+                    <separator colspan="4" string="Groups (no group = global)"/>
+                    <group colspan="4" expand="1">
+                        <field name="global"/>
+                        <field name="groups" nolabel="1" colspan="4"/>
+                    </group>
+                </form>
+            </field>
+        </record>
+        <record id="view_validation_tree" model="ir.ui.view">
+            <field name="name">Record Validation</field>
+            <field name="model">ir.validation</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Record Validation">
+                    <field name="model_id"/>
+                    <field name="name"/>
+                    <field name="global"/>
+                    <field name="domain_force"/>
+                    <field name="message"/>
+                    <field name="perm_pre_write"/>
+                    <field name="perm_post_write"/>
+                    <field name="perm_post_create"/>
+                    <field name="perm_pre_unlink"/>
+                </tree>
+            </field>
+        </record>
+        <record id="view_validation_search" model="ir.ui.view">
+            <field name="name">Record Validation</field>
+            <field name="model">ir.validation</field>
+            <field name="type">search</field>
+            <field name="arch" type="xml">
+                <search string="Record Validation">
+                    <group>
+                        <filter string="Global" icon="terp-stage" domain="[('global','=',True)]"/>
+                        <separator orientation="vertical"/>
+                        <filter string="Full Access" icon="terp-gtk-select-all" domain="[('perm_pre_write','=',True),('perm_post_write','=',True),('perm_post_create','=',True),('perm_pre_unlink','=',True)]"/>
+                        <filter string="Write Access" icon="terp-tools" domain="['|', ('perm_pre_write','=',True), ('perm_post_write','=',True)]"/>
+                        <separator orientation="vertical"/>
+                        <field name="model_id"/>
+                        <field name="name"/>
+                        <field name="groups"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_validation" model="ir.actions.act_window">
+            <field name="name">Record Validation</field>
+            <field name="res_model">ir.validation</field>
+            <field name="view_type">form</field>
+            <field name="view_id" ref="view_validation_tree"/>
+            <field name="search_view_id" ref="view_validation_search"/>
+        </record>
+        <menuitem action="action_validation" id="menu_action_validation" parent="base.menu_security" sequence="3"/>
+    </data>
+</openerp>
