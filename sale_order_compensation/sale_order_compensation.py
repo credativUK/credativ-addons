@@ -130,11 +130,11 @@ class sale_order_claim(osv.osv):
                 voucher + sum([issue[2].get('voucher', 0.0) for issue in issue_ids if issue[0] in [0,1]]))
 
     def _enforce_max_compensation(self, cr, uid, ids, context=None):
-        '''Implements the constraint that refunds/voucher amount must not
+        '''Implements the constraint that refunds amount must not
         exceed maximum refundable amount.
         '''
         for claim in self.browse(cr, uid, ids, context=context):
-            if claim.total_refund + claim.total_voucher > claim.max_refundable:
+            if claim.total_refund > claim.max_refundable:
                 return False
         return True
 
@@ -242,7 +242,7 @@ class sale_order_claim(osv.osv):
         }
 
     _constraints = [
-        (_enforce_max_compensation, 'Compensation amount exceeds maximum allowed for this order.', ['total_refund', 'total_voucher']),
+        (_enforce_max_compensation, 'Compensation amount exceeds maximum allowed for this order.', ['total_refund']),
     ]
 
     def onchange_sale_order(self, cr, uid, ids, sale_order_id, order_issue_ids, context=None):
