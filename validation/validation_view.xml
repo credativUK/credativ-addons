@@ -7,10 +7,11 @@
             <field name="type">form</field>
             <field name="arch" type="xml">
                 <form string="Record Validation">
-                    <group col="2" colspan="2">
-                        <separator colspan="2" string="General"/>
+                    <group col="6" colspan="2">
+                        <separator colspan="6" string="General"/>
                         <field colspan="4" name="name"/>
-                        <field name="model_id"/>
+                        <field colspan="2" name="active"/>
+                        <field colspan="6" name="model_id"/>
                     </group>
                     <group col="4" colspan="2">
                         <separator colspan="4" string="Access Rights"/>
@@ -40,9 +41,10 @@
             <field name="model">ir.validation</field>
             <field name="type">tree</field>
             <field name="arch" type="xml">
-                <tree string="Record Validation">
+                <tree string="Record Validation" colors="grey:active==False;">
                     <field name="model_id"/>
                     <field name="name"/>
+                    <field name="active"/>
                     <field name="global"/>
                     <field name="domain_force"/>
                     <field name="message"/>
@@ -65,6 +67,7 @@
                         <filter string="Full Access" icon="terp-gtk-select-all" domain="[('perm_pre_write','=',True),('perm_post_write','=',True),('perm_post_create','=',True),('perm_pre_unlink','=',True)]"/>
                         <filter string="Write Access" icon="terp-tools" domain="['|', ('perm_pre_write','=',True), ('perm_post_write','=',True)]"/>
                         <separator orientation="vertical"/>
+                        <field name="active"/>
                         <field name="model_id"/>
                         <field name="name"/>
                         <field name="groups"/>
