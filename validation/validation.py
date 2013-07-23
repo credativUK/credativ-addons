@@ -234,6 +234,10 @@ orm.Model.check_access_rule_old = orm.Model.check_access_rule
 orm.Model._validate_old = orm.Model._validate
 
 def check_validation_rule(self, cr, uid, ids, opp, context=None):
+    if context == None:
+        context = {}
+    if context.get('skip_validation', False):
+        return
     where_clause, where_params, tables, msg = self.pool.get('ir.validation').domain_get(cr, uid, self._name, opp, context=context)
     if where_clause:
         where_clause = ' and ' + ' and '.join(where_clause)
