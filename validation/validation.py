@@ -79,6 +79,7 @@ class ir_validation(osv.osv):
         'perm_post_write': fields.boolean('Apply For Post-Write'),
         'perm_post_create': fields.boolean('Apply For Post-Create'),
         'perm_pre_unlink': fields.boolean('Apply For Pre-Delete'),
+        'active': fields.boolean('Active'),
     }
 
     _order = 'model_id DESC'
@@ -89,6 +90,7 @@ class ir_validation(osv.osv):
         'perm_post_create': True,
         'perm_pre_unlink': True,
         'global': True,
+        'active': True,
     }
     _sql_constraints = [
         ('no_access_rights', 'CHECK (perm_pre_write!=False or perm_post_write!=False or perm_post_create!=False or perm_pre_unlink!=False)', 'Rule must have at least one checked access right !'),
@@ -107,6 +109,7 @@ class ir_validation(osv.osv):
                 FROM ir_validation r
                 JOIN ir_model m ON (r.model_id = m.id)
                 WHERE m.model = %s
+                AND r.active = True
                 AND r.perm_""" + mode + """
                 AND (r.id IN (SELECT rule_group_id FROM rule_group_rel g_rel
                             JOIN res_groups_users_rel u_rel ON (g_rel.group_id = u_rel.gid)
@@ -146,6 +149,7 @@ class ir_validation(osv.osv):
                 FROM ir_validation r
                 JOIN ir_model m ON (r.model_id = m.id)
                 WHERE m.model = %s
+                AND r.active = True
                 AND r.perm_""" + mode + """
                 AND (r.id IN (SELECT rule_group_id FROM rule_group_rel g_rel
                             JOIN res_groups_users_rel u_rel ON (g_rel.group_id = u_rel.gid)
@@ -230,21 +234,30 @@ orm.Model.check_access_rule_old = orm.Model.check_access_rule
 orm.Model._validate_old = orm.Model._validate
 
 def check_validation_rule(self, cr, uid, ids, opp, context=None):
+    if context == None:
+        context = {}
+    if context.get('skip_validation', False):
+        return
     where_clause, where_params, tables, msg = self.pool.get('ir.validation').domain_get(cr, uid, self._name, opp, context=context)
     if where_clause:
         where_clause = ' and ' + ' and '.join(where_clause)
         for sub_ids in cr.split_for_in_conditions(ids):
             cr.execute('SELECT ' + self._table + '.id FROM ' + ','.join(tables) + ' WHERE ' + self._table + '.id IN %s' + where_clause, [sub_ids] + where_params)
             if cr.rowcount != len(sub_ids): # We failed validation so now find which message(s) we need to show
-                msgs = []
+                msgs = {}
                 for where_clause, where_params, tables, msg in self.pool.get('ir.validation').domain_get_ittr(cr, uid, self._name, opp, context=context):
                     if where_clause:
                         where_clause = ' and ' + ' and '.join(where_clause)
-                        for sub_ids in cr.split_for_in_conditions(ids):
-                            cr.execute('SELECT ' + self._table + '.id FROM ' + ','.join(tables) + ' WHERE ' + self._table + '.id IN %s' + where_clause, [sub_ids] + where_params)
-                            if cr.rowcount != len(sub_ids):
-                                msgs.append(msg)
-                raise orm.except_orm(_('Validation Error'), _('Validation Error (Operation: %s, Document type: %s).\n\n%s') % (opp, self._description, '\n'.join(msgs)))
+                        for id in ids:
+                            rec = repr(self.name_get(cr, uid, id, context=context))
+                            cr.execute('SELECT ' + self._table + '.id FROM ' + ','.join(tables) + ' WHERE ' + self._table + '.id IN %s' + where_clause, [(id,)] + where_params)
+                            if cr.rowcount != 1:
+                                msgs.setdefault(rec, []).append(msg)
+                error_strs = []
+                for m_rec, m_msg in msgs.iteritems():
+                    error_strs.append("%s:\n%s" % (m_rec, '\n'.join(m_msg)))
+                error_str = "\n\n".join(error_strs)
+                raise orm.except_orm(_('Validation Error'), _('Validation Error (Operation: %s, Document type: %s).\n\n%s') % (opp, self._description, error_str))
     return
 
 def check_access_rule(self, cr, uid, ids, operation, context=None):
