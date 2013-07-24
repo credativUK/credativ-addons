@@ -114,7 +114,8 @@ class purchase_order_line(osv.osv):
             cat_id = product_uom.browse(cr,uid,val['product_uom'],context=context).category_id.id
             #Search uom base reference.
             val['product_uom'] = product_uom.search(cr,uid,[('category_id','=', cat_id), ('factor', '=', 1), ('uom_type','=','reference')],context=context)[0]
-            val['product_qty'] = val['unit_qty']
+            if 'unit_qty' in val:
+                val['product_qty'] = val['unit_qty']
         
         return True
     
