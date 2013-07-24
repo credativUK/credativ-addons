@@ -318,15 +318,8 @@ class sale_order_claim(osv.osv):
         max_refundable = self._max_refundable(cr, uid, id, 'max_refundable', None, context=None)[id]
         max_refundable = round(float(max_refundable), 2)
 
-        if total_voucher > max_refundable:
-            return {'warning': {'title': 'Maximum voucher',
-                                'message': 'The maximum refundable amount for this order is %0.2d. The voucher %0.2d exceeds this maximum.' %\
-                                (max_refundable, total_voucher)},
-                    'value': {'total_voucher': total_voucher,
-                              'max_refundable': max_refundable}}
-
         return {'value': {'total_voucher': self._total_voucher(cr, uid, id, field_name='total_voucher', arg=None, context=None)[id] + voucher,
-                          'max_refundable': self._max_refundable(cr, uid, id, field_name='max_refundable', arg=None, context=None)[id] - voucher}}
+                          'max_refundable': max_refundable }}
 
     def action_open(self, cr, uid, ids, context=None):
         # TODO What should we do with the refunds/vouchers here?
@@ -486,15 +479,6 @@ class sale_order_issue(osv.osv):
         issue = self.browse(cr, uid, id, context=context)
         _, voucher = self._sum_compensation(cr, uid, id, 0.0, voucher, order_issue_ids, context=context)
         voucher = round(float(voucher), 2)
-
-        if voucher > round(float(issue.order_claim_id.max_refundable), 2):
-            return {'warning': {'title': 'Maximum compensation',
-                                'message': 'The maximum refundable amount for this order is %.2f. The voucher %.2f exceeds this maximum.' %\
-                                (round(float(issue.order_claim_id.max_refundable), 2), voucher)}}
-        if voucher > round(float(issue.max_refundable), 2):
-            return {'warning': {'title': 'Maximum compensation',
-                                'message': 'The maximum refundable amount for this item is %.2f. The voucher %.2f exceeds this maximum.' %\
-                                (round(float(issue.max_refundable), 2), voucher)}}
 
         return {'value': {'total_voucher': issue.order_claim_id.total_voucher + voucher}}
 
