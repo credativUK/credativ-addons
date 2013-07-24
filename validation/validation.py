@@ -191,7 +191,7 @@ class ir_validation(osv.osv):
                 # involve objects on which the real uid has no acces rights.
                 # This means also there is no implicit restriction (e.g. an object
                 # references another object the user can't see).
-                query = self.pool.get(model_name)._where_calc(cr, 1, dom, active_test=False)
+                query = self.pool.get(model_name)._where_calc(cr, 1, dom, active_test=False, context=context)
                 return query.where_clause, query.where_clause_params, query.tables, msg
         except Exception, e:
             _logger.error('Error when processing validation rules. %s' % (traceback.format_exc(),))
@@ -206,7 +206,7 @@ class ir_validation(osv.osv):
                     # involve objects on which the real uid has no acces rights.
                     # This means also there is no implicit restriction (e.g. an object
                     # references another object the user can't see).
-                    query = self.pool.get(model_name)._where_calc(cr, 1, dom, active_test=False)
+                    query = self.pool.get(model_name)._where_calc(cr, 1, dom, active_test=False, context=context)
                     yield query.where_clause, query.where_clause_params, query.tables, msg
         except Exception, e:
             _logger.error('Error when processing validation rules. %s' % (traceback.format_exc(),))
