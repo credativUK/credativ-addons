@@ -3,7 +3,7 @@
     <data>
 		<!-- Scheduler -->
         <record forcecreate="True" id="ir_cron_po_merge" model="ir.cron">
-            <field name="name">Run Auto Merge PO</field>
+            <field name="name">Run Auto Merge Scheduler PO</field>
             <field eval="False" name="active"/>
             <field name="user_id" ref="base.user_root"/>
             <field name="interval_number">1</field>
