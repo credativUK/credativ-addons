@@ -26,6 +26,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from osv import osv
 from collections import defaultdict
+import logging
 
 class purchase_order(osv.osv):
     _inherit='purchase.order'
@@ -39,7 +40,8 @@ class purchase_order(osv.osv):
 
         #Search for po which are in draft state
         if not ids:
-            ids = self.search(cr,uid,[('state', '=', 'draft')], context=context)
+            cr.execute("select id from purchase_order where state='draft' and id in (select purchase_id as id from procurement_order where state='running')")
+            ids = map(lambda x: x[0], cr.fetchall())
 
         #assign ids to active_ids in context
         context['active_ids'] = ids
@@ -69,8 +71,10 @@ class procurement_order(osv.osv):
         acc_pos_obj = self.pool.get('account.fiscal.position')
         po_obj = self.pool.get('purchase.order')
         po_line_obj = self.pool.get('purchase.order.line')
-        #Merge all PO in draft state
-        self.pool.get('purchase.order').merge_po(cr,uid,[],context=context)
+        #Get All PO's which were genereated through scheduler
+        cr.execute("select id from purchase_order where state='draft' and id in (select purchase_id as id from procurement_order where state='running')")
+        po_ids = map(lambda x: x[0], cr.fetchall())
+        self.pool.get('purchase.order').merge_po(cr,uid,po_ids,context=context)
         for procurement in self.browse(cr, uid, ids, context=context):
             res_id = procurement.move_id and procurement.move_id.id or False
             partner = procurement.product_id.seller_id # Taken Main Supplier of Product of Procurement.
@@ -123,7 +127,8 @@ class procurement_order(osv.osv):
             user_company_id = user_class.browse(cr, uid, uid, context = context).company_id.id
             po_exists = po_obj.search(cr, uid, [('company_id','=', user_company_id),
             ('partner_id', '=', partner_id),
-            ('state', 'in', ['draft'])])
+            ('state', 'in', ['draft']),
+            ('id', 'in', po_ids)])
 
             if po_exists:
                 purchase_id = po_exists[0]
@@ -149,7 +154,7 @@ class procurement_order(osv.osv):
                 line.update({'order_id': purchase_id})
                 purchase_line_id = po_line_obj.create(cr, uid, line)
             res[procurement.id] = purchase_id
-            self.write(cr, uid, [procurement.id], {'state': 'running', 'purchase_id': purchase_id, 'purchase_line_id':purchase_line_id})
+            self.write(cr, uid, [procurement.id], {'state': 'running', 'purchase_id': purchase_id})
             return res
 
 procurement_order()
