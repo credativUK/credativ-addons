@@ -26,7 +26,6 @@
                                on_change="on_change_refund(refund)"
                                attrs="{'required':[('whole_order_claim','=',True)],'readonly':[('whole_order_claim','=',False)]}" />
                         <field name="voucher"
-                               on_change="on_change_voucher(voucher)"
                                attrs="{'required':[('whole_order_claim','=',True)],'readonly':[('whole_order_claim','=',False)]}" />
                     </group>
                 </field>
@@ -34,8 +33,7 @@
                 <xpath expr="//field[@name='order_issue_ids']/tree/field[@name='reason']" position="after">
                     <field name="refund"
                            on_change="on_change_refund(refund, order_claim_id, sale_order_id)" />
-                    <field name="voucher"
-                           on_change="on_change_voucher(voucher, order_claim_id, sale_order_id)" />
+                    <field name="voucher" />
                     
                     <field name="prev_compensation" />
                 </xpath>

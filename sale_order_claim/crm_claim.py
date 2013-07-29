@@ -48,10 +48,10 @@ class crm_claim(osv.osv):
             'claim_id',
             string='Claim items'),
         'category': fields.many2one(
-            'crm.claim.category',
+            'crm.claim.line.category',
             string='Category'),
         'reason': fields.many2one(
-            'crm.claim.category',
+            'crm.claim.line.category',
             string='Reason'),
         'resolution_id': fields.many2one(
             'crm.claim.resolution',
