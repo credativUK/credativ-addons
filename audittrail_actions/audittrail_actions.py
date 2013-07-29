@@ -59,35 +59,36 @@ class audittrail_objects_proxy2(audittrail.audittrail_objects_proxy):
             lines = self.prepare_audittrail_log_line(cr, uid, pool, model, res_id, method, old_values, new_values, field_list)
 
             # if at least one modification has been found
-            for model_id, resource_id in lines:
+            for key, value in lines.iteritems():
+                model_id, resource_id = key
                 vals = {
                     'method': method,
                     'object_id': model_id,
                     'user_id': uid,
                     'res_id': resource_id,
                 }
-                if (model_id, resource_id) not in old_values and method not in ('copy', 'read'):
+                if key not in old_values and method not in ('copy', 'read'):
                     # the resource was not existing so we are forcing the method to 'create'
                     # (because it could also come with the value 'write' if we are creating
                     #  new record through a one2many field)
                     vals.update({'method': 'create'})
-                if (model_id, resource_id) not in new_values and method not in ('copy', 'read'):
+                if key not in new_values and method not in ('copy', 'read'):
                     # the resource is not existing anymore so we are forcing the method to 'unlink'
                     # (because it could also come with the value 'write' if we are deleting the
                     #  record through a one2many field)
                     vals.update({'method': 'unlink'})
                 # create the audittrail log in super admin mode, only if a change has been detected
-                if lines[(model_id, resource_id)]:
+                if value:
                     log_id = pool.get('audittrail.log').create(cr, 1, vals)
                     model = pool.get('ir.model').browse(cr, uid, model_id)
-                    self.create_log_line(cr, 1, log_id, model, lines[(model_id, resource_id)])
+                    self.create_log_line(cr, 1, log_id, model, value)
                     
                     context = {
                         'method' : vals['method'],
                         'object' : pool.get(model.model).browse(cr, uid, resource_id),
                         'user': pool.get('res.users').browse(cr, uid, uid).name,
-                        'resource_read': old_values and old_values.values()[0]['text'] or new_values.values()[0]['text'],
-                        'lines': lines[(model_id, resource_id)],
+                        'resource_read': old_values.get(key) and old_values.get(key).get('text', False) or new_values.get(key) and new_values.get(key).get('text', False),
+                        'lines': value,
                     }
                     audit_rule = pool.get('audittrail.rule').search(cr, uid, [('object_id', '=', model_id), ('server_action', '!=', False)])
                     if audit_rule:
