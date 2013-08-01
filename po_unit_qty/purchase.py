@@ -115,7 +115,9 @@ class purchase_order_line(osv.osv):
             #Search uom base reference.
             val['product_uom'] = product_uom.search(cr,uid,[('category_id','=', cat_id), ('factor', '=', 1), ('uom_type','=','reference')],context=context)[0]
             if 'unit_qty' in val:
+                uom_qty = val['unit_qty'] / val['product_qty']
                 val['product_qty'] = val['unit_qty']
+                val['price_unit'] = val['price_unit'] / uom_qty
         
         return True
     
