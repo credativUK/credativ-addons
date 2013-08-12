@@ -184,13 +184,19 @@ class sale_order_claim(osv.osv):
             type='float',
             string='Total refunded',
             readonly=True,
-            store=False),
+            store={
+                'sale.order.claim': (lambda self, cr, uid, ids, context: ids, ['refund', 'order_issue_ids'], 20),
+                'sale.order.issue': (_get_claims_from_issues, ['refund', 'order_claim_id'], 10),
+            }),
         'total_voucher': fields.function(
             _total_voucher,
             type='float',
             string='Total vouchers',
             readonly=True,
-            store=False),
+            store={
+                'sale.order.claim': (lambda self, cr, uid, ids, context: ids, ['voucher', 'order_issue_ids'], 20),
+                'sale.order.issue': (_get_claims_from_issues, ['voucher', 'order_claim_id'], 10),
+            }),
         'prev_refund': fields.function(
             _prev_refund,
             type='float',
