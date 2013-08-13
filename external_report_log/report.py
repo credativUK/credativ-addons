@@ -30,7 +30,7 @@ _logger = logging.getLogger(__name__)
 class external_log(osv.osv):
     _name = 'external.log'
     _description = 'External referential transfer log'
-    _order = 'start_time desc'
+    _order = 'name desc'
 
     _columns = {
         'name': fields.char('Execution reference', type='char', size=15, required=True),
