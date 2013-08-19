@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+<document filename="remittance.pdf">
+  <template title="Remittance Advice" author="OpenERP" allowSplitting="20">
+    <pageTemplate id="first">
+      <frame id="first" x1="34.0" y1="28.0" width="530" height="786"/>
+    </pageTemplate>
+  </template>
+  <stylesheet>
+    <blockTableStyle id="Standard_Outline">
+      <blockAlignment value="LEFT"/>
+      <blockValign value="TOP"/>
+    </blockTableStyle>
+    <blockTableStyle id="Table">
+      <blockAlignment value="LEFT"/>
+      <blockValign value="TOP"/>
+      <lineStyle kind="LINEBELOW" colorName="black"/>
+      <lineStyle kind="LINEABOVE" colorName="black"/>
+    </blockTableStyle>
+    <blockTableStyle id="Tableau2">
+      <blockAlignment value="LEFT"/>
+      <blockValign value="TOP"/>
+    </blockTableStyle>
+    <initialize>
+      <paraStyle name="all" alignment="justify"/>
+    </initialize>
+    <paraStyle name="SMALL" fontName="Helvetica" fontSize="8.0" leading="10" alignment="LEFT" spaceBefore="0.0" spaceAfter="0.0"/>
+    <paraStyle name="NORMAL" fontName="Helvetica" fontSize="9.0" leading="11" alignment="LEFT" spaceBefore="0.0" spaceAfter="0.0"/>
+    <images/>
+  </stylesheet>
+  <story>
+    <para style="SMALL">[[repeatIn(objects,'payment')]]</para>
+    <condPageBreak height="22cm"/>
+    <para style="SMALL">[[ setLang(payment.lang) ]]</para>
+    <spacer length="30"/>
+    <blockTable colWidths="286.0,224.0" style="Tableau2">
+      <tr>
+        <td>
+          <para style="NORMAL">[[ payment.partner_id.address[0].title.name or '' ]] [[ payment.partner_id.address[0].name ]]</para>
+          <para style="NORMAL">[[ payment.partner_id.address[0].street ]]</para>
+          <para style="NORMAL">[[ payment.partner_id.address[0].street2 or removeParentNode('para') ]]</para>
+          <para style="NORMAL">[[ payment.partner_id.address[0].zip ]] [[ payment.partner_id.address[0].city ]]</para>
+          <para style="NORMAL">[[ payment.partner_id.address[0].state_id.name or removeParentNode('para')]]</para>
+          <para style="NORMAL">[[ payment.partner_id.address[0].country_id.name ]]</para>
+          <para style="NORMAL">
+            <font color="white"> </font>
+          </para>
+        </td>
+        <td>
+          <para style="NORMAL"><b>Reference: </b>[[ payment.reference or 'N/A']]</para>
+          <para style="NORMAL"><b>Supplier Ref: </b>[[ payment.name or 'N/A']]</para>
+          <para style="NORMAL"><b>Date: </b>[[ payment.date ]]</para>
+          <para style="NORMAL"><b>Currency: </b>[[ payment.company_id.currency_id.name ]]</para>
+          <para style="NORMAL">
+            <font color="white"> </font>
+          </para>
+        </td>
+      </tr>
+    </blockTable>
+    <blockTable style="Table" colWidths="4cm, 4cm, 5cm, 5cm">
+      <tr>
+        <td><para style="NORMAL">Invoice</para></td>
+        <td><para style="NORMAL">Date</para></td>
+        <td><para style="NORMAL">Invoice Amount</para></td>
+        <td><para style="NORMAL">Amount Paid</para></td>
+      </tr>
+        <tr>
+          <para style="NORMAL">[[repeatIn(_get_non_zero_lines(payment.line_ids),'line')]]</para>
+          <td><para style="NORMAL">[[ line.move_line_id.invoice.number ]]</para></td>
+          <td><para style="NORMAL">[[ line.date_original ]]</para></td>
+          <td><para style="NORMAL">[[ (line.account_id and line.account_id.type == 'receivable' and line.type == 'cr' and line.amount_original) or (line.account_id and line.account_id.type == 'payable' and line.type == 'dr' and line.amount_original) or -line.amount_original ]]</para></td>
+          <td><para style="NORMAL">[[ (line.account_id and line.account_id.type == 'receivable' and line.type == 'cr' and line.amount) or (line.account_id and line.account_id.type == 'payable' and line.type == 'dr' and line.amount) or -line.amount ]]</para></td>
+        </tr>
+      <tr>
+        <td><para style="NORMAL">Total Payment</para></td>
+        <td><para style="NORMAL"></para></td>
+        <td><para style="NORMAL">[[ _get_sum_amount_original ]]</para></td>
+        <td><para style="NORMAL">[[ _get_sum_amount ]]</para></td>
+      </tr>
+    </blockTable>
+  </story>
+</document>
