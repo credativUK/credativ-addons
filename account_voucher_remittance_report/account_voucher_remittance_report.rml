@@ -68,7 +68,10 @@
           <td><para style="NORMAL">[[ line.move_line_id.invoice.number ]]</para></td>
           <td><para style="NORMAL">[[ line.date_original ]]</para></td>
           <td><para style="NORMAL">[[ (line.account_id and line.account_id.type == 'receivable' and line.type == 'cr' and line.amount_original) or (line.account_id and line.account_id.type == 'payable' and line.type == 'dr' and line.amount_original) or -line.amount_original ]]</para></td>
-          <td><para style="NORMAL">[[ (line.account_id and line.account_id.type == 'receivable' and line.type == 'cr' and line.amount) or (line.account_id and line.account_id.type == 'payable' and line.type == 'dr' and line.amount) or -line.amount ]]</para></td>
+          <td>
+            <para style="NORMAL">[[ line.amount_original != line.amount and removeParentNode('para') ]] [[ (line.account_id and line.account_id.type == 'receivable' and line.type == 'cr' and line.amount) or (line.account_id and line.account_id.type == 'payable' and line.type == 'dr' and line.amount) or -line.amount ]]</para>
+            <para style="NORMAL">[[ line.amount_original == line.amount and removeParentNode('para') ]] <i>[[ (line.account_id and line.account_id.type == 'receivable' and line.type == 'cr' and line.amount) or (line.account_id and line.account_id.type == 'payable' and line.type == 'dr' and line.amount) or -line.amount ]]</i></para>
+          </td>
         </tr>
       <tr>
         <td><para style="NORMAL">Total Payment</para></td>
