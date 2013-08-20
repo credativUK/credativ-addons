@@ -41,9 +41,8 @@
           <para style="NORMAL">[[ payment.partner_id.address[0].zip ]] [[ payment.partner_id.address[0].city ]]</para>
           <para style="NORMAL">[[ payment.partner_id.address[0].state_id.name or removeParentNode('para')]]</para>
           <para style="NORMAL">[[ payment.partner_id.address[0].country_id.name ]]</para>
-          <para style="NORMAL">
-            <font color="white"> </font>
-          </para>
+          <para style="NORMAL"><font color="white"> </font></para>
+          <para style="NORMAL"><font color="white"> </font></para>
         </td>
         <td>
           <para style="NORMAL"><b>Reference: </b>[[ payment.reference or 'N/A']]</para>
