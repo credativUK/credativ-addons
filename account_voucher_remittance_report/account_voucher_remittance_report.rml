@@ -46,7 +46,7 @@
         </td>
         <td>
           <para style="NORMAL"><b>Reference: </b>[[ payment.reference or 'N/A']]</para>
-          <para style="NORMAL"><b>Supplier Ref: </b>[[ payment.name or 'N/A']]</para>
+          <para style="NORMAL"><b>Partner Ref: </b>[[ payment.name or 'N/A']]</para>
           <para style="NORMAL"><b>Date: </b>[[ payment.date ]]</para>
           <para style="NORMAL"><b>Currency: </b>[[ payment.company_id.currency_id.name ]]</para>
           <para style="NORMAL">
