@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <report auto="False" id="account_overdue_simple" model="res.partner" name="account.overdue.simple" rml="account_overdue_report_simple/account_print_overdue.rml" string="Overdue Payments"/>
+    </data>
+</openerp>
