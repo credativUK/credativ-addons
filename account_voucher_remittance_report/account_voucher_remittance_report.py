@@ -21,32 +21,10 @@
 #
 ##############################################################################
 
-import logging
 import report
-
-def _get_stockable_product(self, line):
-    invoice = line.move_line_id.invoice
-    stockable_product = [ line.product_id for line in invoice.invoice_line if line.product_id.type == 'product']
-    if len(stockable_product) == 0:
-        self._logger.warning('Invoice %s (ID: %s) has no stockable products' % (invoice.number, invoice.id))
-    elif len(stockable_product) > 1:
-        self._logger.warning('Invoice %s (ID: %s) has more than 1 stockable product' % (invoice.number, invoice.id))
-    else:
-        return stockable_product[0]
-    return False
-    
-def _get_product_details(self, product, name=None):
-    self.cr.execute('''select vd.mileage, ss.name
-                from product_product pp
-                left outer join vehicle_details vd on vd.id = pp.x_dbic_link_id
-                left outer join sale_shop ss on ss.id = vd.branch_id
-                where pp.id = %s''' % product.id)
-    prod_data = self.cr.fetchone()
-    return prod_data #  (mileage, site)
 
 class account_voucher_remittance_report(report.report_sxw.rml_parse):
     _name = 'report.remittance.advice'
-    _logger = logging.getLogger(_name)
 
     def __init__(self, cr, uid, name, context=None):
         super(account_voucher_remittance_report, self).__init__(cr, uid, name, context=context)
@@ -60,9 +38,6 @@ class account_voucher_remittance_report(report.report_sxw.rml_parse):
         self._get_sum_amount_original(filtered_line_ids)
         self._get_sum_amount(filtered_line_ids)
         return filtered_line_ids
-
-    _get_product_details = _get_product_details
-    _get_stockable_product = _get_stockable_product
         
     def _get_sum_amount_original(self, filtered_line_ids):
         sum_amount_original = 0
