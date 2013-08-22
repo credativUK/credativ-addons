@@ -35,13 +35,20 @@ class product_template(osv.osv):
         :param browse_record product: product to supply
         :rtype: product.supplierinfo browse_record or False
         """
+        if context == None:
+            context = {}
+        extra_clause = context.get('get_main_product_supplier_clause', None)
         seller_ids = [seller_info.name.id for seller_info in product.seller_ids or []]
         if seller_ids:
-            cr.execute('''SELECT partner_id FROM purchase_order_line
-                        WHERE product_id = %s
-                        AND partner_id IN %s
-                        ORDER BY COALESCE(write_date, create_date) DESC''', (product.id, tuple(seller_ids)))
-                        # Use coalesce for cases where write_date field is not populated
+            cr.execute('''SELECT pol.partner_id FROM purchase_order_line pol
+                        INNER JOIN purchase_order po ON po.id = pol.order_id
+                        INNER JOIN res_partner rp ON rp.id = pol.partner_id
+                        WHERE pol.product_id = %%s
+                        AND pol.partner_id IN %%s
+                        AND po.state NOT IN ('draft', 'cancel')
+                        %s
+                        ORDER BY po.date_order DESC
+                        LIMIT 1''' % (extra_clause or '',), (product.id, tuple(seller_ids)))
             seller_id = cr.fetchone()
             if seller_id:
                 seller = [seller_info for seller_info in product.seller_ids if seller_info.name.id == seller_id[0]]
