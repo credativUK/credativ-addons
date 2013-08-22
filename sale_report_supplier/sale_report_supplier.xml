@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <report auto="False" id="sale_report_supplier" model="res.partner" name="sale.supplier" rml="sale_report_supplier/sale_report_supplier.rml" string="Sales by Supplier (All)"/>
+        <record id="view_wizard_sale_report" model="ir.ui.view">
+            <field name="name">Sales by Supplier (By Date)</field>
+            <field name="model">sale.order.wizard_supplier_report</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Sales by Supplier">
+                    <group col="4" colspan="4">
+                        <field name="date_from"/>
+                        <field name="date_to"/>
+                    </group>
+                    <group col="4" colspan="2">
+                        <button special="cancel" string="_Cancel" icon="gtk-cancel"/>
+                        <button name="run_report" string="_Run Report" type="object" icon="terp-gtk-go-back-rtl"/>
+                    </group>
+                </form>
+            </field>
+        </record>
+        <record id="action_wizard_sale_report" model="ir.actions.act_window">
+            <field name="name">Sales by Supplier (By Date)</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">sale.order.wizard_supplier_report</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_wizard_sale_report"/>
+            <field name="target">new</field>
+        </record>
+        <record model="ir.values" id="wizard_sale_report">
+            <field name="model_id" ref="base.model_res_partner" />
+            <field name="object" eval="1" />
+            <field name="name">Sales by Supplier (By Date)</field>
+            <field name="key2">client_action_multi</field>
+            <field name="value" eval="'ir.actions.act_window,' + str(ref('action_wizard_sale_report'))" />
+            <field name="key">action</field>
+            <field name="model">res.partner</field>
+        </record>
+    </data>
+</openerp>
