@@ -38,6 +38,7 @@ class OverdueSimple(report_sxw.rml_parse):
             'tel_get': self._tel_get,
             'message': self._message,
             'get_type': self._get_type,
+            'get_balance': self._get_balance,
         })
         self.context = context
 
@@ -82,7 +83,7 @@ class OverdueSimple(report_sxw.rml_parse):
     def _lines_get(self, partner):
         moveline_obj = pooler.get_pool(self.cr.dbname).get('account.move.line')
         movelines = moveline_obj.search(self.cr, self.uid,
-                [('partner_id', '=', partner.id),
+                [('partner_id', '=', partner.id), ('quantity', '<>', False),
                     ('account_id.type', 'in', ['receivable', 'payable']),
                     ('state', '<>', 'draft'), ('reconcile_id', '=', False)])
         movelines = moveline_obj.browse(self.cr, self.uid, movelines)
@@ -116,6 +117,17 @@ class OverdueSimple(report_sxw.rml_parse):
             else:
                 transaction_type =  'N/A'
         return transaction_type
+
+    def _get_balance(self, line):
+        invoice_pool = pooler.get_pool(self.cr.dbname).get('account.invoice')
+        invoices = invoice_pool.search(self.cr, self.uid, [('move_id','=',line.move_id.id),('account_id','=',line.account_id.id)])
+        if invoices:
+            # FIXME: could there be more than 1 invoice for a given account and account move
+            invoice = invoice_pool.browse(self.cr, self.uid, invoices[0])
+            balance = invoice.residual
+        else:
+            balance = line.debit - line.credit
+        return balance
 
 report_sxw.report_sxw('report.account.overdue.simple', 'res.partner','account_overdue_report_simple/account_print_overdue.rml', parser=OverdueSimple)
 

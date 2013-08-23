@@ -197,13 +197,13 @@
             <para style="terp_default_Centre_9">[[ line['ref'] ]]</para>
           </td>
           <td>
-            <para style="terp_default_Right_9">[[ (line['account_id']['type'] == 'receivable' and line['debit'] and formatLang(line['debit']) or ' ') ]] </para>  <!--or (line['account_id']['type'] == 'payable' and formatLang(line['credit'] * -1) or ' ')-->
+            <para style="terp_default_Right_9">[[ (line['account_id']['type'] == 'receivable' and line['debit'] and formatLang(line['debit']) or ' ') ]] </para>
           </td>
           <td>
-            <para style="terp_default_Right_9">[[ (line['account_id']['type'] == 'receivable' and line['credit'] and formatLang(line['credit']) or ' ') ]] </para>  <!--or (line['account_id']['type'] == 'payable' and formatLang(line['debit'] * -1) or ' ')-->
+            <para style="terp_default_Right_9">[[ (line['account_id']['type'] == 'receivable' and line['credit'] and formatLang(line['credit']) or ' ') ]] </para>
           </td>
           <td>
-             <para style="terp_default_Right_9">[[ time.strftime('%Y-%m-%d') > formatLang((line['date_maturity'])) and formatLang(line['debit'] - line['credit']) ]] [[ company.currency_id.symbol ]] </para>
+             <para style="terp_default_Right_9">[[ formatLang(get_balance(line)) ]] [[ company.currency_id.symbol ]] </para>
           </td>
         </tr>
       </blockTable>
@@ -235,7 +235,7 @@
     <para style="terp_default_9">
       <font color="white"> </font>
     </para>
-    <para style="terp_default_9"><b>Total amount due: [[ formatLang((reduce(lambda x, y: x + (y['debit'] - y['credit']), getLines(o), 0)), currency_obj=company.currency_id) ]]</b></para>
+    <para style="terp_default_9"><b>Total amount due: [[ formatLang((reduce(lambda x, y: x + (get_balance(y) >= 0 and get_balance(y) or 0), getLines(o), 0)), currency_obj=company.currency_id) ]]</b></para>
     <para style="terp_default_8">
       <font color="white"> </font>
     </para>
