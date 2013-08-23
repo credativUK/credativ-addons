@@ -343,7 +343,12 @@ class external_report_lines(osv.osv):
                                    ('rejected','Rejected')], readonly=True, string='State'),
         'res_name': fields.function(_get_resource_name, type='char', size=128, string='Resource Name'),
         'external_log_id': fields.many2one('external.log', 'External log', readonly=True),
-        'message': fields.text('Error message', readonly=True)
+        'message': fields.text('Error message', readonly=True),
+        'res_model': fields.char('Resource Object', size=64, required=True, readonly=True, select="1"),
+        'res_id': fields.integer('Resource Id', readonly=True, select="1"),
+        'action': fields.char('Action', size=32, required=True, readonly=True, select="1"),
+        'external_id': fields.char('External ID', size=64, readonly=True, select="1"),
+        'referential_id': fields.many2one('external.referential', 'External Referential', required=True, readonly=True, select="1"),
         }
 
     def log_system_fail(self, cr, uid, model, action, referential_id, exc, msg=None, defaults=None, context=None):
