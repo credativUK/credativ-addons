@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+-->
+<openerp>
+    <data noupdate="1">
+        <record model="ir.cron" id="external_report_log_purge_lines">
+            <field name="name">External report log - purge lines</field>
+            <field name="model">external.report.line</field>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_type">days</field>
+            <field name="interval_number" eval="1"/>
+            <field name="numbercall" eval="-1"/>
+            <field name="active" eval="False"/>
+            <field name="doall" eval="False"/>
+            <field name="function">run_purge_lines</field>
+            <field name="args">({'days': 30},)</field>
+        </record>
+    </data>
+</openerp>

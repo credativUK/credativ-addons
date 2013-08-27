@@ -484,6 +484,21 @@ class external_report_lines(osv.osv):
         res = super(external_report_lines, self).retry(cr, uid, ids, context)
         return res
 
+    def run_purge_lines(self, cr, uid, args=None, context=None):
+        if context is None:
+            context = {}
+        if args is None:
+            args = {}
+
+        days = args.get('days', 30)
+        _logger.info('Starting old external report line purge...')
+        limit = datetime.date.today() - datetime.timedelta(days=days)
+        old_line_ids = self.search(cr, uid, [('create_date','<=',limit.strftime('%Y-%m-%d 00:00:00')),('state','=','exported')], context=context)
+        if old_line_ids:
+            self.unlink(cr, uid, old_line_ids, context=context)
+            cr.execute("""REINDEX TABLE external_report_line""")
+        _logger.info('Finished old external report line purge.  Removed %s lines.' % (len(old_line_ids))
+
 external_report_lines()
 
 
