@@ -28,7 +28,7 @@ openerp.web.DataExport = openerp.web.DataExport.extend({
             data: {data: JSON.stringify({
                 model: this.dataset.model,
                 fields: exported_fields,
-                ids: this.dataset.ids,
+                ids: this.widget_parent.get_selected_ids().length === 0 ? this.dataset.ids : this.widget_parent.get_selected_ids(),
                 domain: this.dataset.domain,
                 import_compat: Boolean(
                     this.$element.find("#import_compat").val()),
