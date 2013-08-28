@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+-->
+<openerp>
+    <data>
+        <record id="view_stock_unassign_wizard" model="ir.ui.view">
+            <field name="name">Stock Unassign Wizard</field>
+            <field name="model">stock.unassign.wizard</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Stock Unassign Wizard">
+                    <field name="picking_id"/>
+                    <newline/>
+                    <separator colspan="4" string="Moves to Assign" />
+                    <field colspan="4" name="move_ids" nolabel="1">
+                        <tree string="Moves to Assign">
+                            <field name="name" />
+                            <field name="picking_id" />
+                            <field name="origin" />
+                            <field name="partner_id" />
+                            <field name="product_id" />
+                            <field name="product_qty" />
+                            <field name="product_uom" string="UoM" />
+                            <field name="product_uos" string="UoS" />
+                            <field name="prodlot_id" />
+                            <field name="location_id" />
+                            <field name="location_dest_id" />
+                            <field name="date" />
+                            <field name="date_expected" />
+                        </tree>
+                    </field>
+                    <separator colspan="4" string="Moves to Unassign" />
+                    <label string="Select moves listed below to unassign in order to allow the moves listed above to be assigned." colspan="4"/>
+                    <field colspan="4" name="other_move_ids" nolabel="1">
+                        <tree string="Moves to Unassign" colors="grey:state=='assign'">
+                            <button name="action_assign" string="Leave Assigned" icon="gtk-go-forward" type="object" colspan="2" attrs="{'invisible': [('state','=','assign')]}" />
+                            <button name="action_unassign" string="Unassign" icon="gtk-go-back" type="object" colspan="2" attrs="{'invisible': [('state','=','unassign')]}" />
+                            <field name="state" />
+                            <field name="move_id" />
+                            <field name="picking_id" />
+                            <field name="origin" />
+                            <field name="partner_id" />
+                            <field name="product_id" />
+                            <field name="product_qty" />
+                            <field name="product_uom" />
+                            <field name="product_uos" />
+                            <field name="prodlot_id" />
+                            <field name="location_id" />
+                            <field name="location_dest_id" />
+                            <field name="date" />
+                            <field name="date_expected" />
+                        </tree>
+                    </field>
+                    <separator colspan="4" string="Unassign ?"/>
+                    <group col="2" colspan="2">
+                        <button special="cancel" string="_Cancel" icon="gtk-cancel"/>
+                        <button name="action_assign" string="_Unassign" type="object" icon="terp-gtk-go-back-rtl"/>
+                    </group>
+                </form>
+            </field>
+        </record>
+        <record id="action_stock_unassign_wizard" model="ir.actions.act_window">
+            <field name="name">Stock Unassign Wizard</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">stock.unassign.wizard</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_stock_unassign_wizard"/>
+            <field name="target">new</field>
+        </record>
+    </data>
+</openerp>
