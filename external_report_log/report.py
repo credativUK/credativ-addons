@@ -497,7 +497,7 @@ class external_report_lines(osv.osv):
         if old_line_ids:
             self.unlink(cr, uid, old_line_ids, context=context)
             cr.execute("""REINDEX TABLE external_report_line""")
-        _logger.info('Finished old external report line purge.  Removed %s lines.' % (len(old_line_ids))
+        _logger.info('Finished old external report line purge.  Removed %s lines.' % (len(old_line_ids),))
 
 external_report_lines()
 
