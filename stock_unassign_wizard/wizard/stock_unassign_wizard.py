@@ -28,10 +28,24 @@ class stock_unassign_wizard(osv.osv_memory):
     _description = 'Stock Unassign Wizard'
     _rec_name = 'picking_id'
 
+    def _get_confirmed_moves(self, cr, uid, ids, name, arg, context=None):
+        move_obj = self.pool.get('stock.move')
+        res = {}
+        for obj in self.read(cr, uid, ids, ['picking_id'], context=context):
+            move_ids = move_obj.search(cr, uid, [('picking_id', '=', obj['picking_id'][0]), ('state', '=', 'confirmed')], context=context)
+            res[obj['id']] = move_ids
+        return res
+
     _columns = {
         'picking_id': fields.many2one('stock.picking', 'Picking', required=True, readonly=True,),
-        'move_ids': fields.related('picking_id', 'move_lines', type='one2many', relation='stock.move', string='Move Lines', domain=[('state', '=', 'confirmed'),], readonly=True,),
+        'move_ids': fields.function(_get_confirmed_moves, type='one2many', relation='stock.move', string='Move Lines', readonly=True,),
         'other_move_ids': fields.one2many('stock.unassign.wizard.line', 'stock_unassign_id', 'Other Moves', readonly=True,),
+        'error_on_fail': fields.boolean('Error on Failure', help="If selected, show an error and abort all changes if not all of the 'Moves to Assign' are assigned. \n" \
+            "If not selected and not all of the 'Moves to Assign' are assigned, the selected 'Moves to Unassign' will be left unassigned.")
+    }
+
+    _defaults = {
+        'error_on_fail': True,
     }
 
     def create(self, cr, uid, vals={}, context=None):
@@ -66,13 +80,13 @@ class stock_unassign_wizard(osv.osv_memory):
             unassign_ids = []
             for move in rec.other_move_ids:
                 if move.move_id.state != 'assigned':
-                    raise osv.except_osv(_('Error!'),_('The state of one or more of the listed stock moves has changed since this wizard was launched. Please close the wizard and try again.'))
+                    raise osv.except_osv(_('Error!'),_("The state of one or more of the 'Moves to Unassign' has changed since this wizard was launched. Please close and relaunch this wizard."))
                 if move.state == 'unassign':
                     unassign_ids.append(move.move_id.id)
             move_obj.cancel_assign(cr, uid, unassign_ids, context=ctx)
             res = pick_obj.action_assign(cr, uid, [rec.picking_id.id,], context=ctx)
-            if res != True:
-                raise osv.except_osv(_('Error!'),_('Still not enough stock to assign picking after unassigning selected stock moves. Please unassign additional stock moves, or if not possible there may not be enough stock present in this location.'))
+            if res != True and rec.error_on_fail:
+                raise osv.except_osv(_('Error!'),_("After unassigning the selected 'Moves to Unassign' there is still not enough stock to assign the 'Moves to Assign'. Please unassign additional stock moves, or if not possible there may not be enough stock present in this location."))
         return {'type': 'ir.actions.act_window_close'}
 
 stock_unassign_wizard()
