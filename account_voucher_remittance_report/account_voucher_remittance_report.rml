@@ -75,7 +75,7 @@
       <tr>
         <td><para style="NORMAL">Total Payment</para></td>
         <td><para style="NORMAL"></para></td>
-        <td><para style="NORMAL">[[ _get_sum_amount_original ]]</para></td>
+        <td><para style="NORMAL"></para></td>
         <td><para style="NORMAL">[[ _get_sum_amount ]]</para></td>
       </tr>
     </blockTable>

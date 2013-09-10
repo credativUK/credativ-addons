@@ -35,30 +35,8 @@ class account_voucher_remittance_report(report.report_sxw.rml_parse):
         
     def _get_non_zero_lines(self, all_line_ids):
         filtered_line_ids = [x for x in all_line_ids if x.amount]
-        self._get_sum_amount_original(filtered_line_ids)
         self._get_sum_amount(filtered_line_ids)
         return filtered_line_ids
-        
-    def _get_sum_amount_original(self, filtered_line_ids):
-        sum_amount_original = 0
-        for line in filtered_line_ids:
-            if line.type == 'cr':
-                if line.account_id and line.account_id.type == 'payable':
-                    sum_amount_original -= line.amount_original
-                else:
-                    sum_amount_original += line.amount_original
-            else:
-                if line.account_id and line.account_id.type == 'payable':
-                    sum_amount_original += line.amount_original
-                else:
-                    sum_amount_original -= line.amount_original
-            
-                
-        sum_amount_original_string = '%.2f' % (sum_amount_original)
-        self.localcontext.update({
-            '_get_sum_amount_original': sum_amount_original_string,
-        })
-        return sum_amount_original
         
     def _get_sum_amount(self, filtered_line_ids):
         sum_amount = 0
