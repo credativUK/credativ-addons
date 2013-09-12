@@ -38,7 +38,7 @@
           <para style="NORMAL">[[ payment.partner_id.address[0].title.name or '' ]] [[ payment.partner_id.name ]]</para>
           <para style="NORMAL">[[ payment.partner_id.address[0].street ]]</para>
           <para style="NORMAL">[[ payment.partner_id.address[0].street2 or removeParentNode('para') ]]</para>
-          <para style="NORMAL">[[ payment.partner_id.address[0].zip ]] [[ payment.partner_id.address[0].city ]]</para>
+          <para style="NORMAL">[[ payment.partner_id.address[0].city ]] [[ payment.partner_id.address[0].zip ]]</para>
           <para style="NORMAL">[[ payment.partner_id.address[0].state_id.name or removeParentNode('para')]]</para>
           <para style="NORMAL">[[ payment.partner_id.address[0].country_id.name ]]</para>
           <para style="NORMAL"><font color="white"> </font></para>
