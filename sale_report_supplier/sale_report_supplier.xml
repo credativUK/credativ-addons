@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
     <data>
-        <report auto="False" id="sale_report_supplier" model="res.partner" name="sale.supplier" rml="sale_report_supplier/sale_report_supplier.rml" string="Sales by Supplier (All)"/>
+        <report auto="False" id="sale_report_supplier_pdf" model="res.partner" name="sale.supplier.pdf" rml="sale_report_supplier/sale_report_supplier.rml" string="Sales by Supplier (All - PDF)"/>
+        <report id="sale_report_supplier_csv" model="res.partner" name="sale.supplier.csv" string="Sales by Supplier (All - CSV)"/>
         <record id="view_wizard_sale_report" model="ir.ui.view">
             <field name="name">Sales by Supplier (By Date)</field>
             <field name="model">sale.order.wizard_supplier_report</field>
@@ -12,9 +13,10 @@
                         <field name="date_from"/>
                         <field name="date_to"/>
                     </group>
-                    <group col="4" colspan="2">
+                    <group col="4" colspan="3">
                         <button special="cancel" string="_Cancel" icon="gtk-cancel"/>
-                        <button name="run_report" string="_Run Report" type="object" icon="terp-gtk-go-back-rtl"/>
+                        <button name="run_report_pdf" string="_Run PDF Report" type="object" icon="terp-gtk-go-back-rtl"/>
+                        <button name="run_report_csv" string="_Run CSV Report" type="object" icon="terp-gtk-go-back-rtl"/>
                     </group>
                 </form>
             </field>

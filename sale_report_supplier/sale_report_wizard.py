@@ -32,7 +32,7 @@ class wizard_supplier_report(osv.osv_memory):
             'date_to' : fields.date('To'),
         }
 
-    def run_report(self, cr, uid, ids, context=None):
+    def run_report_pdf(self, cr, uid, ids, context=None):
         if not context:
             context = {}
 
@@ -45,7 +45,29 @@ class wizard_supplier_report(osv.osv_memory):
 
         return {
                 'type': 'ir.actions.report.xml',
-                'report_name': 'sale.supplier',
+                'report_name': 'sale.supplier.pdf',
+                'datas': {
+                            'ids': rec_ids,
+                            'model': 'res.partner',
+                            'form': {}
+                        },
+                'context': context,
+            }
+
+    def run_report_csv(self, cr, uid, ids, context=None):
+        if not context:
+            context = {}
+
+        rec_ids = context.get('active_ids', False)
+        assert rec_ids, _('Active IDs is not set in Context')
+
+        data = self.browse(cr, uid, ids, context=context)
+        if data and data[0]:
+            context.update({'date_from': data[0].date_from, 'date_to': data[0].date_to})
+
+        return {
+                'type': 'ir.actions.report.xml',
+                'report_name': 'sale.supplier.csv',
                 'datas': {
                             'ids': rec_ids,
                             'model': 'res.partner',

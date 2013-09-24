@@ -21,21 +21,15 @@
 
 import time
 
+import StringIO
+import csv
 from report import report_sxw
 import pooler
+import report
+import netsvc
 from tools.translate import _
 
-class sale_report_supplier(report_sxw.rml_parse):
-    def __init__(self, cr, uid, name, context):
-        super(sale_report_supplier, self).__init__(cr, uid, name, context=context)
-        self.localcontext.update( {
-            'time': time,
-            'adr_get': self._adr_get,
-            'getCustomerData': self._customers_get,
-            'getDateText': self._date_text_get,
-        })
-        self.context = context
-
+class sale_report_supplier_base(object):
     def _customers_get(self, partner):
         date_from = self.context.get('date_from', None)
         date_to = self.context.get('date_to', None)
@@ -132,6 +126,84 @@ class sale_report_supplier(report_sxw.rml_parse):
             return _('To %s') % (self.context.get('date_to'),)
         return ''
 
-report_sxw.report_sxw('report.sale.supplier', 'res.partner', 'addons/sale_report_supplier/sale_report_supplier.rml', parser=sale_report_supplier)
+class sale_report_supplier(report_sxw.rml_parse, sale_report_supplier_base):
+    def __init__(self, cr, uid, name, context):
+        super(sale_report_supplier, self).__init__(cr, uid, name, context=context)
+        self.localcontext.update( {
+            'time': time,
+            'adr_get': self._adr_get,
+            'getCustomerData': self._customers_get,
+            'getDateText': self._date_text_get,
+        })
+        self.context = context
+
+report_sxw.report_sxw('report.sale.supplier.pdf', 'res.partner', 'addons/sale_report_supplier/sale_report_supplier.rml', parser=sale_report_supplier)
+
+def encode(obj):
+    if hasattr(obj, 'encode'):
+        return obj.encode('utf-8')
+    elif obj is False:
+        return None
+    else:
+        return obj
+
+class csv_report(report.interface.report_int):
+    def __init__(self, name, generator):
+        super(csv_report, self).__init__(name)
+        self.generator = generator
+
+    def create(self, cr, uid, ids, data, context):
+        f = StringIO.StringIO()
+        csv_writer = csv.writer(f)
+
+        for row in self.generator(cr, uid, ids, data, context):
+            row = [encode(cell) for cell in row]
+            csv_writer.writerow(row)
+
+        return f.getvalue(), 'csv'
+
+def csv_register(name, generator):
+    if not netsvc.Service.exists(name):
+        csv_report(name, generator)
+
+class sale_report_supplier_csv_base(sale_report_supplier_base):
+    cr = None
+    uid = None
+    context = None
+
+    def __init__(self, cr, uid, context):
+        self.cr = cr
+        self.uid = uid
+        self.context = context.copy()
+
+def sale_report_supplier_csv(cr, uid, ids, data, context):
+    row = ['Supplier Ref',
+           'Customer',
+           'Date',
+           'Product Code',
+           'Product Name',
+           'QTY',
+           'UoM']
+    yield row
+
+    report_base = sale_report_supplier_csv_base(cr, uid, context)
+    res_partner = pooler.get_pool(cr.dbname).get('res.partner')
+    res_partner_address = pooler.get_pool(cr.dbname).get('res.partner.address')
+
+    for supplier in res_partner.browse(cr, uid, ids, context=context):
+        for customer, customerdata in report_base._customers_get(supplier.id).iteritems():
+            for uom, data in customerdata.iteritems():
+                for datarow in data:
+                    row = [supplier.ref,            # Supplier Ref
+                           customer.name,           # Customer
+                           datarow[0],              # Date
+                           datarow[1].default_code, # Product Code
+                           datarow[1].name,         # Product Name
+                           datarow[2],              # QTY
+                           uom.name,                # UoM
+                          ]
+                    yield row
+
+csv_register('report.sale.supplier.csv', sale_report_supplier_csv)
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
