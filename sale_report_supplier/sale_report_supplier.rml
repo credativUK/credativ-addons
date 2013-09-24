@@ -129,7 +129,7 @@
                         <para style="terp_default_5">[[ line[0] ]]</para>
                     </td>
                     <td>
-                        <para style="terp_default_5">[[ line[1].name ]]</para>
+                        <para style="terp_default_5">[[ "[%s] %s" % (line[1].default_code, line[1].name) ]]</para>
                     </td>
                     <td>
                         <para style="terp_default_5">[[ line[2] ]]</para>
