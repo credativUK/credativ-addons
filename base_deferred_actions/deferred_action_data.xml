@@ -29,5 +29,33 @@
             <field name="args" eval="'()'"/>
         </record>
 
+        <!-- Server Actions for notifications -->
+        <record id="server_act_notification_begin" model="ir.actions.server">
+            <field name="type">ir.actions.server</field>
+            <field name="name">Deferred Action Begin</field>
+            <field name="model_id" ref="model_deferred_action"/>
+            <field name="state">other</field>
+            <field name="condition">True</field>
+            <field name="active" eval="1" />
+        </record>
+
+        <record id="server_act_notification_done" model="ir.actions.server">
+            <field name="type">ir.actions.server</field>
+            <field name="name">Deferred Action Done</field>
+            <field name="model_id" ref="model_deferred_action"/>
+            <field name="state">other</field>
+            <field name="condition">True</field>
+            <field name="active" eval="1" />
+        </record>
+
+        <record id="server_act_notification_fail" model="ir.actions.server">
+            <field name="type">ir.actions.server</field>
+            <field name="name">Deferred Action Failed</field>
+            <field name="model_id" ref="model_deferred_action"/>
+            <field name="state">other</field>
+            <field name="condition">True</field>
+            <field name="active" eval="1" />
+        </record>
+
     </data>
 </openerp>

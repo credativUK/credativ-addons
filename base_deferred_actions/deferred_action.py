@@ -160,7 +160,7 @@ class deferred_action(osv.osv):
                 self.write(_cr, uid, action.id, {'state': 'done',
                                                 'date_completed': datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
                                                 'result': res,}, context=context)
-                self._notification_done(_cr, uid, action.id, context=context)
+                self._notification_done(_cr, uid, [action.id], context=context)
                 _cr.commit()
             except Exception, e:
                 _cr.rollback()
@@ -168,7 +168,7 @@ class deferred_action(osv.osv):
                 self.write(_cr, uid, action.id, {'state': 'fail',
                                                 'date_completed': datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
                                                 'result': e,}, context=context)
-                self._notification_fail(_cr, uid, action.id, context=context)
+                self._notification_fail(_cr, uid, [action.id], context=context)
                 _cr.commit()
             finally:
                 _cr.close()
@@ -178,7 +178,7 @@ class deferred_action(osv.osv):
         self.write(cr, uid, ids, {'state': 'cancel',
                                   'date_completed': datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
                                   'result': 'Cancelled by user %s' % (uid,)}, context=context)
-        self._notification_done(cr, uid, ids, context=context)
+        self._notification_fail(cr, uid, ids, context=context)
         return True
 
     def retry(self, cr, uid, ids, context=None):
@@ -199,13 +199,29 @@ class deferred_action(osv.osv):
                 'res_id': retry_ids[0],
                 'type': 'ir.actions.act_window'}
 
+    def _get_ids(self, cr, uid, model, name):
+        data_pool = self.pool.get('ir.model.data')
+        ids = data_pool.search(cr, uid, [('model', '=', model), ('name', '=', name)])
+        return [data.res_id for data in data_pool.browse(cr, uid, ids)]
+
+    def _notification(self, cr, uid, ids, server_action_id, context=None):
+        if context == None:
+            context = {}
+        if not ids:
+            return True
+        action_context = dict(context, active_id=ids[0], active_ids=ids,)
+        return self.pool.get('ir.actions.server').run(cr, uid, server_action_id, context=action_context)
+
     def _notification_begin(self, cr, uid, ids, context=None):
-        return True
+        server_action_id = self._get_ids(cr, uid, 'ir.actions.server', 'server_act_notification_begin')
+        return self._notification(cr, uid, ids, server_action_id, context=context)
 
     def _notification_done(self, cr, uid, ids, context=None):
-        return True
+        server_action_id = self._get_ids(cr, uid, 'ir.actions.server', 'server_act_notification_done')
+        return self._notification(cr, uid, ids, server_action_id, context=context)
 
     def _notification_fail(self, cr, uid, ids, context=None):
-        return True
+        server_action_id = self._get_ids(cr, uid, 'ir.actions.server', 'server_act_notification_fail')
+        return self._notification(cr, uid, ids, server_action_id, context=context)
 
 deferred_action()
