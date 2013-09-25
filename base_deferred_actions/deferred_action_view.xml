@@ -7,22 +7,32 @@
             <field name="type">form</field>
             <field name="arch" type="xml">
                 <form string="Deferred Action">
-                    <field name="name" />
-                    <field name="model" />
-                    <field name="function" />
-                    <field name="res_id" />
-                    <field name="user_id" />
-                    <field name="date_requested" />
-                    <field name="date_completed" />
-                    <field name="state" />
-                    <field name="args" />
-                    <field name="kwargs" />
-                    <field name="result" />
-                    <field name="retry_of" />
-                    <field name="retrys" />
-                    <button string="Run" name="run" states="pending" type="object" icon="terp-gtk-go-back-rtl" />
-                    <button string="Cancel" name="cancel" states="pending" type="object" icon="terp-dialog-close" />
-                    <button string="Retry" name="retry" states="fail,cancel" type="object" icon="terp-mail-forward" />
+                    <group colspan="2" col="2">
+                        <separator orientation="horizontal" string="Call Details" colspan="2"/>
+                        <field name="name" />
+                        <field name="date_requested" />
+                        <field name="date_completed" />
+                        <field name="retry_of" />
+                        <separator orientation="horizontal" string="Result" colspan="2"/>
+                        <field name="result" nolabel="1" colspan="2" />
+                    </group>
+                    <group colspan="2" col="2">
+                        <separator orientation="horizontal" string="Deferred Action Details" colspan="2"/>
+                        <field name="user_id" />
+                        <field name="model" />
+                        <field name="function" />
+                        <field name="res_id" />
+                        <separator orientation="horizontal" string="Arguments" colspan="2"/>
+                        <field name="args" nolabel="1" colspan="2" />
+                        <field name="kwargs" nolabel="1" colspan="2" />
+                    </group>
+                    <separator orientation="horizontal" string="State" colspan="4"/>
+                    <group colspan="4" col="6">
+                        <field name="state" colspan="2" />
+                        <button string="Run" name="run" states="pending" type="object" icon="terp-gtk-go-back-rtl" colspan="1" />
+                        <button string="Cancel" name="cancel" states="pending" type="object" icon="terp-dialog-close" colspan="1" />
+                        <button string="Retry" name="retry" states="fail,cancel" type="object" icon="terp-mail-forward" colspan="1" />
+                    </group>
                 </form>
             </field>
         </record>
@@ -44,7 +54,6 @@
                     <button string="Run" name="run" states="pending" type="object" icon="terp-gtk-go-back-rtl" />
                     <button string="Cancel" name="cancel" states="pending" type="object" icon="terp-dialog-close" />
                     <button string="Retry" name="retry" states="fail,cancel" type="object" icon="terp-mail-forward" />
-                    <field name="retrys" invisible="1" />
                 </tree>
             </field>
         </record>

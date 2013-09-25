@@ -42,8 +42,8 @@ class deferred_action(osv.osv):
 
     _columns = {
         'name': fields.char('Name', size=32, required=True, readonly=True,),
-        'function': fields.text('Function', required=True, readonly=True,),
-        'model': fields.text('Model', required=True, readonly=True,),
+        'function': fields.char('Function', size=128, required=True, readonly=True,),
+        'model': fields.char('Model', size=128, required=True, readonly=True,),
         'res_id': fields.integer('Resource ID', requested=True, readonly=True,),
         'user_id': fields.many2one('res.users', required=True, string='User', readonly=True,),
         'date_requested': fields.datetime('Request Date', required=True, readonly=True,),
@@ -89,7 +89,7 @@ class deferred_action(osv.osv):
                                             ])
         if action_ids:
             action = self.browse(cr, uid, action_ids[0])
-            raise osv.except_osv('Error!', "This action has already requested by %s at %s." % (action.user_id.name, action.date_requested))
+            raise osv.except_osv('Error!', "This action has already been requested by %s at %s." % (action.user_id.name, action.date_requested))
 
         return super(deferred_action, self).create(cr, uid, vals, context=None)
 
