@@ -2,17 +2,31 @@
 <openerp>
     <data noupdate="1">
 
-        <!-- Sequences for deferred.action.instance -->
-        <record id="seq_type_base_deferred_action_instance" model="ir.sequence.type">
-            <field name="name">Deferred Action Instance</field>
-            <field name="code">deferred.action.instance</field>
+        <!-- Sequences for deferred.action -->
+        <record id="seq_type_deferred_action" model="ir.sequence.type">
+            <field name="name">Deferred Action</field>
+            <field name="code">deferred.action</field>
         </record>
 
-        <record id="seq_base_deferred_action_instance" model="ir.sequence">
-            <field name="name">Deferred Action Instance</field>
-            <field name="code">deferred.action.instance</field>
-            <field name="prefix">ACT</field>
+        <record id="seq_deferred_action" model="ir.sequence">
+            <field name="name">Deferred Action</field>
+            <field name="code">deferred.action</field>
+            <field name="prefix">D</field>
             <field name="padding">8</field>
+        </record>
+
+        <!-- Cron for deferred actions -->
+        <record model="ir.cron" id="cron_deferred_action">
+            <field name="name">Deferred Actions</field>
+            <field name="model">deferred.action</field>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_type">minutes</field>
+            <field name="interval_number" eval="1"/>
+            <field name="numbercall" eval="-1"/>
+            <field name="doall" eval="False"/>
+            <field name="priority" eval="0"/>
+            <field name="function">run_scheduler</field>
+            <field name="args" eval="'()'"/>
         </record>
 
     </data>

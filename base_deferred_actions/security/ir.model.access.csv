@@ -1,8 +1,2 @@
 "id","name","model_id:id","group_id:id","perm_read","perm_write","perm_create","perm_unlink"
-"access_deferred_action","deferred.action","model_deferred_action","base.group_user",1,0,0,0
-"access_deferred_action_phase","deferred.action.phase","model_deferred_action_phase","base.group_user",1,0,0,0
-"access_deferred_action_instance","deferred.action.instance","model_deferred_action_instance","base.group_user",1,1,1,1
-"access_deferred_action_phase_instance","deferred.action.phase.instance","model_deferred_action_phase_instance","base.group_user",1,1,1,1
-"access_deferred_action_failed_resource","deferred.action.failed.resource","model_deferred_action_failed_resource","base.group_user",1,1,1,1
-"access_deferred_action_config","deferred.action","model_deferred_action","base.group_system",1,1,1,1
-"access_deferred_action_phase_config","deferred.action.phase","model_deferred_action_phase","base.group_system",1,1,1,1
+"access_deferred_action","deferred.action","model_deferred_action","base.group_user",1,1,1,1
