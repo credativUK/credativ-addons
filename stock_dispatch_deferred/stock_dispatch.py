@@ -42,6 +42,16 @@ class stock_dispatch(osv.osv):
         self.write(cr, uid, ids, {'state': 'done', 'complete_date': datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), 'complete_uid': uid})
         return True
 
+    def _get_dispatch_errors(self, cr, uid, id, context=None):
+        dispatch = self.browse(cr, uid, id, context=None)
+        res = []
+
+        if dispatch.state not in ('confirmed', 'partial'):
+            error_str = "Dispatch %s in state %s cannot be completed." % (dispatch.name, dispatch.state,)
+            res.append(error_str)
+
+        return res
+
     @defer_action
     def complete_dispatch(self, cr, uid, ids, context=None):
         if context is None:
@@ -49,16 +59,16 @@ class stock_dispatch(osv.osv):
 
         move_obj = self.pool.get('stock.move')
         wkf_service = netsvc.LocalService('workflow')
-        
+
         all_messages = []
 
         for dispatch in self.browse(cr, uid, ids):
             context['from_dispatch'] = dispatch.id
             errors = {}
 
-            if dispatch.state not in ('confirmed', 'partial'):
-                error_str = "Dispatch %s in state %s cannot be completed." % (dispatch.name, dispatch.state,)
-                all_messages.append(error_str)
+            errs = self._get_dispatch_errors(cr, uid, dispatch.id, context=context)
+            if errs:
+                all_messages.extend(errs)
                 continue
 
             for move in dispatch.stock_moves:
