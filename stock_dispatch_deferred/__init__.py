@@ -1,8 +1,10 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution	
-#    Copyright (C) 2013 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
+#    OpenERP, Open Source Management Solution   
+#    Copyright (C) 2013 credativ Ltd (<http://credativ.co.uk>).
+#    All Rights Reserved
+#    $Id$
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -19,22 +21,8 @@
 #
 ##############################################################################
 
-{
-    'name': 'Deferred Actions',
-    'version': '0.2',
-    'category': 'Generic Modules/Base',
-    'description': """This module provides the abillity to defer user actions to a queue.""",
-    'author': 'credativ',
-    'depends': [
-        'base',
-    ],
-    'update_xml': [
-        'deferred_action_data.xml',
-        'deferred_action_view.xml',
-        'wizard/deferred_action_notification_view.xml',
-        'security/ir.model.access.csv',
-    ],
-    'demo_xml': [],
-    'installable': True,
-    'active': False,
-}
+import stock_dispatch
+import stock
+import wizard
+
+# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

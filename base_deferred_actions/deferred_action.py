@@ -24,6 +24,8 @@ import pooler
 import logging
 import datetime
 from tools.safe_eval import safe_eval
+import traceback
+import psycopg2
 
 _logger = logging.getLogger(__name__)
 
@@ -128,7 +130,7 @@ class deferred_action(osv.osv):
                                                   'args': str_args,
                                                   'kwargs': str_kwargs})
             new_action_ids.append(new_action_id)
-        self._notification_begin(cr, uid, new_action_ids, context=context)
+        self._notification_begin(cr, uid, new_action_ids, context={})
         return self._message(cr, uid, new_action_ids, message='The action "%s.%s" has been started in the background, you will be emailed on completion of this action.' % (model, function))
 
     def run_scheduler(self, cr, uid, context=None):
@@ -162,12 +164,23 @@ class deferred_action(osv.osv):
                                                 'result': res,}, context=context)
                 self._notification_done(_cr, uid, [action.id], context=context)
                 _cr.commit()
-            except Exception, e:
+            except psycopg2.OperationalError, e:
                 _cr.rollback()
-                raise
+                if e.pgcode in (psycopg2.errorcodes.LOCK_NOT_AVAILABLE, psycopg2.errorcodes.SERIALIZATION_FAILURE, psycopg2.errorcodes.DEADLOCK_DETECTED):
+                    _logger.warning('Deferred Action %s encountered exception %s and will retry.' % (action.id, e,))
+                    continue
+                errorstr = "Exception: %s\n%s" % (e.__repr__(), traceback.format_exc())
                 self.write(_cr, uid, action.id, {'state': 'fail',
                                                 'date_completed': datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
-                                                'result': e,}, context=context)
+                                                'result': errorstr,}, context=context)
+                self._notification_fail(_cr, uid, [action.id], context=context)
+                _cr.commit()
+            except Exception, e:
+                _cr.rollback()
+                errorstr = "Exception: %s\n%s" % (e.__repr__(), traceback.format_exc())
+                self.write(_cr, uid, action.id, {'state': 'fail',
+                                                'date_completed': datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+                                                'result': errorstr,}, context=context)
                 self._notification_fail(_cr, uid, [action.id], context=context)
                 _cr.commit()
             finally:

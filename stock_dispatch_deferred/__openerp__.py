@@ -1,8 +1,9 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution	
-#    Copyright (C) 2013 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
+#    OpenERP, Open Source Management Solution
+#    Copyright (C) 2013 credativ Ltd (<http://credativ.co.uk>).
+#    All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -18,23 +19,29 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-
 {
-    'name': 'Deferred Actions',
-    'version': '0.2',
-    'category': 'Generic Modules/Base',
-    'description': """This module provides the abillity to defer user actions to a queue.""",
-    'author': 'credativ',
-    'depends': [
+    'name' : 'Stock Dispatch Deferred',
+    'version' : '1.0.0.0',
+    'author' : 'credativ Ltd',
+    'website' : 'http://credativ.co.uk',
+    'depends' : [
         'base',
+        'stock_dispatch',
+        'base_deferred_actions',
     ],
-    'update_xml': [
-        'deferred_action_data.xml',
-        'deferred_action_view.xml',
-        'wizard/deferred_action_notification_view.xml',
-        'security/ir.model.access.csv',
+    'category' : 'Generic Modules/Stock',
+    'description': '''
+Integration of the deferred action model to Stock Dispatch and ability to have partially completed dispatches
+''',
+    'init_xml' : [
     ],
-    'demo_xml': [],
-    'installable': True,
+    'demo_xml' : [
+    ],
+    'update_xml' : [
+        'stock_dispatch_view.xml',
+        'stock_dispatch_workflow.xml',
+    ],
     'active': False,
+    'installable': True
 }
+# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

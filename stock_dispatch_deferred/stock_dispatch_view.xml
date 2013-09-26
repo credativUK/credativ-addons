@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_dispatch_form_deferred" model="ir.ui.view">
+            <field name="name">stock.dispatch.form.deferred</field>
+            <field name="inherit_id" ref="stock_dispatch.view_dispatch_form"/>
+            <field name="model">stock.dispatch</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <data>
+                    <button name="done" position="replace">
+                        <button name="complete_dispatch" states="confirmed,partial" string="Complete Dispatch (Deferred)" type="object" icon="gtk-execute"/>
+                    </button>
+                </data>
+            </field>
+        </record>
+    </data>
+</openerp>
