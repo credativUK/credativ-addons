@@ -95,7 +95,7 @@
       </tr>
     </blockTable>
     <spacer length="30"/>
-    <para style="terp_default_Bold_9">Supplier Ref: [[ o.ref or '' ]]</para>
+    <para style="terp_default_Bold_9">Supplier: [[ "[%s] %s" % (o.ref or '', o.name,) ]]</para>
     <para style="terp_default_9">[[ getDateText() or removeParentNode('para') ]]</para>
     <para style="terp_default_9">
       <font color="white"> </font><br/>
@@ -103,7 +103,7 @@
 
     <section>
         <para style="terp_default_8">[[repeatIn(getCustomerData(o.id).iteritems(), 'data') ]]</para>
-        <para style="terp_default_Bold_9" keepWithNext="1">Customer: [[ data[0].name or '' ]]</para>
+        <para style="terp_default_Bold_9" keepWithNext="1">Customer: [[ "[%s] %s" % (data[0].ref or '', data[0].name,) ]]</para>
         <blockTable colWidths="100.0,330.0,40.0,40.0" style="Table1">
             <tr>
                 <td>

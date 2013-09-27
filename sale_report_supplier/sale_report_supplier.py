@@ -178,6 +178,8 @@ class sale_report_supplier_csv_base(sale_report_supplier_base):
 
 def sale_report_supplier_csv(cr, uid, ids, data, context):
     row = ['Supplier Ref',
+           'Supplier',
+           'Customer Ref',
            'Customer',
            'Date',
            'Product Code',
@@ -195,6 +197,8 @@ def sale_report_supplier_csv(cr, uid, ids, data, context):
             for uom, data in customerdata.iteritems():
                 for datarow in data:
                     row = [supplier.ref,            # Supplier Ref
+                           supplier.name,           # Supplier
+                           customer.ref,            # Customer Ref
                            customer.name,           # Customer
                            datarow[0],              # Date
                            datarow[1].default_code, # Product Code
