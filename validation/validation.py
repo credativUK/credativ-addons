@@ -230,9 +230,6 @@ class ir_validation(osv.osv):
 
 ir_validation()
 
-orm.Model.check_access_rule_old = orm.Model.check_access_rule
-orm.Model._validate_old = orm.Model._validate
-
 def check_validation_rule(self, cr, uid, ids, opp, context=None):
     if context == None:
         context = {}
@@ -276,8 +273,24 @@ def _validate(self, cr, uid, ids, context=None):
     self.check_validation_rule(cr, uid, ids, 'post_write', context=context)
     return res
 
-orm.Model.check_access_rule = check_access_rule
-orm.Model._validate = _validate
-orm.Model.check_validation_rule = check_validation_rule
+orm.BaseModel.check_access_rule_old = orm.BaseModel.check_access_rule
+orm.BaseModel._validate_old = orm.BaseModel._validate
+orm.BaseModel.check_validation_rule = check_validation_rule
+
+class ir_module_module(osv.osv):
+    _inherit = 'ir.module.module'
+
+    def check(self, cr, uid, ids, context=None):
+        # Why this function..? Probably best not to ask, but this is the only function which is always called
+        # at the end of every module being loaded so we can override functions of the base class consistantly
+        if orm.BaseModel.check_access_rule.__code__ != orm.BaseModel.check_access_rule_old.__code__ and orm.BaseModel.check_access_rule.__code__ != check_access_rule.__code__:
+            orm.BaseModel.check_access_rule_old = orm.BaseModel.check_access_rule
+        if orm.BaseModel._validate.__code__ != orm.BaseModel._validate_old.__code__ and orm.BaseModel._validate.__code__ != _validate.__code__:
+            orm.BaseModel._validate_old = orm.BaseModel._validate
+        orm.BaseModel.check_access_rule = check_access_rule
+        orm.BaseModel._validate = _validate
+        res = super(ir_module_module, self).check(cr, uid, ids, context)
+
+ir_module_module()
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
