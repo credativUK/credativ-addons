@@ -32,7 +32,8 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
                     </field>
                     <separator colspan="4"/>
                     <button special="cancel" string="Cancel" icon="gtk-cancel"/>
-                    <button name="pay" string="Pay" type="object" icon="gtk-ok"/>
+                    <button name="pay" string="Pay (Draft)" type="object" icon="gtk-ok"/>
+                    <button name="pay_and_validate" string="Pay and Validate" type="object" icon="gtk-ok"/>
                 </form>
             </field>
         </record>

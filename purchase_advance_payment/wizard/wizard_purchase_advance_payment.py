@@ -99,6 +99,8 @@ class purchase_advance_payment(osv.osv_memory):
         res = {'value': {}}
         orig_amount = 0.0
         for line in line_ids:
+            if line[0] == 4:
+                raise osv.except_osv('Error !', 'Active ID is not set in Context. Please close and reload the wizard.')
             if line[0] != 0:
                 continue
             orig_amount += line[2].get('amount', 0.0)
@@ -129,20 +131,26 @@ class purchase_advance_payment(osv.osv_memory):
         running_amount = 0.0
         res_lines = []
         for line in line_ids:
+            ## FIXME: Due to a bug in OpenERP 6.1 web client, it is not possible to update a one2many field
+            ## from an edit of the same one2many field. It throws an error since the 'selected' field just edited
+            ## is removed in the change but is still referenced. Maybe this will work in 7.0?
+            if line[0] == 4:
+                raise osv.except_osv('Error !', 'Active ID is not set in Context. Please close and reload the wizard.')
             if line[0] != 0:
-                res_lines.append(line)
+            #    res_lines.append(line)
                 continue
             data = line[2].copy()
-            if data.get('amount', 0.0) < 0.0:
-                amount = 0.0
-            elif data.get('amount', 0.0) > data.get('amount_unreconciled', 0.0):
-                amount = data.get('amount_unreconciled', 0.0)
-            else:
-                amount = data.get('amount', 0.0)
-            data['amount'] = amount
+            #if data.get('amount', 0.0) < 0.0:
+            #    amount = 0.0
+            #elif data.get('amount', 0.0) > data.get('amount_unreconciled', 0.0):
+            #    amount = data.get('amount_unreconciled', 0.0)
+            #else:
+            #    amount = data.get('amount', 0.0)
+            #data['amount'] = amount
+            amount = data.get('amount', 0.0)
             running_amount += amount
-            res_lines.append([0, False, data])
-        res['value']['line_ids'] = res_lines
+            #res_lines.append([0, False, data])
+        #res['value']['line_ids'] = res_lines
         res['value']['amount'] = running_amount
         return res
 
@@ -169,13 +177,18 @@ class purchase_advance_payment(osv.osv_memory):
 
     def pay(self, cr, uid, ids, context=None):
         rec_id = context and context.get('active_id', False)
-        assert rec_id, _('Active ID is not set in Context')
+        if not rec_id:
+            raise osv.except_osv('Error !', "Active ID is not set in Context. Please close and reload the wizard.")
         purchase_obj = self.pool.get('purchase.order')
         voucher_obj = self.pool.get('account.voucher')
 
         data = self.browse(cr, uid, ids[0], context=context)
         lines = []
         for line in data.line_ids:
+            if line.amount == 0:
+                continue
+            if line.amount < 0 or line.amount > line.amount_unreconciled:
+                raise osv.except_osv('Error !', "Pay amount for each line must not exceed open balance")
             lines.append([0, False, {
                     'account_id': data.partner_id.property_account_payable.id,
                     'amount': line.amount,
@@ -187,6 +200,9 @@ class purchase_advance_payment(osv.osv_memory):
                     'amount_original': line.amount_original,
                     'amount_unreconciled': line.amount_unreconciled,
                 }])
+
+        if not lines:
+            raise osv.except_osv('Error !', "Please enter an amount for at least one open line")
 
         data = {
                 'type': 'payment',
@@ -201,7 +217,20 @@ class purchase_advance_payment(osv.osv_memory):
                 'line_ids': lines,
             }
         vid = voucher_obj.create(cr, uid, data, context=context)
-        voucher_obj.proforma_voucher(cr, uid, [vid,], context=context)
+        return {
+                'name': 'Supplier Payment',
+                'view_type': 'form',
+                'view_mode': 'form,tree',
+                'res_model': 'account.voucher',
+                'views': [(self.pool.get('ir.model.data').get_object_reference(cr, uid, 'account_voucher', 'view_vendor_payment_form')[1], 'form')],
+                'res_id': vid,
+                'type': 'ir.actions.act_window',
+            }
+
+    def pay_and_validate(self, cr, uid, ids, context=None):
+        res = self.pay(cr, uid, ids, context=context)
+        vid = res['res_id']
+        self.pool.get('account.voucher').proforma_voucher(cr, uid, [vid,], context=context)
         return {'type': 'ir.actions.act_window_close'}
 
 purchase_advance_payment()

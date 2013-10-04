@@ -10,6 +10,9 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
             <field name="inherit_id" ref="purchase.purchase_order_form" />
             <field name="arch" type="xml">
                 <data>
+                    <xpath expr="//group[button[@string='Print']]" position="attributes">
+                        <attribute name="col">12</attribute>
+                    </xpath>
                     <xpath expr="//button[@string='Print']" position="after">
                         <button name="%(action_purchase_advance_payment)d" string="Advance Payment" states="approved" type="action" icon="terp-dolar"/>
                     </xpath>
