@@ -156,9 +156,13 @@ class purchase_advance_payment(osv.osv_memory):
 
     def onchange_journal(self, cr, uid, ids, amount, partner_id, purchase_order_id, journal_id, line_ids, context=None):
         aml_obj = self.pool.get('account.move.line')
+        jor_pool = self.pool.get('account.journal')
         res = {'value': {}}
         res_lines = []
-        lines = self.pool.get('account.voucher').recompute_voucher_lines(cr, uid, [], partner_id, journal_id, False, False, 'payment', False)
+        currency_id = False
+        if journal_id and jor_pool.browse(cr,uid,journal_id,context=context).currency:
+            currency_id = jor_pool.browse(cr,uid,journal_id,context=context).currency.id
+        lines = self.pool.get('account.voucher').recompute_voucher_lines(cr, uid, [], partner_id, journal_id, False, currency_id, 'payment', False)
         for line in lines['value']['line_dr_ids']:
             ml = aml_obj.browse(cr, uid, line['move_line_id'], context=context)
             if ml.invoice and purchase_order_id in [x.id for x in ml.invoice.purchase_ids]:
