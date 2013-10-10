@@ -246,7 +246,7 @@ def check_validation_rule(self, cr, uid, ids, opp, context=None):
                     if where_clause:
                         where_clause = ' and ' + ' and '.join(where_clause)
                         for id in ids:
-                            rec = repr(self.name_get(cr, uid, id, context=context))
+                            rec = repr(self.name_get(cr, uid, [id], context=context))
                             cr.execute('SELECT ' + self._table + '.id FROM ' + ','.join(tables) + ' WHERE ' + self._table + '.id IN %s' + where_clause, [(id,)] + where_params)
                             if cr.rowcount != 1:
                                 msgs.setdefault(rec, []).append(msg)
