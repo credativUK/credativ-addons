@@ -150,4 +150,4 @@ class Reports(ReportsBase):
                  ('Content-Disposition', 'attachment; filename="%s"' % (filename,)),
                  ('Content-Type', report_mimetype),
                  ('Content-Length', len(report))],
-             cookies={'fileToken': int(token)})
+             cookies={'fileToken': token})
