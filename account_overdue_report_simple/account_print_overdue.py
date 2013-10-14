@@ -33,8 +33,8 @@ class OverdueSimple(report_sxw.rml_parse):
         super(OverdueSimple, self).__init__(cr, uid, name, context=context)
         self.localcontext.update( {
             'open_invoices_balance': 0,
-            'unreconciled_payments': 0,
-            'unreconciled_credit_notes': 0,
+            'unallocated_payments': 0,
+            'unallocated_credit_notes': 0,
             'amount_due': 0,
             'time': time,
             'adr_get': self._adr_get,
@@ -93,26 +93,26 @@ class OverdueSimple(report_sxw.rml_parse):
                     ('state', '<>', 'draft'), ('reconcile_id', '=', False)])
         all_movelines = moveline_obj.browse(self.cr, self.uid, moveline_ids)
         invoice_lines = []
-        unreconciled_payments = 0
-        unreconciled_credit_notes = 0
+        unallocated_payments = 0
+        unallocated_credit_notes = 0
         open_invoices_balance = 0
         amount_due = 0
         for line in all_movelines:
             line_type = self._get_type(line)
             if line_type == 'INV':
                 invoice_lines.append(line)
-                open_invoices_balance += line.debit - line.credit
+                open_invoices_balance += self._get_balance(line)
             else:
-                if line.reconcile_partial_id:
+                if not line.reconcile_partial_id:
                     if line_type == 'PAY':
-                        unreconciled_payments += line.credit - line.debit
+                        unallocated_payments += line.credit - line.debit
                     elif line_type == 'CRN':
-                        unreconciled_credit_notes += line.credit - line.debit
-        amount_due = open_invoices_balance - (unreconciled_payments + unreconciled_credit_notes)
+                        unallocated_credit_notes += line.credit - line.debit
+        amount_due = open_invoices_balance - (unallocated_payments + unallocated_credit_notes)
         self.localcontext.update( {
             'open_invoices_balance': open_invoices_balance,
-            'unreconciled_payments': unreconciled_payments,
-            'unreconciled_credit_notes':unreconciled_credit_notes,
+            'unallocated_payments': unallocated_payments,
+            'unallocated_credit_notes':unallocated_credit_notes,
             'amount_due':amount_due,
             } )
         return invoice_lines

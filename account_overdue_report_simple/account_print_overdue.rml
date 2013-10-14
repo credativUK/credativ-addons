@@ -230,10 +230,10 @@
             </para>
           </td>
           <td>
-              <para style="terp_default_9">[[ unreconciled_payments and "Unreconciled payments:" ]]</para>
+              <para style="terp_default_9">[[ unallocated_payments and "Unallocated payments:" ]]</para>
           </td>
           <td>
-              <para style="terp_default_Right_9">[[ unreconciled_payments and company.currency_id.symbol ]] [[ unreconciled_payments and formatLang(unreconciled_payments) ]]</para>
+              <para style="terp_default_Right_9">[[ unallocated_payments and company.currency_id.symbol ]] [[ unallocated_payments and formatLang(unallocated_payments) ]]</para>
           </td>
       </tr>
     </blockTable>
@@ -245,10 +245,10 @@
             </para>
           </td>
           <td>
-              <para style="terp_default_9">[[ unreconciled_credit_notes and "Unreconciled credit notes:" ]]</para>
+              <para style="terp_default_9">[[ unallocated_credit_notes and "Unallocated credit notes:" ]]</para>
           </td>
           <td>
-              <para style="terp_default_Right_9">[[ unreconciled_credit_notes and company.currency_id.symbol ]] [[ unreconciled_credit_notes and formatLang(unreconciled_credit_notes) ]]</para>
+              <para style="terp_default_Right_9">[[ unallocated_credit_notes and company.currency_id.symbol ]] [[ unallocated_credit_notes and formatLang(unallocated_credit_notes) ]]</para>
           </td>
       </tr>
     </blockTable>
