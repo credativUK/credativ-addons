@@ -161,10 +161,9 @@
     <para style="terp_default_9">
       <font color="white"> </font><br/>
     </para>
-    <blockTable colWidths="80.0,80.0,110.0,80.0,80.0,80.0" style="Table1">
+    <blockTable colWidths="80.0,80.0,190.0,80.0,80.0" style="Table1">
       <tr>
         <td>
-          <para style="terp_tblheader_Details">Type</para>
         </td>
         <td>
           <para style="terp_tblheader_Details">Date</para>
@@ -173,19 +172,16 @@
           <para style="terp_tblheader_Details_Centre">Reference</para>
         </td>
         <td>
-          <para style="terp_tblheader_Details_Right">Debit</para>
+          <para style="terp_tblheader_Details_Right">Invoice Total</para>
         </td>
         <td>
-          <para style="terp_tblheader_Details_Right">Credit</para>
-        </td>
-        <td>
-          <para style="terp_tblheader_Details_Right">Balance</para>
+          <para style="terp_tblheader_Details_Right">Invoice Balance</para>
         </td>
       </tr>
     </blockTable>
     <section>
       <para style="terp_default_8">[[repeatIn(getLines(o), 'line') ]]</para>
-      <blockTable colWidths="80.0,80.0,110.0,80.0,80.0,80.0" style="Table3">
+      <blockTable colWidths="80.0,80.0,190.0,80.0,80.0" style="Table3">
         <tr>
           <td>
             <para style="terp_default_9">[[ get_type(line) ]]</para>
@@ -194,21 +190,18 @@
             <para style="terp_default_9">[[ formatLang(line['date'],date=True) ]]</para>
           </td>
           <td>
-            <para style="terp_default_Centre_9">[[ line['ref'] ]]</para>
+            <para style="terp_default_Centre_9">[[ get_ref(line) ]]</para>
           </td>
           <td>
             <para style="terp_default_Right_9">[[ (line['account_id']['type'] == 'receivable' and line['debit'] and formatLang(line['debit']) or ' ') ]] </para>
           </td>
           <td>
-            <para style="terp_default_Right_9">[[ (line['account_id']['type'] == 'receivable' and line['credit'] and formatLang(line['credit']) or ' ') ]] </para>
-          </td>
-          <td>
-             <para style="terp_default_Right_9">[[ formatLang(get_balance(line)) ]] [[ company.currency_id.symbol ]] </para>
+             <para style="terp_default_Right_9">[[ company.currency_id.symbol ]] [[ formatLang(get_balance(line)) ]] </para>
           </td>
         </tr>
       </blockTable>
     </section>
-    <blockTable colWidths="201.0,70.0,80.0,80.0,80.0" style="Table2">
+    <blockTable colWidths="160.0,190.0,80.0,80.0" style="Table2">
       <tr>
         <td>
           <para style="terp_default_8">
@@ -219,23 +212,64 @@
           <para style="terp_default_Bold_9">Sub-Total : </para>
         </td>
         <td>
-          <para style="terp_default_Right_9">[[ formatLang((reduce(lambda x, y: x + ((y['account_id']['type'] == 'receivable' and y['debit'] or 0) or (y['account_id']['type'] == 'payable' and y['credit'] * -1 or 0)), getLines(o), 0))) ]] </para>
-        </td>
-        <td>
-          <para style="terp_default_Right_9">[[ formatLang((reduce(lambda x, y: x + ((y['account_id']['type'] == 'receivable' and y['credit'] or 0) or (y['account_id']['type'] == 'payable' and y['debit'] * -1 or 0)), getLines(o), 0))) ]] </para>
-        </td>
-        <td>
           <para style="terp_default_Right_9"><font color="white"> </font></para>
+        </td>
+        <td>
+          <para style="terp_default_Right_9">[[ open_invoices_balance and company.currency_id.symbol ]] [[ open_invoices_balance and formatLang(open_invoices_balance) ]] </para>
         </td>
       </tr>
     </blockTable>
     <para style="terp_default_9">
       <font color="white"> </font>
     </para>
+    <blockTable colWidths="160.0,270.0,80.0">
+      <tr>
+          <td>
+            <para style="terp_default_8">
+                <font color="white"> </font>
+            </para>
+          </td>
+          <td>
+              <para style="terp_default_9">[[ unreconciled_payments and "Unreconciled payments:" ]]</para>
+          </td>
+          <td>
+              <para style="terp_default_Right_9">[[ unreconciled_payments and company.currency_id.symbol ]] [[ unreconciled_payments and formatLang(unreconciled_payments) ]]</para>
+          </td>
+      </tr>
+    </blockTable>
+    <blockTable colWidths="160.0,270.0,80.0">
+      <tr>
+          <td>
+            <para style="terp_default_8">
+                <font color="white"> </font>
+            </para>
+          </td>
+          <td>
+              <para style="terp_default_9">[[ unreconciled_credit_notes and "Unreconciled credit notes:" ]]</para>
+          </td>
+          <td>
+              <para style="terp_default_Right_9">[[ unreconciled_credit_notes and company.currency_id.symbol ]] [[ unreconciled_credit_notes and formatLang(unreconciled_credit_notes) ]]</para>
+          </td>
+      </tr>
+    </blockTable>
+    <blockTable colWidths="160.0,270.0,80.0" style="Table2">
+      <tr>
+          <td>
+            <para style="terp_default_8">
+                <font color="white"> </font>
+            </para>
+          </td>
+          <td>
+              <para style="terp_default_9"><b>Total amount due:</b></para>
+          </td>
+          <td>
+              <para style="terp_default_Right_9"><b>[[ amount_due and company.currency_id.symbol ]] [[ amount_due and formatLang(amount_due) ]]</b></para>
+          </td>
+      </tr>
+    </blockTable>
     <para style="terp_default_9">
       <font color="white"> </font>
     </para>
-    <para style="terp_default_9"><b>Total amount due: [[ formatLang((reduce(lambda x, y: x + (get_balance(y) >= 0 and get_balance(y) or 0), getLines(o), 0)), currency_obj=company.currency_id) ]]</b></para>
     <para style="terp_default_8">
       <font color="white"> </font>
     </para>

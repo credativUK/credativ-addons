@@ -32,12 +32,17 @@ class OverdueSimple(report_sxw.rml_parse):
     def __init__(self, cr, uid, name, context):
         super(OverdueSimple, self).__init__(cr, uid, name, context=context)
         self.localcontext.update( {
+            'open_invoices_balance': 0,
+            'unreconciled_payments': 0,
+            'unreconciled_credit_notes': 0,
+            'amount_due': 0,
             'time': time,
             'adr_get': self._adr_get,
             'getLines': self._lines_get,
             'tel_get': self._tel_get,
             'message': self._message,
             'get_type': self._get_type,
+            'get_ref': self._get_ref,
             'get_balance': self._get_balance,
         })
         self.context = context
@@ -82,12 +87,35 @@ class OverdueSimple(report_sxw.rml_parse):
 
     def _lines_get(self, partner):
         moveline_obj = pooler.get_pool(self.cr.dbname).get('account.move.line')
-        movelines = moveline_obj.search(self.cr, self.uid,
+        moveline_ids = moveline_obj.search(self.cr, self.uid,
                 [('partner_id', '=', partner.id),
                     ('account_id.type', 'in', ['receivable', 'payable']),
                     ('state', '<>', 'draft'), ('reconcile_id', '=', False)])
-        movelines = moveline_obj.browse(self.cr, self.uid, movelines)
-        return movelines
+        all_movelines = moveline_obj.browse(self.cr, self.uid, moveline_ids)
+        invoice_lines = []
+        unreconciled_payments = 0
+        unreconciled_credit_notes = 0
+        open_invoices_balance = 0
+        amount_due = 0
+        for line in all_movelines:
+            line_type = self._get_type(line)
+            if line_type == 'INV':
+                invoice_lines.append(line)
+                open_invoices_balance += line.debit - line.credit
+            else:
+                if line.reconcile_partial_id:
+                    if line_type == 'PAY':
+                        unreconciled_payments += line.credit - line.debit
+                    elif line_type == 'CRN':
+                        unreconciled_credit_notes += line.credit - line.debit
+        amount_due = open_invoices_balance - (unreconciled_payments + unreconciled_credit_notes)
+        self.localcontext.update( {
+            'open_invoices_balance': open_invoices_balance,
+            'unreconciled_payments': unreconciled_payments,
+            'unreconciled_credit_notes':unreconciled_credit_notes,
+            'amount_due':amount_due,
+            } )
+        return invoice_lines
 
     def _message(self, obj, company):
         company_pool = pooler.get_pool(self.cr.dbname).get('res.company')
@@ -117,6 +145,16 @@ class OverdueSimple(report_sxw.rml_parse):
             else:
                 transaction_type =  'N/A'
         return transaction_type
+
+    def _get_ref(self, line):
+        ref = ''
+        move_id = line.move_id.id
+        invoice_pool = pooler.get_pool(self.cr.dbname).get('account.invoice')
+        invoice_ids = invoice_pool.search(self.cr, self.uid, [('move_id','=',line.move_id.id),('account_id','=',line.account_id.id)])
+        if invoice_ids:
+            invoice = invoice_pool.browse(self.cr, self.uid, invoice_ids[0])
+            ref = invoice.number
+        return ref
 
     def _get_balance(self, line):
         invoice_pool = pooler.get_pool(self.cr.dbname).get('account.invoice')
