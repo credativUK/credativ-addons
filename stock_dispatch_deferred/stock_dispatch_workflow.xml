@@ -4,7 +4,6 @@
         <!-- Activity -->
         <record id="act_dispatch_partial" model="workflow.activity">
             <field name="wkf_id" ref="stock_dispatch.dispatch_wkf"/>
-            <field name="flow_start">True</field>
             <field name="name">dispatch_partial</field>
             <field name="kind">function</field>
             <field name="action">action_partial()</field>
