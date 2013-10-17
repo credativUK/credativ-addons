@@ -26,6 +26,7 @@ from base_deferred_actions.deferred_action import defer_action
 import traceback
 import datetime
 import netsvc
+import psycopg2
 
 class stock_dispatch(osv.osv):
     _inherit = 'stock.dispatch'
@@ -82,15 +83,21 @@ class stock_dispatch(osv.osv):
                 cr.execute("SAVEPOINT pre_move_done")
                 try:
                     move_obj.action_done(cr, uid, [move.id,], context=context)
+                    if move.picking_id and self.test_finished(cr, uid, [move.picking_id.id]):
+                        wkf_service.trg_validate(uid, 'stock.picking', move.picking_id.id, 'button_done', cr)
+                    else:
+                        wkf_service.trg_write(uid, 'stock.picking', move.picking_id.id, cr)
+                except psycopg2.OperationalError, e:
+                    if e.pgcode in (psycopg2.errorcodes.LOCK_NOT_AVAILABLE, psycopg2.errorcodes.SERIALIZATION_FAILURE, psycopg2.errorcodes.DEADLOCK_DETECTED):
+                        raise
+                    else:
+                        cr.execute("ROLLBACK TO pre_move_done")
+                        errors[move] = "Exception: %s\n%s" % (e.__repr__(), traceback.format_exc())
+                        continue
                 except Exception, e:
                     cr.execute("ROLLBACK TO pre_move_done")
                     errors[move] = "Exception: %s\n%s" % (e.__repr__(), traceback.format_exc())
                     continue
-
-                if move.picking_id and self.test_finished(cr, uid, [move.picking_id.id]):
-                    wkf_service.trg_validate(uid, 'stock.picking', move.picking_id.id, 'button_done', cr)
-                else:
-                    wkf_service.trg_write(uid, 'stock.picking', move.picking_id.id, cr)
 
             if errors:
                 error_str = "Dispatch %s was partially completed with the following errors:\n" % (dispatch.name,)
