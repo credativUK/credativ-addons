@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+-->
+<openerp>
+    <data>
+        <record id="view_partner_carrier_dispatch_action_form" model="ir.ui.view">
+            <field name="name">res.partner.carrier.dispatch.action.form</field>
+            <field name="model">res.partner</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="delivery.view_partner_property_form" />
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='property_delivery_carrier']" position="after">
+                    <separator string="Dispatch Actions" colspan="4"/>
+                    <field name="dispatch_action_delay"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</openerp>
