@@ -37,6 +37,12 @@ class stock_dispatch(osv.osv):
             for dispatch in self.browse(cr, uid, ids, context=context):
                 dispatch_action_delay = dispatch.carrier_id and dispatch.carrier_id.dispatch_action_delay or 0
                 country = context.get('country_id', False)
+                if not country:
+                    shop = dispatch.stock_moves and dispatch.stock_moves[0].sale_line_id and dispatch.stock_moves[0].sale_line_id.order_id and dispatch.stock_moves[0].sale_line_id.order_id.shop_id
+                    country = shop and shop.address_id and shop.address_id.country_id and shop.address_id.country_id.id
+                if not country:
+                    order = dispatch.stock_moves and dispatch.stock_moves[0].sale_line_id and dispatch.stock_moves[0].sale_line_id.order_id
+                    country = order and order.partner_shipping_id and order.partner_shipping_id.country_id and order.partner_shipping_id.country_id.id
                 if country:
                     # Skip weekends and holidays if the country is defined in context
                     days = int(dispatch_action_delay) / 24
