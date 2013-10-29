@@ -23,7 +23,7 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
                    <xpath expr="//page[@string='Order Lines']/field[@name='order_line']/form[@string='Sales Order Lines']/group/group/field[@name='price_unit']" position="after">
                        <label for="delay" help="Number of days from confirmation date of order until delivery. The requested delivery date will override this if it is set."/>
                        <div>
-                           <field name="delay" class="oe_inline" help="Number of days from confirmation date of order until delivery. The requested delivery date will override this if it is set."/> days
+                           <field name="delay" on_change="onchange_delay(delay)" class="oe_inline" help="Number of days from confirmation date of order until delivery. The requested delivery date will override this if it is set."/> days
                        </div>
                         <label for="default_delivery_date"/> 
                        <div>
