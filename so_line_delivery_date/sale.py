@@ -56,14 +56,14 @@ class sale_order_line(osv.osv):
         today = datetime.datetime(year=datetime.datetime.today().year, month=datetime.datetime.today().month, day=datetime.datetime.today().day)
         if requested_delivery_date and not id:
             timedelta_until_delivery = datetime.datetime.strptime(requested_delivery_date, '%Y-%m-%d') - today
-            return timedelta_until_delivery and timedelta_until_delivery.days
+            return timedelta_until_delivery.days
         try:
             line = self.browse(cr, uid, id, context=context)
             if not requested_delivery_date:
                 requested_delivery_date = line.requested_delivery_date
             date_confirm = line.order_id.date_confirm and datetime.datetime.strptime(line.order_id.date_confirm, '%Y-%m-%d')
             timedelta_until_delivery = datetime.datetime.strptime(requested_delivery_date, '%Y-%m-%d') - ( date_confirm or today )
-            return timedelta_until_delivery and timedelta_until_delivery.days
+            return timedelta_until_delivery.days
         except:
             return False
 
