@@ -25,6 +25,9 @@ import time
 from osv import osv, fields
 import decimal_precision as dp
 from tools.translate import _
+import tools
+from tools import DEFAULT_SERVER_DATETIME_FORMAT, DEFAULT_SERVER_DATE_FORMAT
+from datetime import datetime
 
 class purchase_advance_payment_line(osv.osv_memory):
     _name = "purchase.advance.payment.line"
@@ -81,6 +84,7 @@ class purchase_advance_payment(osv.osv_memory):
             'line_ids':fields.one2many('purchase.advance.payment.line','purchase_advance_payment_id','Payment Lines',),
             'amount': fields.float('Total', digits_compute=dp.get_precision('Account'), required=True,),
             'reference': fields.char('Ref #', size=64,),
+            'state': fields.selection([('advance', 'Advance Payment'), ('payment', 'Invoice Payment')], 'Payment Type', readonly=True),
         }
 
     def default_get(self, cr, uid, fields, context):
@@ -93,9 +97,26 @@ class purchase_advance_payment(osv.osv_memory):
         res['purchase_order_id'] = purchase.id
         res['partner_id'] = purchase.partner_id.id
 
+        query = "select id from account_invoice where id in (select invoice_id from purchase_invoice_rel where purchase_id = %s) and state = 'open'"%(purchase.id)
+        cr.execute(query)
+        invoice_ids = tools.flatten(cr.fetchall())
+        if not invoice_ids:
+            state = 'advance'
+        else:
+            state = 'payment'
+        res['state'] = state
+
         return res
 
-    def onchange_amount(self, cr, uid, ids, amount, partner_id, purchase_order_id, journal_id, line_ids, context=None):
+    def onchange_amount(self, cr, uid, ids, amount, partner_id, purchase_order_id, journal_id, line_ids, state, context=None):
+        if state == 'advance':
+            ## FIXME: Currency conversion needed?
+            #po = self.pool.get('purchase.order').browse(cr, uid, purchase_order_id, context=context)
+            #if amount > po.amount_total:
+            #    return {'value': {'amount': po.amount_total},
+            #            'warning': {'title': 'Warning!', 'message': 'Cannot enter and amount greater than the PO total amount of %s' % (po.amount_total)}}
+            return {'value': {}}
+
         res = {'value': {}}
         orig_amount = 0.0
         for line in line_ids:
@@ -154,7 +175,10 @@ class purchase_advance_payment(osv.osv_memory):
         res['value']['amount'] = running_amount
         return res
 
-    def onchange_journal(self, cr, uid, ids, amount, partner_id, purchase_order_id, journal_id, line_ids, context=None):
+    def onchange_journal(self, cr, uid, ids, amount, partner_id, purchase_order_id, journal_id, line_ids, state, context=None):
+        if state == 'advance':
+            return
+
         aml_obj = self.pool.get('account.move.line')
         jor_pool = self.pool.get('account.journal')
         res = {'value': {}}
@@ -175,9 +199,96 @@ class purchase_advance_payment(osv.osv_memory):
                     'amount_unreconciled': line['amount_unreconciled'],
                     }])
         res['value']['line_ids'] = res_lines
-        res_amount_update = self.onchange_amount(cr, uid, ids, amount, partner_id, purchase_order_id, journal_id, res_lines, context=context)
+        res_amount_update = self.onchange_amount(cr, uid, ids, amount, partner_id, purchase_order_id, journal_id, res_lines, state, context=context)
         res['value'].update(res_amount_update.get('value', {}))
         return res
+
+    def advance_pay(self, cr, uid, ids, context=None):
+        rec_id = context and context.get('active_id', False)
+        if not rec_id:
+            raise osv.except_osv('Error !', "Active ID is not set in Context. Please close and reload the wizard.")
+
+        inv_obj = self.pool.get('account.invoice')
+        ir_module_obj = self.pool.get('ir.module.module')
+        seq_obj = self.pool.get('ir.sequence')
+        move_obj = self.pool.get('account.move')
+        currency_obj = self.pool.get('res.currency')
+
+        data = self.browse(cr, uid, ids[0], context=context)
+
+        if not data.amount or data.amount < 0:
+            raise osv.except_osv('Error !', "Please enter an amount")
+
+        ## FIXME: Currency conversion needed?
+        #if data.amount > data.purchase_order_id.amount_total:
+        #    raise osv.except_osv('Error !', "Amount must not be greater than the PO total amount of %s" % (data.purchase_order_id.amount_total))
+
+        company = data.purchase_order_id.company_id
+        partner = data.purchase_order_id.partner_id
+        journal = data.journal_id
+        period_pool = self.pool.get('account.period')
+        type = 'in_invoice'
+        currency_id = company.currency_id.id != journal.currency.id and journal.currency.id or False
+
+        vals = inv_obj.onchange_partner_id(cr, uid, [], type, partner.id).get('value', {})
+        src_account_id = vals.get('account_id', False)
+        pay_account_id = journal.default_credit_account_id and journal.default_credit_account_id.id or False
+
+        date = data.date or datetime.now().strftime(DEFAULT_SERVER_DATE_FORMAT)
+        pids = period_pool.find(cr, uid, date, context=context)
+        period_id = pids and pids[0] or False
+
+        move_line_name = seq_obj.next_by_id(cr, uid, journal.sequence_id.id, context=context)
+        move_name = seq_obj.next_by_id(cr, uid, journal.sequence_id.id, context=context)
+
+        foreign_currency_diff = 0.0
+        amount_currency = False
+        if currency_id:
+            amount_currency = currency_obj.compute(cr, uid, company.currency_id.id, currency_id, data.amount, context=context)
+
+        move_lines = [[0,0,{
+            'journal_id': journal.id,
+            'period_id': period_id,
+            'name': data.purchase_order_id.name,
+            'account_id': src_account_id,
+            'partner_id': partner.id,
+            'currency_id': currency_id,
+            'amount_currency': amount_currency,
+            'quantity': 1,
+            'debit': data.amount,
+            'credit': 0.0,
+            'date': date,
+            'ref': move_name,
+        }], [0,0,{
+            'journal_id': journal.id,
+            'period_id': period_id,
+            'name': move_line_name,
+            'account_id': pay_account_id,
+            'amount_currency': -amount_currency,
+            'partner_id': partner.id,
+            'currency_id': currency_id,
+            'quantity': 1,
+            'credit': data.amount,
+            'debit': 0.0,
+            'date': date,
+            'ref': move_name,
+        }]]
+
+        move = {
+            'name': move_name,
+            'journal_id': journal.id,
+            'date': date,
+            'period_id': period_id,
+            'narration': data.name,
+            'ref': data.reference or move_name,
+            'purchase_order_id': data.purchase_order_id.id,
+            'line_id': move_lines,
+        }
+
+        move_id = move_obj.create(cr, uid, move, context=context)
+
+        return {'type': 'ir.actions.act_window_close'}
+
 
     def pay(self, cr, uid, ids, context=None):
         rec_id = context and context.get('active_id', False)
@@ -185,9 +296,11 @@ class purchase_advance_payment(osv.osv_memory):
             raise osv.except_osv('Error !', "Active ID is not set in Context. Please close and reload the wizard.")
         purchase_obj = self.pool.get('purchase.order')
         voucher_obj = self.pool.get('account.voucher')
+        seq_obj = self.pool.get('ir.sequence')
 
         data = self.browse(cr, uid, ids[0], context=context)
         lines = []
+        move_name = seq_obj.next_by_id(cr, uid, data.journal_id.sequence_id.id, context=context)
         for line in data.line_ids:
             if line.amount == 0:
                 continue
@@ -203,6 +316,7 @@ class purchase_advance_payment(osv.osv_memory):
                     'date_due': line.date_due,
                     'amount_original': line.amount_original,
                     'amount_unreconciled': line.amount_unreconciled,
+                    'name': data.purchase_order_id.name,
                 }])
 
         if not lines:
@@ -215,10 +329,13 @@ class purchase_advance_payment(osv.osv_memory):
                 'amount': data.amount,
                 'reference': data.reference,
                 'partner_id': data.partner_id.id,
-                'account_id': data.partner_id.property_account_payable.id,
+                'account_id': data.journal_id.default_credit_account_id and data.journal_id.default_credit_account_id.id or False,
                 'company_id': self.pool.get('res.company')._company_default_get(cr, uid, 'account.voucher',context=context),
                 'period_id': voucher_obj._get_period(cr, uid, context=context),
                 'line_ids': lines,
+                'reference': data.reference or data.purchase_order_id.name,
+                'narration': data.name,
+                'name': move_name,
             }
         vid = voucher_obj.create(cr, uid, data, context=context)
         return {

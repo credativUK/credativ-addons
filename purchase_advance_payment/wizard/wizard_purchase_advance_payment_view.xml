@@ -5,21 +5,21 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
 <openerp>
     <data>
         <record id="view_purchase_advance_payment" model="ir.ui.view">
-            <field name="name">Advance Payment</field>
+            <field name="name">PO Payment</field>
             <field name="model">purchase.advance.payment</field>
             <field name="type">form</field>
             <field name="arch" type="xml">
-                <form string="Advance Payment">
+                <form string="PO Payment">
                     <group col="6" colspan="4">
                         <field name="purchase_order_id" invisible="1"/>
                         <field name="partner_id"/>
-                        <field name="amount" on_change="onchange_amount(amount, partner_id, purchase_order_id, journal_id, line_ids)"/>
-                        <field name="journal_id" domain="[('type','in',['bank', 'cash'])]" widget="selection" string="Payment Method" on_change="onchange_journal(amount, partner_id, purchase_order_id, journal_id, line_ids)"/>
+                        <field name="amount" on_change="onchange_amount(amount, partner_id, purchase_order_id, journal_id, line_ids, state)"/>
+                        <field name="journal_id" domain="[('type','in',['bank', 'cash'])]" widget="selection" string="Payment Method" on_change="onchange_journal(amount, partner_id, purchase_order_id, journal_id, line_ids, state)"/>
                         <field name="date"/>
                         <field name="reference" string="Payment Ref"/>
                         <field name="name"/>
                     </group>
-                    <field name="line_ids" on_change="onchange_line_ids(amount, partner_id, purchase_order_id, journal_id, line_ids)" colspan="4" nolabel="1" height="180">
+                    <field name="line_ids" on_change="onchange_line_ids(amount, partner_id, purchase_order_id, journal_id, line_ids)" colspan="4" nolabel="1" height="180" attrs="{'invisible':[('state','!=','payment')]}">
                         <tree string="Voucher Items" editable="bottom">
                             <field name="invoice_id"/>
                             <field name="move_line_id"/>
@@ -32,13 +32,15 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
                     </field>
                     <separator colspan="4"/>
                     <button special="cancel" string="Cancel" icon="gtk-cancel"/>
-                    <button name="pay" string="Pay (Draft)" type="object" icon="gtk-ok"/>
-                    <button name="pay_and_validate" string="Pay and Validate" type="object" icon="gtk-ok"/>
+                    <button name="advance_pay" string="Advance Payment" type="object" icon="gtk-ok" attrs="{'invisible':[('state','!=','advance')]}"/>
+                    <button name="pay" string="Pay (Draft)" type="object" icon="gtk-ok"  attrs="{'invisible':[('state','!=','payment')]}"/>
+                    <button name="pay_and_validate" string="Pay and Validate" type="object" icon="gtk-ok" attrs="{'invisible':[('state','!=','payment')]}"/>
+                    <field name="state" invisible="1"/>
                 </form>
             </field>
         </record>
         <record id="action_purchase_advance_payment" model="ir.actions.act_window">
-            <field name="name">Advance Payment</field>
+            <field name="name">PO Payment</field>
             <field name="type">ir.actions.act_window</field>
             <field name="res_model">purchase.advance.payment</field>
             <field name="view_type">form</field>
@@ -49,7 +51,7 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
         <record model="ir.values" id="purchase_advance_payment">
             <field name="model_id" ref="purchase.model_purchase_order" />
             <field name="object" eval="1" />
-            <field name="name">Advance Payment</field>
+            <field name="name">PO Payment</field>
             <field name="key2">client_action_multi</field>
             <field name="value" eval="'ir.actions.act_window,' + str(ref('action_purchase_advance_payment'))" />
             <field name="key">action</field>

@@ -11,10 +11,16 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
             <field name="arch" type="xml">
                 <data>
                     <xpath expr="//group[button[@string='Print']]" position="attributes">
-                        <attribute name="col">12</attribute>
+                        <attribute name="col">14</attribute>
                     </xpath>
                     <xpath expr="//button[@string='Print']" position="after">
-                        <button name="check_for_invoices" string="Advance Payment" states="approved" type="object" icon="terp-dolar"/>
+                        <field name="has_valid_invoices" invisible="1"/>
+                        <group attrs="{'invisible': ['|', ('has_valid_invoices', '=', True), ('state', '!=', 'approved')]}">
+                            <button name="check_for_invoices" string="Advance Payment" states="approved" type="object" icon="terp-dolar"/>
+                        </group>
+                        <group attrs="{'invisible': ['|', ('has_valid_invoices', '=', False), ('state', '!=', 'approved')]}">
+                            <button name="check_for_invoices" string="Payment" states="approved" type="object" icon="terp-dolar"/>
+                        </group>
                     </xpath>
                 </data>
             </field>

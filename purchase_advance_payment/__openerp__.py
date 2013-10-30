@@ -38,6 +38,7 @@ This module will make it possible to quickly generate payment vouchers from the 
     'update_xml' : [
         "wizard/wizard_purchase_advance_payment_view.xml",
         "purchase_view.xml",
+        "account_view.xml",
     ],
     'active': False,
     'installable': True
