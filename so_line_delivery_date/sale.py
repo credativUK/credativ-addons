@@ -116,7 +116,7 @@ class sale_order_line(osv.osv):
             context = {}
         for line in self.browse(cr, uid, ids, context=context):
             self.write(cr, uid, ids, {'default_delivery_date_when_confirmed': line.default_delivery_date})
-            if line.days_until_delivery:
+            if line.requested_delivery_date:
                 self.write(cr, uid, ids, {'delay': line.days_until_delivery})
         res = super(sale_order_line, self).button_confirm(cr, uid, ids, context=context)
         return res
