@@ -218,6 +218,8 @@ class purchase_advance_payment(osv.osv_memory):
         purchase_order = data.purchase_order_id
         if purchase_order.state == 'draft':
             raise osv.except_osv('Warning !', "Cannot create advance payment until purchase order has been approved.")
+        if purchase_order.state == 'cancel':
+            raise osv.except_osv('Warning !', "Cannot create advance payment for cancelled order.")
         if purchase_order.invoiced:
             raise osv.except_osv('Warning !', "Cannot create advance payment because this order has already been invoiced.")
 
