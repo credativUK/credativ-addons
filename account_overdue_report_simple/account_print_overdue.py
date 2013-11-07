@@ -115,6 +115,8 @@ class OverdueSimple(report_sxw.rml_parse):
             'unallocated_credit_notes':unallocated_credit_notes,
             'amount_due':amount_due,
             } )
+        # Reverse invoice lines so that oldest invoices are displayed at the top
+        invoice_lines.reverse()
         return invoice_lines
 
     def _message(self, obj, company):

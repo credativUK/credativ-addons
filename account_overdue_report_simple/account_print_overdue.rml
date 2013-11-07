@@ -193,7 +193,7 @@
             <para style="terp_default_Centre_9">[[ get_ref(line) ]]</para>
           </td>
           <td>
-            <para style="terp_default_Right_9">[[ (line['account_id']['type'] == 'receivable' and line['debit'] and formatLang(line['debit']) or ' ') ]] </para>
+            <para style="terp_default_Right_9">[[ company.currency_id.symbol ]] [[ (line['account_id']['type'] == 'receivable' and line['debit'] and formatLang(line['debit']) or '0.00') ]] </para>
           </td>
           <td>
              <para style="terp_default_Right_9">[[ company.currency_id.symbol ]] [[ formatLang(get_balance(line)) ]] </para>
