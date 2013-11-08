@@ -36,7 +36,7 @@ The module provides a crm.claim.resolution model which allows different kinds of
     'depends': ['sale','crm','crm_claim','account'],
     'init_xml': [],
     'update_xml': [
-        #'security/ir.model.access.csv',
+        'security/ir.model.access.csv',
         'sale_order_claim_sequence.xml',
         'crm_claim_view.xml',
         'sale_order_claim_view.xml',
