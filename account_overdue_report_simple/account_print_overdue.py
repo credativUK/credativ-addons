@@ -99,7 +99,8 @@ class OverdueSimple(report_sxw.rml_parse):
         amount_due = 0
         for line in all_movelines:
             line_type = self._get_type(line)
-            if line_type == 'INV':
+            # MISC type and 'sale' journal type mean that the line may be an 'invoice' without a physical invoice in the system
+            if line_type == 'INV' or (line_type == 'MISC' and line.journal_id.type == 'sale') :
                 invoice_lines.append(line)
                 open_invoices_balance += self._get_balance(line)
             else:
@@ -141,7 +142,8 @@ class OverdueSimple(report_sxw.rml_parse):
                 if line.credit:
                     transaction_type =  'PAY'
                 elif line.debit:
-                    transaction_type =  'RFD'
+                    # Either refund or 'invoice' with no physical invoice in system
+                    transaction_type =  'MISC'
                 else:
                     transaction_type =  'N/A'
             else:

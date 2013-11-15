@@ -91,31 +91,21 @@
   <story>
   <pto>
   <pto_header>
-    <blockTable colWidths="57.0,136.0,51.0,72.0,54.0,56.0,66.0,18.0" style="Table1">
+    <blockTable colWidths="80.0,80.0,190.0,80.0,80.0" style="Table1">
       <tr>
+        <td>
+        </td>
         <td>
           <para style="terp_tblheader_Details">Date</para>
         </td>
         <td>
-          <para style="terp_tblheader_Details">Description</para>
+          <para style="terp_tblheader_Details_Centre">Reference</para>
         </td>
         <td>
-          <para style="terp_tblheader_Details_Centre">Ref</para>
+          <para style="terp_tblheader_Details_Right">Invoice Total</para>
         </td>
         <td>
-          <para style="terp_tblheader_Details_Centre">Maturity date</para>
-        </td>
-        <td>
-          <para style="terp_tblheader_Details_Right">Due</para>
-        </td>
-        <td>
-          <para style="terp_tblheader_Details_Right">Paid</para>
-        </td>
-        <td>
-          <para style="terp_tblheader_Details_Right">Maturity</para>
-        </td>
-        <td>
-          <para style="terp_tblheader_Details_Centre">Li.</para>
+          <para style="terp_tblheader_Details_Right">Invoice Balance</para>
         </td>
       </tr>
     </blockTable>
