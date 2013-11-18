@@ -100,7 +100,7 @@ class OverdueSimple(report_sxw.rml_parse):
         for line in all_movelines:
             line_type = self._get_type(line)
             # MISC type and 'sale' journal type mean that the line may be an 'invoice' without a physical invoice in the system
-            if line_type == 'INV' or (line_type == 'MISC' and line.journal_id.type == 'sale') :
+            if line_type == 'INV' or (line_type == 'MISC' and line.journal_id.type == 'sale'):
                 invoice_lines.append(line)
                 open_invoices_balance += self._get_balance(line)
             else:
@@ -168,7 +168,10 @@ class OverdueSimple(report_sxw.rml_parse):
             invoice = invoice_pool.browse(self.cr, self.uid, invoices[0])
             balance = invoice.residual
         else:
-            balance = line.debit - line.credit
+            if line.reconcile_partial_id:
+                balance = line.amount_residual
+            else:
+                balance = line.debit - line.credit
         return balance
 
 report_sxw.report_sxw('report.account.overdue.simple', 'res.partner','account_overdue_report_simple/account_print_overdue.rml', parser=OverdueSimple)
