@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+
+<openerp>
+  <data>
+
+    <record model="ir.ui.view" id="view_hr_holidays_form_inherit">
+      <field name="name">hr.holidays.form.inherit</field>
+      <field name="model">hr.holidays</field>
+      <field name="type">form</field>
+      <field name="inherit_id" ref="hr_holidays.edit_holiday_new"/>
+      <field name="arch" type="xml">
+        <field name="employee_id" position="after">
+	  <field name="covering_id"/>
+	</field>
+      </field>
+    </record>
+
+  </data>
+</openerp>
