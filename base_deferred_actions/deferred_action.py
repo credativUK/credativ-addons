@@ -38,9 +38,37 @@ def defer_action(func):
             return self.pool.get('deferred.action').create_defered_action(cr, uid, self._name, func.func_name, ids, *args, **kwargs)
     return new_action
 
+def defer_action_quiet(func):
+    def new_action(self, cr, uid, ids, *args, **kwargs):
+        if 'base_deferred_actions_do_not_defer' in kwargs:
+            del kwargs['base_deferred_actions_do_not_defer']
+            return func(self, cr, uid, ids, *args, **kwargs)
+        else:
+            self.pool.get('deferred.action').create_defered_action(cr, uid, self._name, func.func_name, ids, *args, **kwargs)
+            return True
+    return new_action
+
 class deferred_action(osv.osv):
 
     _name = 'deferred.action'
+
+    def _is_running(self, cr, uid, ids, field, arg, context=None):
+        res = {}
+        for id in ids:
+            _cr = pooler.get_db(cr.dbname).cursor()
+            running = False
+            try:
+                _cr.execute("SELECT * FROM deferred_action WHERE id = %s FOR UPDATE NOWAIT" % (id,), log_exceptions=False)
+            except psycopg2.OperationalError, e:
+                if e.pgcode == '55P03':
+                    running = True
+                else:
+                    raise
+            finally:
+                _cr.rollback()
+                _cr.close()
+            res[id] = running
+        return res
 
     _columns = {
         'name': fields.char('Name', size=32, required=True, readonly=True,),
@@ -56,6 +84,7 @@ class deferred_action(osv.osv):
         'result': fields.text('Result', readonly=True,),
         'retry_of': fields.many2one('deferred.action', string="Retry Of", readonly=True,),
         'retrys': fields.one2many('deferred.action', 'retry_of', string="Retry Actions", readonly=True,),
+        'running': fields.function(_is_running, string='Running', type='boolean', method=True),
     }
 
     _sql_constraints = [
@@ -69,7 +98,6 @@ class deferred_action(osv.osv):
         'state': lambda *a: 'pending',
         'date_requested': lambda *a: datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
     }
-
 
     def _message(self, cr, uid, ids, title='Action started in background', message='Action started in background. You will be notified by email on completion.', context=None):
         notify_pool = self.pool.get('deferred.action.notification')
@@ -144,7 +172,7 @@ class deferred_action(osv.osv):
             _cr = pooler.get_db(cr.dbname).cursor()
             # Get an exclusive lock on the job
             try:
-                _cr.execute("SELECT * FROM deferred_action WHERE id = %s FOR UPDATE NOWAIT" % (action.id,))
+                _cr.execute("SELECT * FROM deferred_action WHERE id = %s FOR UPDATE NOWAIT" % (action.id,), log_exceptions=False)
             except psycopg2.OperationalError, e:
                 _cr.rollback()
                 _cr.close()
@@ -188,10 +216,29 @@ class deferred_action(osv.osv):
         return True
 
     def cancel(self, cr, uid, ids, context=None):
-        self.write(cr, uid, ids, {'state': 'cancel',
-                                  'date_completed': datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
-                                  'result': 'Cancelled by user %s' % (uid,)}, context=context)
-        self._notification_fail(cr, uid, ids, context=context)
+        _cr = pooler.get_db(cr.dbname).cursor()
+        # Get an exclusive lock on all jobs
+        try:
+            _cr.execute("SELECT * FROM deferred_action WHERE id IN %s FOR UPDATE NOWAIT", (tuple(ids),), log_exceptions=False)
+        except psycopg2.OperationalError, e:
+            _cr.rollback()
+            _cr.close()
+            if e.pgcode == '55P03':
+                raise osv.except_osv('Error!', "Deferred action is currently running and cannot be cancelled.")
+            else:
+                raise
+
+        try:
+            for action in self.browse(_cr, uid, ids, context=context):
+                if action.state != 'pending':
+                    raise osv.except_osv('Error!', "Deferred action is not in pending state and cannot be cancelled.")
+            self.write(_cr, uid, ids, {'state': 'cancel',
+                                'date_completed': datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+                                'result': 'Cancelled by user %s' % (uid,)}, context=context)
+            self._notification_fail(_cr, uid, ids, context=context)
+        finally:
+            _cr.commit()
+            _cr.close()
         return True
 
     def retry(self, cr, uid, ids, context=None):
