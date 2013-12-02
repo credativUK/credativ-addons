@@ -8,9 +8,35 @@
             <field name="type">form</field>
             <field name="arch" type="xml">
                 <data>
+                    <field name="complete_date" position="after">
+                        <field name="deferred_state" invisible="1" />
+                    </field>
                     <button name="done" position="replace">
-                        <button name="complete_dispatch" states="confirmed,partial" string="Complete Dispatch (Deferred)" type="object" icon="gtk-execute"/>
+                       <group colspan="2" col="6" attrs="{'invisible': [('state', 'not in', ('confirmed', 'partial'))]}" >
+                            <group attrs="{'invisible': [('deferred_state', 'in', ('queue', 'running'))]}">
+                                <button name="complete_dispatch" states="confirmed,partial" string="Complete Dispatch (Deferred)" type="object" icon="gtk-execute"/>
+                            </group>
+                            <group attrs="{'invisible': [('deferred_state', 'in', ('draft', 'running'))]}">
+                                <button name="cancel_defer" states="confirmed,partial" string="Cancel Finalisation" type="object" icon="gtk-cancel"/>
+                            </group>
+                            <field name="deferred_state" attrs="{'invisible': [('deferred_state', '=', 'draft')]}" nolabel="1" />
+                        </group>
                     </button>
+                </data>
+            </field>
+        </record>
+        <record id="view_dispatch_tree_deferred" model="ir.ui.view">
+            <field name="name">stock.dispatch.tree.deferred</field>
+            <field name="inherit_id" ref="stock_dispatch.view_dispatch_tree"/>
+            <field name="model">stock.dispatch</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <data>
+                    <field name="state" position="after">
+                        <field name="deferred_state" />
+                        <button name="complete_dispatch" attrs="{'invisible': ['|', ('deferred_state', 'in', ('queue', 'running')), ('state', 'not in', ('confirmed', 'partial'))]}" string="Complete Dispatch (Deferred)" type="object" icon="gtk-execute"/>
+                        <button name="cancel_defer" attrs="{'invisible': [('deferred_state', 'in', ('draft', 'running'))]}" string="Cancel Finalisation" type="object" icon="gtk-cancel"/>
+                    </field>
                 </data>
             </field>
         </record>
