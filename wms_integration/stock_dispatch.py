@@ -144,7 +144,7 @@ class stock_dispatch(osv.osv):
         
         for stock_move in stock_moves:
             if not stock_move.dispatch_id:
-                _logger.warn('Stock move %d dispatched but not part of a dispatch.' % (stock_move.id, stock_move.state,))
+                _logger.warn('Stock move %d dispatched but not part of a dispatch.' % (stock_move.id,))
                 ctx['from_dispatch'] = False
                 sm_obj.action_done(cr, uid, stock_move.id, context=ctx)
             else:
