@@ -30,8 +30,8 @@ class account_voucher(osv.osv):
 
         default = super(account_voucher,self).recompute_voucher_lines(cr, uid, ids, partner_id, journal_id, price, currency_id, ttype, date, context=context)
         #Check for invoice lines
-        if ttype == 'receipt' and len(default['value']['line_cr_ids']) > 1:
-            for dr_lines in default['value']['line_dr_ids']:
+        if ttype == 'receipt':
+            for dr_lines in default['value']['line_cr_ids']:
                 dr_lines['amount'] = 0.0
                 dr_lines['reconcile'] = False
             default['value']['writeoff_amount'] = self._compute_writeoff_amount(cr, uid, default['value']['line_dr_ids'], default['value']['line_cr_ids'], price)
