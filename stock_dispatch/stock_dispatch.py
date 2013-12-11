@@ -42,7 +42,7 @@ class stock_dispatch(osv.osv):
         'state': fields.selection([('draft', 'Draft'), ('waiting', 'Waiting Another Move'), ('confirmed', 'Confirmed'), ('assigned', 'Available'), ('done', 'Done'), ('cancel', 'Cancelled')], 'Status', readonly=True, select=True),
         'dispatch_date': fields.date('Planned Dispatch Date', required=True, readonly=True, states={'draft':[('readonly',False)]}),
         'cutoff_date': fields.datetime('Cutoff Date', required=True, readonly=True, states={'draft':[('readonly',False)]}),
-        'warehouse_id': fields.many2one('stock.warehouse', string='Warehouse', required=True, readonly=True, states={'draft':[('readonly',False)]}),
+        'warehouse_id': fields.many2one('stock.warehouse', string='Warehouse', required=True, readonly=True, store=True, states={'draft':[('readonly',False)]}),
         'notes': fields.text('Notes'),
         }
 
