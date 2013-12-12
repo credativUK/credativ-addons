@@ -29,11 +29,11 @@ class account_voucher(osv.osv):
         '''Default recompute voucher lines over ride to diable auto reconcile feature'''
 
         default = super(account_voucher,self).recompute_voucher_lines(cr, uid, ids, partner_id, journal_id, price, currency_id, ttype, date, context=context)
-        #Check for invoice lines
-        if ttype == 'receipt':
-            for dr_lines in default['value']['line_cr_ids']:
-                dr_lines['amount'] = 0.0
-                dr_lines['reconcile'] = False
+        #Check for invoice and credit lines and avoid disable reconcile if making payment from invoice
+        if ttype == 'receipt' and context.get('active_model',False) != 'account.invoice':
+            for lines in (default['value']['line_cr_ids'] + default['value']['line_dr_ids']):
+                lines['amount'] = 0.0
+                lines['reconcile'] = False
             default['value']['writeoff_amount'] = self._compute_writeoff_amount(cr, uid, default['value']['line_dr_ids'], default['value']['line_cr_ids'], price)
         return default
 
