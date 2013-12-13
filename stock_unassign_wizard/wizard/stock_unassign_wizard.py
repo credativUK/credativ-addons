@@ -59,7 +59,7 @@ class stock_unassign_wizard(osv.osv_memory):
             m_ids = stock_obj.search(cr, uid, [ ('product_id', '=', move.product_id.id),
                                                 ('location_id', '=', move.location_id.id),
                                                 ('state', '=', 'assigned'),
-                                                ('picking_id', '!=', vals.get('picking_id'))], context=context)
+                                                ('picking_id', '!=', picking_id)], context=context)
             move_ids.extend(m_ids)
         return move_ids
 
