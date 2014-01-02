@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2013 credativ Ltd (<http://credativ.co.uk>).
+#    Copyright (C) 2014 credativ Ltd (<http://credativ.co.uk>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -30,7 +30,6 @@
     'website': 'http://www.credativ.co.uk',
     'images': [],
     'depends': ['hr_timesheet',
-                'public_holidays',
     ],
     'init_xml': [],
     'update_xml': [
