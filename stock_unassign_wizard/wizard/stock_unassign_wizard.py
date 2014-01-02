@@ -48,20 +48,24 @@ class stock_unassign_wizard(osv.osv_memory):
         'error_on_fail': True,
     }
 
+    def _moves_for_unassign(self, cr, uid, picking_id, context=None):
+        move_ids = []
+        pick_obj = self.pool.get('stock.picking')
+        stock_obj = self.pool.get('stock.move')
+        pick = pick_obj.browse(cr, uid, picking_id, context=context)
+        for move in pick.move_lines:
+            if move.state != 'confirmed':
+                continue
+            m_ids = stock_obj.search(cr, uid, [ ('product_id', '=', move.product_id.id),
+                                                ('location_id', '=', move.location_id.id),
+                                                ('state', '=', 'assigned'),
+                                                ('picking_id', '!=', picking_id)], context=context)
+            move_ids.extend(m_ids)
+        return move_ids
+
     def create(self, cr, uid, vals={}, context=None):
         if vals.get('picking_id'):
-            move_ids = []
-            pick_obj = self.pool.get('stock.picking')
-            stock_obj = self.pool.get('stock.move')
-            pick = pick_obj.browse(cr, uid, vals.get('picking_id'), context=context)
-            for move in pick.move_lines:
-                if move.state != 'confirmed':
-                    continue
-                m_ids = stock_obj.search(cr, uid, [ ('product_id', '=', move.product_id.id),
-                                                    ('location_id', '=', move.location_id.id),
-                                                    ('state', '=', 'assigned'),
-                                                    ('picking_id', '!=', vals.get('picking_id'))], context=context)
-                move_ids.extend(m_ids)
+            move_ids = self._moves_for_unassign(cr, uid, vals.get('picking_id'), context=context)
             if move_ids:
                 other_move_ids = [[0, 0, {'move_id': x}] for x in move_ids]
                 vals.update({'other_move_ids': other_move_ids})

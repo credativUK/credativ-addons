@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+        <record id="hr_timesheet_line_replicate_wizard_view" model="ir.ui.view">
+            <field name="name">hr.timesheet.line.replicate.wizard.view</field>
+            <field name="model">hr.timesheet.line.replicate.wizard</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Timesheet Line Replicator">
+                    <separator colspan="4" string="Replication Parameters"/>
+                    <group col="4" colspan="3">
+                        <field name="start_date"/>
+                        <field name="end_date" on_change="end_date_set(end_date)"/>
+                        <group colspan="3" col="3">
+                            <field name="new_except" string="New Exception"/>
+                            <button name="add_exception" string="Add Exception" type="object" icon="STOCK_JUMP_TO"/>
+                        </group>
+                        <group colspan="3" col="2">
+                            <field name="except" string="Exceptions"/>
+                        </group>
+                    </group>
+                    <group col="2" colspan="1">
+                        <field name="mon"/>
+                        <field name="tue"/>
+                        <field name="wed"/>
+                        <field name="thu"/>
+                        <field name="fri"/>
+                        <field name="sat"/>
+                        <field name="sun"/>
+                    </group>
+                    <button name="go" string="Replicate" type="object" icon="gtk-go-forward"/>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_hr_timesheet_line_replicate_wizard" model="ir.actions.act_window">
+           <field name="name">Timesheet Line Replicator</field>
+           <field name="type">ir.actions.act_window</field>
+           <field name="res_model">hr.timesheet.line.replicate.wizard</field>
+           <field name="view_type">form</field>
+           <field name="view_mode">form</field>
+           <field name="target">new</field>
+        </record>
+
+    </data>
+</openerp>

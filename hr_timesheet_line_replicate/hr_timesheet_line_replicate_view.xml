@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+        
+        <record id="hr_timesheet_line_tree_inherit" model="ir.ui.view">
+            <field name="name">hr.analytic.timesheet.tree.inherit</field>
+            <field name="model">hr.analytic.timesheet</field>
+            <field name="type">tree</field>
+            <field name="inherit_id" ref="hr_timesheet.hr_timesheet_line_tree"/>
+            <field name="arch" type="xml">
+                <field name="general_account_id" position="after">
+                    <field name="dummy_field" string=""/>
+                    <button name="replicate_line" string="Replicate" type="object" icon="gtk-go-forward"/>
+                </field>
+            </field>
+        </record>
+
+    </data>
+</openerp>
