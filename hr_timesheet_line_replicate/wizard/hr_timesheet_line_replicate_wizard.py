@@ -172,7 +172,7 @@ class hr_timesheet_line_replicate(osv.osv_memory):
 
             tsht_obj.copy(cr, uid, tsht_id, {'date' : start_date.strftime('%Y-%m-%d')}, context=context)
         
-        return []
+        return {'type' : 'ir.actions.act_window_close'}
 
 
 hr_timesheet_line_replicate()
