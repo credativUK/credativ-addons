@@ -22,7 +22,7 @@
 
 from osv import osv, fields
 from osv.orm import except_orm
-from base_deferred_actions.deferred_action import defer_action
+from base_deferred_actions.deferred_action import defer_action_quiet
 import traceback
 import datetime
 import netsvc
@@ -31,8 +31,22 @@ import psycopg2
 class stock_dispatch(osv.osv):
     _inherit = 'stock.dispatch'
 
+    def _get_deferred_state(self, cr, uid, ids, fields, arg, context=None):
+        res = {}
+        defact_obj = self.pool.get('deferred.action')
+        for id in ids:
+            pend_ids = defact_obj.search(cr, uid, [('model', '=', 'stock.dispatch'), ('res_id', '=', id), ('state', '=', 'pending'), ('function', '=', 'complete_dispatch')], context=context)
+            if pend_ids:
+                running = defact_obj.read(cr, uid, pend_ids[0], ['running',], context=context)['running']
+                res[id] = running and 'running' or 'queue'
+            else:
+                res[id] = 'draft'
+        return res
+
     _columns = {
             'state': fields.selection([('draft', 'Draft'), ('waiting', 'Waiting Another Move'), ('confirmed', 'Confirmed'), ('assigned', 'Available'), ('done', 'Done'), ('partial', 'Partial'), ('cancel', 'Cancelled')], 'Status', readonly=True, select=True),
+            'deferred_state': fields.function(_get_deferred_state, type='selection', string='Deferred', method=True,
+                                selection= [('draft', ''), ('queue', 'Queued for Finalisation'), ('running', 'Finalisation in Progress')],),
         }
 
     def action_partial(self, cr, uid, ids, context=None):
@@ -53,7 +67,20 @@ class stock_dispatch(osv.osv):
 
         return res
 
-    @defer_action
+    def cancel_defer(self, cr, uid, ids, context=None):
+        defact_obj = self.pool.get('deferred.action')
+        for id in ids:
+            pend_ids = defact_obj.search(cr, uid, [('model', '=', 'stock.dispatch'), ('res_id', '=', id), ('state', '=', 'pending'), ('function', '=', 'complete_dispatch')], context=context)
+            if pend_ids:
+                try:
+                    defact_obj.cancel(cr, uid, pend_ids, context=context)
+                except osv.except_osv:
+                    raise osv.except_osv('Error!', "Dispatch finalisation cannot be cancelled at this point, it may have already started or be complete. Please contact support.")
+            else:
+                raise osv.except_osv('Error!', "Dispatch finalisation cannot be cancelled at this point, it may have already started or be complete. Please contact support.")
+        return True
+
+    @defer_action_quiet
     def complete_dispatch(self, cr, uid, ids, context=None):
         if context is None:
             context = {}
