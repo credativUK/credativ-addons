@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <report header='True' auto="False" id="report_remittance_advice" model="account.voucher" name="remittance.advice"
+                rml="account_voucher_remittance_report/account_voucher_remittance_report.rml" string="Remittance/Receipt Advice (PDF)"
+                usage="default"
+                />
+    </data>
+</openerp>
