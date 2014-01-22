@@ -21,6 +21,7 @@
                                 <field name="mapping_dispatch_orders_id" domain="[('referential_id', '=', referential_id), ('model_id.model', '=', 'stock.move')]"/>
                                 <button name="import_dispatch_receipts" string="4 - Import Dispatch Receipts" colspan="2" type="object" />
                                 <field name="mapping_dispatch_orders_import_id" domain="[('referential_id', '=', referential_id), ('model_id.model', '=', 'stock.move')]"/>
+                                <button name="import_stock_image" string="5 - Import Stock Image" colspan="2" type="object" />
                             </page>
                             <page string="External Warehouse Settings">
                                 <field name="referential_id"/>

@@ -26,6 +26,8 @@ from datetime import datetime
 import pooler
 import os
 DEBUG = True
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 _logger = logging.getLogger(__name__)
 
@@ -40,6 +42,7 @@ class stock_warehouse(osv.osv):
         'mapping_dispatch_orders_id': fields.many2one('external.mapping', string='Override Dispatch Export Mapping'),
         'mapping_purchase_orders_import_id': fields.many2one('external.mapping', string='Override Purchase Orders Import Mapping'),
         'mapping_dispatch_orders_import_id': fields.many2one('external.mapping', string='Override Dispatch Import Mapping'),
+        'mapping_stock_image_import_id': fields.many2one('external.mapping', string='Stock Image'),
     }
     
     def get_exportable_pos(self, cr, uid, ids, referential_id, context=None):
@@ -236,6 +239,86 @@ class stock_warehouse(osv.osv):
                 raise
             finally:
                 _cr.close()
+        return True
+
+    def import_stock_image(self, cr, uid, ids, context=None):
+        if context == None:
+            context = {}
+        if not isinstance(ids, list):
+            ids = [ids]
+        product_obj = self.pool.get('product.product')
+        user_obj = self.pool.get('res.users')
+        for warehouse in self.browse(cr, uid, ids):
+            if not warehouse.referential_id or not warehouse.mapping_purchase_orders_import_id:
+                continue
+            
+            _cr = pooler.get_db(cr.dbname).cursor()
+            try:
+                stock_image_import, fn = self.pool.get('external.referential')._import(_cr, uid, warehouse.mapping_stock_image_import_id, context=context)
+            except:
+                _cr.rollback()
+                raise
+            finally:
+                _cr.close()
+            if not fn:
+                continue
+            orium_list_dict = stock_image_import[0]
+            orium_dict = dict([(x['sku'], x) for x in orium_list_dict])
+            orium_sku_list = orium_dict.keys()
+            cr.execute("select p.default_code from mrp_bom b left join product_product p on b.product_id=p.id where b.bom_id is null")
+            bom_list = [x[0] for x in cr.fetchall()]
+            p_ids = product_obj.search(cr, uid, [], context=context)
+            made_dict = dict([(x['default_code'], x) for x in product_obj.read(cr, uid, p_ids, ['default_code', 'qty_available'], context)])
+            made_sku_list = made_dict.keys()
+            message = ""
+            list_to_check = [x for x in made_sku_list if x in orium_sku_list and x not in bom_list]
+            for z in list_to_check:
+                orium_qty = orium_dict[z]['qty'].strip()
+                made_qty = made_dict[z]['qty_available']
+                if not orium_qty:
+                    orium_qty = 0
+                if not made_qty:
+                    made_qty = 0
+                diff = int(orium_qty) - int(made_qty)
+                if diff != 0:
+                    message += "%s: %s \n" % (z, diff)
+            msg = MIMEMultipart()
+            subject = 'Stock Image Discrepancies with Orium'
+            msg['Subject'] = subject
+            me = 'erp@made.com'
+            receiver_ids = user_obj.search(cr, uid, [('orium_report', '=', True)])
+            receivers = [x['user_email'] for x in user_obj.read(cr, uid, receiver_ids, ['user_email'])]
+            msg['From'] = me
+            msg['To'] = ', '.join(receivers)
+            msg['Body'] = 'Please find attached the "%s".' % subject
+            msg.preamble = 'Test preambule'
+            attachm = MIMEText(message)
+            attachm.add_header('Content-Disposition', 'attachment', filename='report')
+            msg.attach(attachm)
+            self.pool.get('ir.mail_server').send_email(cr, uid, msg)
+            _cr = pooler.get_db(cr.dbname).cursor()
+            try:
+                if fn:
+                    conn = self.pool.get('external.referential').external_connection(_cr, uid, warehouse.mapping_stock_image_import_id.referential_id.id, DEBUG, context=context)
+                    fpath, fname = os.path.split(fn)
+                    remote_csv_fn_rn = os.path.join(fpath, 'Archives', fname)
+                    _logger.info("Archiving imported STOCK IMAGE file %s as %s" % (fn, remote_csv_fn_rn))
+                    conn.rename_file(fn, remote_csv_fn_rn, context=context)
+                    conn.finalize_rename(context=context)
+                    _cr.commit()
+            except:
+                _cr.rollback()
+                raise
+            finally:
+                _cr.close()
+        return True
+
+    def run_import_stock_image_scheduler(self, cr, uid, context=None):
+        warehouse_ids = self.search(cr, uid, [], context=context)
+        for warehouse in self.browse(cr, uid, warehouse_ids, context=context):
+            if warehouse.referential_id:
+                _logger.info("Running Stock Image comparison scheduler for Warehouse %d" % (warehouse.id))
+                warehouse.import_stock_image(context=context)
         return True
 
     def run_export_purchase_orders_scheduler(self, cr, uid, context=None):

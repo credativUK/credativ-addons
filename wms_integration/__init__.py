@@ -23,3 +23,4 @@ import wms_integration_core
 import purchase
 import stock_dispatch
 import stock
+import res_users

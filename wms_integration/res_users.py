@@ -1,8 +1,10 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution	
-#    Copyright (C) 2012 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
+#    OpenERP, Open Source Management Solution   
+#    Copyright (C) 2009 credativ Ltd (<http://credativ.co.uk>).
+#    All Rights Reserved
+#    $Id$
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -18,26 +20,16 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
+from osv import fields,osv
 
-{
-    'name': 'wms_integration',
-    'version': '0.1',
-    'category': 'Generic Modules/Warehouse',
-    'description': """
-    Allows data interchange with external warehouse management systems.
-    """,
-    'author': 'credativ',
-    'depends': ['base_external_referentials',
-                'external_report_log',
-                'stock',
-                'stock_dispatch',
-                'purchase',
-                'sale'],
-    'update_xml': ['wms_integration_core_view.xml',
-                   'stock_warehouse_view.xml',
-                   'settings/external.referential.type.csv',
-                   'res_users_view.xml'],
-    'demo_xml': [],
-    'installable': True,
-    'active': False,
-}
+
+class res_users(osv.osv):
+    _inherit = 'res.users'
+    _columns = {
+        'orium_report': fields.boolean('Receive Orium discrepancy report'),
+    }
+
+res_users()
+
+# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+
