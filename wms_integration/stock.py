@@ -278,7 +278,6 @@ class stock_warehouse(osv.osv):
             ids = [ids]
         product_obj = self.pool.get('product.product')
         msg_obj = self.pool.get('mail.compose.message')
-        data_obj = self.pool.get('ir.model.data')
         for warehouse in self.browse(cr, uid, ids):
             if not warehouse.referential_id or not warehouse.mapping_purchase_orders_import_id:
                 continue
@@ -322,8 +321,13 @@ class stock_warehouse(osv.osv):
             if file_exported:
                 attachment_id = self.save_report_in_attachment(cr, uid, ids, file_exported, "Stock_discrepancies.csv", context)
             # Create email based on the template "Stock Image Report Mail"
-            template_id = data_obj.get_object_reference(cr, uid, 'wms_integration', 'email_template_stock_image')[1]
-            onchange = msg_obj.on_change_template(cr, uid, [], True, template_id)
+            template_id = self.pool.get('email.template').search(cr, uid, [('name', '=', 'Stock Image Report Mail')], context=context)
+            if not template_id:
+                raise osv.except_osv('Error!',
+                                     """An Email Template Should be created in Settings | Configuration | Email | Templates 
+                                     with the name 'Stock Image Report Mail' and with the model 'Warehouse'.
+                                     """)
+            onchange = msg_obj.on_change_template(cr, uid, [], True, template_id[0])
             vals = onchange.get('value')
             attachment_id and vals.update({'attachment_ids': [(6, 0, [attachment_id])]})
             msg_id = msg_obj.create(cr, uid, vals)
