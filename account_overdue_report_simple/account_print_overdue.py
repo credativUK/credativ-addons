@@ -148,6 +148,9 @@ class OverdueSimple(report_sxw.rml_parse):
                     transaction_type =  'N/A'
             else:
                 transaction_type =  'N/A'
+                if line.account_id.type == 'payable' and  line.credit:
+                    # When voucher created without allocating amount to invoices or credit lines
+                    transaction_type =  'PAY'
         return transaction_type
 
     def _get_ref(self, line):
