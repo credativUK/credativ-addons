@@ -36,7 +36,7 @@
     'update_xml': ['wms_integration_core_view.xml',
                    'stock_warehouse_view.xml',
                    'settings/external.referential.type.csv',
-                   'res_users_view.xml'],
+                   'data/email_template.xml'],
     'demo_xml': [],
     'installable': True,
     'active': False,

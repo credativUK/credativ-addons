@@ -1,0 +1,17 @@
+<?xml version="1.0" ?>
+<openerp>
+    <data noupdate="1">
+
+        <!--Email template -->
+        <record id="email_template_stock_image" model="email.template">
+            <field name="name">Stock Image Report Mail</field>
+            <field name="email_from">erp@made.com</field>
+            <field name="subject">Stock Image Discrepancies</field>
+            <field name="email_to">matt.choplin@made.com</field>
+            <field name="model_id" ref="stock.model_stock_warehouse"/>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_text"> Dear,
+Please find the discrepancy report in attachment</field>
+        </record>
+    </data>
+</openerp>

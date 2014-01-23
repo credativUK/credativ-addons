@@ -20,16 +20,34 @@
 ##############################################################################
 from osv import osv, fields
 from tools.translate import _
-import netsvc
 import logging
-from datetime import datetime
 import pooler
 import os
 DEBUG = True
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import csv
+import base64
+from tempfile import TemporaryFile
 
 _logger = logging.getLogger(__name__)
+
+
+def enc(s):
+    if isinstance(s, unicode):
+        return s.encode('utf8')
+    return s
+
+
+def get_csv_format(columns_header, lines_to_export):
+    outfile = TemporaryFile('w+')
+    writer = csv.writer(outfile, quotechar='"', delimiter=',')
+    writer.writerow([enc(x[0]) for x in columns_header])
+    for line in lines_to_export:
+        writer.writerow([enc(x) for x in line])
+    outfile.seek(0)
+    file_to_export = base64.encodestring(outfile.read())
+    outfile.close()
+    return file_to_export
+
 
 class stock_warehouse(osv.osv):
     _inherit = "stock.warehouse"
@@ -241,13 +259,26 @@ class stock_warehouse(osv.osv):
                 _cr.close()
         return True
 
+    def save_report_in_attachment(self, cr, uid, ids, file_exported, filename, context):
+        """
+        Version the reports
+        """
+        vals = {'report_config_id': ids[0],
+                'name': filename,
+                'res_model': 'report.config',
+                'datas': file_exported,
+                'datas_fname': filename,
+                'res_id': False}
+        return self.pool.get('ir.attachment').create(cr, uid, vals, context)
+
     def import_stock_image(self, cr, uid, ids, context=None):
         if context == None:
             context = {}
         if not isinstance(ids, list):
             ids = [ids]
         product_obj = self.pool.get('product.product')
-        user_obj = self.pool.get('res.users')
+        msg_obj = self.pool.get('mail.compose.message')
+        data_obj = self.pool.get('ir.model.data')
         for warehouse in self.browse(cr, uid, ids):
             if not warehouse.referential_id or not warehouse.mapping_purchase_orders_import_id:
                 continue
@@ -262,40 +293,44 @@ class stock_warehouse(osv.osv):
                 _cr.close()
             if not fn:
                 continue
-            orium_list_dict = stock_image_import[0]
-            orium_dict = dict([(x['sku'], x) for x in orium_list_dict])
-            orium_sku_list = orium_dict.keys()
+            ext_list_dict = stock_image_import[0]
+            ext_dict = dict([(x['sku'], x) for x in ext_list_dict])
+            ext_sku_list = ext_dict.keys()
             cr.execute("select p.default_code from mrp_bom b left join product_product p on b.product_id=p.id where b.bom_id is null")
             bom_list = [x[0] for x in cr.fetchall()]
             p_ids = product_obj.search(cr, uid, [], context=context)
-            made_dict = dict([(x['default_code'], x) for x in product_obj.read(cr, uid, p_ids, ['default_code', 'qty_available'], context)])
-            made_sku_list = made_dict.keys()
+            internal_dict = dict([(x['default_code'], x) for x in product_obj.read(cr, uid, p_ids, ['default_code', 'qty_available'], context)])
+            internal_sku_list = internal_dict.keys()
             message = ""
-            list_to_check = [x for x in made_sku_list if x in orium_sku_list and x not in bom_list]
-            for z in list_to_check:
-                orium_qty = orium_dict[z]['qty'].strip()
-                made_qty = made_dict[z]['qty_available']
-                if not orium_qty:
-                    orium_qty = 0
-                if not made_qty:
-                    made_qty = 0
-                diff = int(orium_qty) - int(made_qty)
+            list_to_check = [x for x in internal_sku_list if x in ext_sku_list and x not in bom_list]
+            lines_to_export = []
+            for product in list_to_check:
+                ext_qty = ext_dict[product]['qty'].strip()
+                internal_qty = internal_dict[product]['qty_available']
+                if not ext_qty:
+                    ext_qty = 0
+                if not internal_qty:
+                    internal_qty = 0
+                diff = int(ext_qty) - int(internal_qty)
                 if diff != 0:
-                    message += "%s: %s \n" % (z, diff)
-            msg = MIMEMultipart()
-            subject = 'Stock Image Discrepancies with Orium'
-            msg['Subject'] = subject
-            me = 'erp@made.com'
-            receiver_ids = user_obj.search(cr, uid, [('orium_report', '=', True)])
-            receivers = [x['user_email'] for x in user_obj.read(cr, uid, receiver_ids, ['user_email'])]
-            msg['From'] = me
-            msg['To'] = ', '.join(receivers)
-            msg['Body'] = 'Please find attached the "%s".' % subject
-            msg.preamble = 'Test preambule'
-            attachm = MIMEText(message)
-            attachm.add_header('Content-Disposition', 'attachment', filename='report')
-            msg.attach(attachm)
-            self.pool.get('ir.mail_server').send_email(cr, uid, msg)
+                    message += "%s: %s \n" % (product, diff)
+                    lines_to_export.append([product, diff])
+            # Create csv file
+            file_exported = get_csv_format([ (_('SKU'), 'string'), (_('Difference'), 'number')], lines_to_export)
+            # Create attachment
+            attachment_id = False
+            if file_exported:
+                attachment_id = self.save_report_in_attachment(cr, uid, ids, file_exported, "Stock_discrepancies.csv", context)
+            # Create email based on the template "Stock Image Report Mail"
+            template_id = data_obj.get_object_reference(cr, uid, 'wms_integration', 'email_template_stock_image')[1]
+            onchange = msg_obj.on_change_template(cr, uid, [], True, template_id)
+            vals = onchange.get('value')
+            attachment_id and vals.update({'attachment_ids': [(6, 0, [attachment_id])]})
+            msg_id = msg_obj.create(cr, uid, vals)
+            # Send email
+            msg_obj.send_mail(cr, uid, [msg_id], context)
+            # Delete attachment
+            self.pool.get('ir.attachment').unlink(cr, uid, [attachment_id], context)
             _cr = pooler.get_db(cr.dbname).cursor()
             try:
                 if fn:
