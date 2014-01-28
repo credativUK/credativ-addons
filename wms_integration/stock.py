@@ -263,9 +263,7 @@ class stock_warehouse(osv.osv):
         """
         Version the reports
         """
-        vals = {'report_config_id': ids[0],
-                'name': filename,
-                'res_model': 'report.config',
+        vals = {'name': filename,
                 'datas': file_exported,
                 'datas_fname': filename,
                 'res_id': False}
