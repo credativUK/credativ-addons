@@ -35,11 +35,13 @@
         'sale',
         'purchase',
         'mail',
+        'account_cancel',
         ],
     'init_xml': [
         ],
     'update_xml': [
         'wizard/order_edit_wizard_view.xml',
+        'sale_view.xml'
     ],
     'demo_xml': [
     ],
