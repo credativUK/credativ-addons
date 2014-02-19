@@ -417,6 +417,8 @@ class external_report_lines(osv.osv):
                     vals['external_log_id'] = context.get('external_log_id')
                 if res:
                     self.write(log_cr, uid, res, vals)
+                    log_fail = self.read(log_cr, uid, res, ['error_message', 'traceback'])
+                    _logger.error('Logging failure in external log %s: %s\n%s' % (log_fail.get('id'), log_fail.get('error_message'), log_fail.get('traceback')))
             except:
                 log_cr.rollback()
                 raise
@@ -426,14 +428,13 @@ class external_report_lines(osv.osv):
                 if context.get('new_cursor', True):
                     log_cr.close()
         else:
-            try:
-                vals = {'state': 'failed'}
-                if context.get('external_log_id'):
-                    vals['external_log_id'] = context.get('external_log_id')
-                if res:
-                    self.write(cr, uid, res, vals)
-            except:
-                raise
+            vals = {'state': 'failed'}
+            if context.get('external_log_id'):
+                vals['external_log_id'] = context.get('external_log_id')
+            if res:
+                self.write(cr, uid, res, vals)
+                log_fail = self.read(cr, uid, res, ['error_message', 'traceback'])
+                _logger.error('Logging failure in external log %s: %s\n%s' % (log_fail.get('id'), log_fail.get('error_message'), log_fail.get('traceback')))
         return res
 
     def log_success(self, cr, uid, model, action, referential_id, res_id=None, external_id=None,  data_record=None, defaults=None, context=None):
