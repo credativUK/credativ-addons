@@ -376,7 +376,7 @@ class sale_order(osv.osv, order_edit):
         if context is None:
             context={}
         mo_pool = self.pool.get('mrp.production')
-        mo_ids = mo_pool.search(cr,uid,[('origin','=',order.name)],context=context)
+        mo_ids = mo_pool.search(cr,uid,[('origin','=',order.name), ('state','!=','cancel')],context=context)
         wf_service = netsvc.LocalService("workflow")
         if mo_ids:
             try:
