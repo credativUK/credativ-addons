@@ -380,12 +380,12 @@ class sale_order(osv.osv, order_edit):
         wf_service = netsvc.LocalService("workflow")
         if mo_ids:
             try:
-                wf_service.trg_validate(uid, 'mrp.production', mo_ids[0], 'button_cancel', cr)
+                self.pool.get('mrp.production').action_cancel(cr,uid,mo_ids,context=context)
                 proc_pool = self.pool.get('procurement.order')
                 #Run schedule to create new Manufacturing order
                 proc_pool.run_scheduler(cr,uid,False,False,context=context)
-            except osv.osv_except, e:
-                raise osv.osv_except('Error in cancelling Manufacturing order',e.value)
+            except Exception, e:
+                raise osv.except_osv('Error in cancelling Manufacturing order','Error in cancelling Manufacturing order. ' + e.value)
 
     def _refund(self, cr, uid, original, order, context=None):
 
