@@ -31,6 +31,7 @@ import itertools
 import netsvc
 
 import util
+from collections import defaultdict
 
 
 class order_edit(object):
@@ -49,6 +50,7 @@ class order_edit(object):
 
         done_totals = {}
         moves = []
+
         for picking in original.picking_ids:
             for move in picking.move_lines:
                 moves.append(move)
@@ -83,8 +85,8 @@ class order_edit(object):
             if self._name == 'purchase.order':
                 new_vals[line.product_id.id].update({'date_planned': line.date_planned})
             if self._name == 'sale.order':
-                line.button_cancel(cr, uid, [line.id], context=context)
-            line.unlink(cr, uid, [line.id], context=context)
+                line.button_cancel(context=context)
+            line.unlink(context=context)
 
         def add_product_order_line(product_id, qty):
             line_obj = self.pool.get(order.order_line[0]._name)
@@ -107,11 +109,11 @@ class order_edit(object):
                 line_obj.browse(cr, uid, line_id, context=context).button_confirm()
             return line_id
 
-        line_moves = {}
+        line_moves = defaultdict(list)
         for m in moves:
             if m.state in ['done', 'assigned']:
                 line_id = add_product_order_line(m.product_id.id, m.product_qty)
-                line_moves[line_id] = m
+                line_moves[line_id].append(m)
 
         for product, edit_total in edit_totals.iteritems():
             remainder = edit_total - done_totals.get(product, 0)
@@ -475,18 +477,40 @@ class sale_order(osv.osv, order_edit):
         else:
             return False
 
+    def _fixup_created_picking(self, cr, uid, line_moves, context):
+        # This is a post confirm hook
+        # - post-action hook: replace new stuff generated in the action with old stuff
+        # identified in the pre-action hook
+        move_pool = self.pool.get('stock.move')
+
+        if line_moves is not None:
+            for line_id, old_moves in line_moves.iteritems():
+                line = self.pool.get('sale.order.line').browse(cr, uid, line_id)
+                created_moves = [x for x in line.move_ids]
+                for old_move in old_moves:
+                    try:
+                        created_move = created_moves.pop()
+                    except IndexError:
+                        raise osv.except_osv(_('Error!'), _('The edited order must include any done or assigned moves'))
+                    picking = created_move.picking_id
+                    move_pool.write(cr, uid, [old_move.id], {'sale_line_id': line_id, 'picking_id': picking.id})
+                    move_pool.write(cr, uid, created_move.id, {'sale_line_id': False, 'picking_id': False})
+                    created_move.action_cancel()
+                    picking.action_done()
+                assert(len(created_moves) == 0)
+
     def action_ship_create(self, cr, uid, ids, context=None):
         # run on order confirm, after action_wait
 
 #        # Sale order edit
 #        # -  pre-action hook: find what has been edited
-#        line_moves = self.check_consolidation(cr, uid, ids, context)
+        line_moves = self.check_consolidation(cr, uid, ids, context)
 
         # -    action: run original action
         res = super(sale_order, self).action_ship_create(cr, uid, ids, context=context)
 
 #        # - post-action hook: replace new stuff generated in the action with old stuff
-#        self._fixup_created_picking(cr, uid, line_moves, context)
+        self._fixup_created_picking(cr, uid, line_moves, context)
 
         for order in self.browse(cr, uid, ids, context=context):
             original_id = self.get_edit_original(cr, uid, order, context=context)
