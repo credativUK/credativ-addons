@@ -229,6 +229,8 @@ class sale_order(osv.osv, order_edit):
             if all_done:
                 wf_service.trg_validate(uid, 'stock.picking', pick.id, 'button_done', cr)
             wf_service.trg_validate(uid, 'stock.picking', pick.id, 'button_cancel', cr)
+            #Call work flow twice to cancel stock picking
+            wf_service.trg_validate(uid, 'stock.picking', pick.id, 'button_cancel', cr)
             util.log(self, 'Cancelled picking %s, state %s' % (pick.name, pick.state), logging.INFO)
             
         sale.refresh()
@@ -380,6 +382,7 @@ class sale_order(osv.osv, order_edit):
         mo_pool = self.pool.get('mrp.production')
         mo_ids = mo_pool.search(cr,uid,[('origin','=',order.name), ('state','!=','cancel')],context=context)
         wf_service = netsvc.LocalService("workflow")
+        # TODO Cancel Picking for MO which are not in (done,in_production) state. If MO are in (done,in_production)state then move MO to edited order.
         if mo_ids:
             try:
                 self.pool.get('mrp.production').action_cancel(cr,uid,mo_ids,context=context)
