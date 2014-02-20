@@ -20,14 +20,34 @@
 ##############################################################################
 from osv import osv, fields
 from tools.translate import _
-import netsvc
 import logging
-from datetime import datetime
 import pooler
 import os
 DEBUG = True
+import csv
+import base64
+from tempfile import TemporaryFile
 
 _logger = logging.getLogger(__name__)
+
+
+def enc(s):
+    if isinstance(s, unicode):
+        return s.encode('utf8')
+    return s
+
+
+def get_csv_format(columns_header, lines_to_export):
+    outfile = TemporaryFile('w+')
+    writer = csv.writer(outfile, quotechar='"', delimiter=',')
+    writer.writerow([enc(x[0]) for x in columns_header])
+    for line in lines_to_export:
+        writer.writerow([enc(x) for x in line])
+    outfile.seek(0)
+    file_to_export = base64.encodestring(outfile.read())
+    outfile.close()
+    return file_to_export
+
 
 class stock_warehouse(osv.osv):
     _inherit = "stock.warehouse"
@@ -40,6 +60,7 @@ class stock_warehouse(osv.osv):
         'mapping_dispatch_orders_id': fields.many2one('external.mapping', string='Override Dispatch Export Mapping'),
         'mapping_purchase_orders_import_id': fields.many2one('external.mapping', string='Override Purchase Orders Import Mapping'),
         'mapping_dispatch_orders_import_id': fields.many2one('external.mapping', string='Override Dispatch Import Mapping'),
+        'mapping_stock_image_import_id': fields.many2one('external.mapping', string='Stock Image'),
     }
     
     def get_exportable_pos(self, cr, uid, ids, referential_id, context=None):
@@ -236,6 +257,105 @@ class stock_warehouse(osv.osv):
                 raise
             finally:
                 _cr.close()
+        return True
+
+    def save_report_in_attachment(self, cr, uid, ids, file_exported, filename, context):
+        """
+        Version the reports
+        """
+        vals = {'name': filename,
+                'datas': file_exported,
+                'datas_fname': filename,
+                'res_id': False}
+        return self.pool.get('ir.attachment').create(cr, uid, vals, context)
+
+    def import_stock_image(self, cr, uid, ids, context=None):
+        if context == None:
+            context = {}
+        if not isinstance(ids, list):
+            ids = [ids]
+        product_obj = self.pool.get('product.product')
+        msg_obj = self.pool.get('mail.compose.message')
+        for warehouse in self.browse(cr, uid, ids):
+            if not warehouse.referential_id or not warehouse.mapping_purchase_orders_import_id:
+                continue
+            
+            _cr = pooler.get_db(cr.dbname).cursor()
+            try:
+                stock_image_import, fn = self.pool.get('external.referential')._import(_cr, uid, warehouse.mapping_stock_image_import_id, context=context)
+            except:
+                _cr.rollback()
+                raise
+            finally:
+                _cr.close()
+            if not fn:
+                continue
+            ext_list_dict = stock_image_import[0]
+            ext_dict = dict([(x['sku'], x) for x in ext_list_dict])
+            ext_sku_list = ext_dict.keys()
+            cr.execute("select p.default_code from mrp_bom b left join product_product p on b.product_id=p.id where b.bom_id is null")
+            bom_list = [x[0] for x in cr.fetchall()]
+            p_ids = product_obj.search(cr, uid, [], context=context)
+            internal_dict = dict([(x['default_code'], x) for x in product_obj.read(cr, uid, p_ids, ['default_code', 'qty_available'], context)])
+            internal_sku_list = internal_dict.keys()
+            message = ""
+            list_to_check = [x for x in internal_sku_list if x in ext_sku_list and x not in bom_list]
+            lines_to_export = []
+            for product in list_to_check:
+                ext_qty = ext_dict[product]['qty'].strip()
+                internal_qty = internal_dict[product]['qty_available']
+                if not ext_qty:
+                    ext_qty = 0
+                if not internal_qty:
+                    internal_qty = 0
+                diff = int(ext_qty) - int(internal_qty)
+                if diff != 0:
+                    message += "%s: %s \n" % (product, diff)
+                    lines_to_export.append([product, diff])
+            # Create csv file
+            file_exported = get_csv_format([ (_('SKU'), 'string'), (_('Difference'), 'number')], lines_to_export)
+            # Create attachment
+            attachment_id = False
+            if file_exported:
+                attachment_id = self.save_report_in_attachment(cr, uid, ids, file_exported, "Stock_discrepancies.csv", context)
+            # Create email based on the template "Stock Image Report Mail"
+            template_id = self.pool.get('email.template').search(cr, uid, [('name', '=', 'Stock Image Report Mail')], context=context)
+            if not template_id:
+                raise osv.except_osv('Error!',
+                                     """An Email Template Should be created in Settings | Configuration | Email | Templates 
+                                     with the name 'Stock Image Report Mail' and with the model 'Warehouse'.
+                                     """)
+            onchange = msg_obj.on_change_template(cr, uid, [], True, template_id[0])
+            vals = onchange.get('value')
+            attachment_id and vals.update({'attachment_ids': [(6, 0, [attachment_id])]})
+            msg_id = msg_obj.create(cr, uid, vals)
+            # Send email
+            msg_obj.send_mail(cr, uid, [msg_id], context)
+            # Delete attachment
+            self.pool.get('ir.attachment').unlink(cr, uid, [attachment_id], context)
+            _cr = pooler.get_db(cr.dbname).cursor()
+            try:
+                if fn:
+                    conn = self.pool.get('external.referential').external_connection(_cr, uid, warehouse.mapping_stock_image_import_id.referential_id.id, DEBUG, context=context)
+                    fpath, fname = os.path.split(fn)
+                    remote_csv_fn_rn = os.path.join(fpath, 'Archives', fname)
+                    _logger.info("Archiving imported STOCK IMAGE file %s as %s" % (fn, remote_csv_fn_rn))
+                    conn.rename_file(fn, remote_csv_fn_rn, context=context)
+                    conn.finalize_rename(context=context)
+                    _cr.commit()
+            except:
+                _cr.rollback()
+                raise
+            finally:
+                _cr.close()
+        return True
+
+    def run_import_stock_image_scheduler(self, cr, uid, context=None):
+        warehouse_ids = self.search(cr, uid, [], context=context)
+        for warehouse in self.browse(cr, uid, warehouse_ids, context=context):
+            if warehouse.referential_id:
+                _logger.info("Running Stock Image comparison scheduler for Warehouse %d" % (warehouse.id))
+                warehouse.import_stock_image(context=context)
         return True
 
     def run_export_purchase_orders_scheduler(self, cr, uid, context=None):

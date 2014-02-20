@@ -26,8 +26,22 @@ from tools.translate import _
 import tools
 
 class purchase_order(osv.osv):
-
     _inherit = 'purchase.order'
+
+    def _has_valid_invoices(self, cr, uid, ids, name, args, context=None):
+        res = {}
+        for id in ids:
+            res[id] = False
+            query = "select id from account_invoice where id in (select invoice_id from purchase_invoice_rel where purchase_id = %s) and state = 'open'"%(id)
+            cr.execute(query)
+            invoice_ids = tools.flatten(cr.fetchall())
+            if invoice_ids:
+                res[id] = True
+        return res
+
+    _columns = {
+            'has_valid_invoices': fields.function(_has_valid_invoices, type='boolean', string='Has Valid Invoices'),
+        }
 
     def check_for_invoices(self,cr,uid,ids,context=None):
         ''' Check for open invoices attached to purchase order'''
@@ -37,13 +51,16 @@ class purchase_order(osv.osv):
             query = "select id from account_invoice where id in (select invoice_id from purchase_invoice_rel where purchase_id = %s) and state = 'open'"%(ids[0])
             cr.execute(query)
             invoice_ids = tools.flatten(cr.fetchall())
-        if not invoice_ids:
-            raise osv.except_osv(_('Warning'), _("Purchase Order(s) doesn't contain any open/unpaid invoices!"))
 
-        wiz_context = context=dict(context, active_ids=ids, active_id=ids[0])
+        if not invoice_ids:
+            wiz_name = _("PO Advance Payment")
+        else:
+            wiz_name = _("PO Payment")
+
+        wiz_context = dict(context, active_ids=ids, active_id=ids[0])
 
         return {
-            'name':_("PO Advance Payment"),
+            'name':wiz_name,
             'view_mode': 'form',
             'view_type': 'form',
             'view_id': False,
