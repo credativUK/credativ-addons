@@ -33,19 +33,19 @@ class purchase_order_line(osv.osv):
     
     def onchange_product_uom(self, cr, uid, ids, pricelist_id, product_id, qty, uom_id,
             partner_id, date_order=False, fiscal_position_id=False, date_planned=False,
-            name=False, price_unit=False, notes=False, context=None):
+            name=False, price_unit=False, context=None):
         """
         onchange handler of product_uom.
         """
         if not uom_id:
-            return {'value': {'price_unit': price_unit or 0.0, 'name': name or '', 'notes': notes or'', 'product_uom' : uom_id or False}}
+            return {'value': {'price_unit': price_unit or 0.0, 'name': name or '', 'product_uom' : uom_id or False}}
         return self.onchange_product_id(cr, uid, ids, pricelist_id, product_id, qty, uom_id,
             partner_id, date_order=date_order, fiscal_position_id=fiscal_position_id, date_planned=date_planned,
-            name=name, price_unit=price_unit, notes=notes, context=context)
+            name=name, price_unit=price_unit, context=context)
     
     def onchange_product_id(self, cr, uid, ids, pricelist_id, product_id, qty, uom_id,
             partner_id, date_order=False, fiscal_position_id=False, date_planned=False,
-            name=False, price_unit=False, notes=False, context=None):
+            name=False, price_unit=False, context=None):
         """
         onchange handler of product_id.
         """
@@ -72,7 +72,7 @@ class purchase_order_line(osv.osv):
 
     def onchange_unit_qty(self, cr, uid, ids, pricelist_id, product_id, qty, uom_id,
             partner_id, date_order=False, fiscal_position_id=False, date_planned=False,
-            name=False, price_unit=False, notes=False, unit_qty=0.0, qty_per_uom=0.0, context=None):
+            name=False, price_unit=False, unit_qty=0.0, qty_per_uom=0.0, context=None):
         """
         onchange handler of unit_qty.
         """

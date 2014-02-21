@@ -10,7 +10,7 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
             <field name="inherit_id" ref="purchase.purchase_order_form" />
             <field name="arch" type="xml">
                 <xpath expr="/form/sheet/notebook/page[@string='Purchase Order']/field[@name='order_line']/tree/field[@name='product_uom']" position="after">
-                    <field name="unit_qty" readonly="0" on_change="onchange_unit_qty(parent.pricelist_id,product_id,product_qty,product_uom,parent.partner_id, parent.date_order,parent.fiscal_position,date_planned,name,price_unit,notes,unit_qty, qty_per_uom,context)" context="{'force_product_uom': True}"/>
+                    <field name="unit_qty" readonly="0" on_change="onchange_unit_qty(parent.pricelist_id,product_id,product_qty,product_uom,parent.partner_id, parent.date_order,parent.fiscal_position,date_planned,name,price_unit,unit_qty,qty_per_uom,context)" context="{'force_product_uom': True}"/>
                     <field name="qty_per_uom"/>
                 </xpath>
                 <xpath expr="/form/sheet/notebook/page[@string='Purchase Order']/field[@name='order_line']/tree/field[@name='product_qty']" position="attributes">
