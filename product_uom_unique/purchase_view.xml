@@ -6,19 +6,19 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
     <data>
         <record id="purchase_order_line_form_case" model="ir.ui.view">
             <field name="name">purchase.order.line.form.case</field>
-            <field name="model">purchase.order.line</field>
-            <field name="inherit_id" ref="purchase.purchase_order_line_form" />
+            <field name="model">purchase.order</field>
+            <field name="inherit_id" ref="purchase.purchase_order_form" />
             <field name="arch" type="xml">
-                <field name='product_uom' position="after">
+                <xpath expr="/form/sheet/notebook/page[@string='Purchase Order']/field[@name='order_line']/tree/field[@name='product_uom']" position="after">
                     <field name="unit_qty" readonly="0" on_change="onchange_unit_qty(parent.pricelist_id,product_id,product_qty,product_uom,parent.partner_id, parent.date_order,parent.fiscal_position,date_planned,name,price_unit,notes,unit_qty, qty_per_uom,context)" context="{'force_product_uom': True}"/>
                     <field name="qty_per_uom"/>
-                </field>
-                <field name='product_qty' position="attributes">
+                </xpath>
+                <xpath expr="/form/sheet/notebook/page[@string='Purchase Order']/field[@name='order_line']/tree/field[@name='product_qty']" position="attributes">
                     <attribute name="string">Quantity of UOMs</attribute>
-                </field>
-                <field name="product_uom" position="attributes">
+                </xpath>
+                <xpath expr="/form/sheet/notebook/page[@string='Purchase Order']/field[@name='order_line']/tree/field[@name='product_uom']" position="attributes">
                     <attribute name="domain">['|', ('product_ids','in', [product_id]), ('product_ids', 'not in', [])]</attribute>
-                </field>
+                </xpath>
             </field>
         </record>
 	</data>
