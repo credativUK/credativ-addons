@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution    
-#    Copyright (C) 2013 credativ Ltd (<http://credativ.co.uk>).
+#    Copyright (C) 2014 credativ Ltd (<http://credativ.co.uk>).
 #    All Rights Reserved
 #    $Id$
 #
@@ -27,7 +27,8 @@
     'website' : 'http://credativ.co.uk',
     'depends' : [
         'base',
-        'purchase'
+        'purchase',
+        'sale',
     ],
     'category' : 'Generic Modules/Purchase',
     'description': '''
@@ -42,6 +43,7 @@ If no products are allocated to a UoM, this UoM is available to all products.
     'update_xml' : [
         "purchase_view.xml",
         "product_view.xml",
+        "sale_view.xml",
     ],
     'active': False,
     'installable': True

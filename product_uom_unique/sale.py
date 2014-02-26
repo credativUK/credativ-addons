@@ -28,50 +28,40 @@ def rounding(f, r):
         return f
     return round(f / r) * r
 
-class purchase_order_line(osv.osv):
-    _inherit = 'purchase.order.line'
+class sale_order_line(osv.osv):
+    _inherit = 'sale.order.line'
     
-    def onchange_product_uom(self, cr, uid, ids, pricelist_id, product_id, qty, uom_id,
-            partner_id, date_order=False, fiscal_position_id=False, date_planned=False,
-            name=False, price_unit=False, context=None):
+    def product_uom_change(self, cr, uid, ids, pricelist, product, qty=0, uom=False, qty_uos=0, uos=False, name='', partner_id=False, lang=False, update_tax=True, date_order=False, context=None):
         """
         onchange handler of product_uom.
         """
-        if not uom_id:
-            return {'value': {'price_unit': price_unit or 0.0, 'name': name or '', 'product_uom' : uom_id or False}}
-        return self.onchange_product_id(cr, uid, ids, pricelist_id, product_id, qty, uom_id,
-            partner_id, date_order=date_order, fiscal_position_id=fiscal_position_id, date_planned=date_planned,
-            name=name, price_unit=price_unit, context=context)
-    
-    def onchange_product_id(self, cr, uid, ids, pricelist_id, product_id, qty, uom_id,
-            partner_id, date_order=False, fiscal_position_id=False, date_planned=False,
-            name=False, price_unit=False, context=None):
+        if not uom:
+            return {'value': {'name': name or '', 'product_uom' : uom or False}}
+        return self.product_id_change(cr, uid, ids, pricelist, product, qty, uom, qty_uos, uos, name, partner_id, lang, update_tax, date_order, context=context)
+
+    def product_id_change(self, cr, uid, ids, pricelist, product, qty=0, uom=False, qty_uos=0, uos=False, name='', partner_id=False, lang=False, update_tax=True, date_order=False, packaging=False, fiscal_position=False, flag=False, context=None):
         """
         onchange handler of product_id.
         """
-        res = super(purchase_order_line, self).onchange_product_id(cr,uid,ids,pricelist_id, product_id, qty, uom_id,
-            partner_id, date_order=date_order, fiscal_position_id=fiscal_position_id, date_planned=date_planned,
-            name=name, price_unit=price_unit, context=context)
+        res = super(sale_order_line, self).product_id_change(cr,uid,ids,pricelist, product, qty, uom, qty_uos, uos, name, partner_id, lang, update_tax, date_order, packaging, fiscal_position, flag, context)
         
         # Remove warning message restricting a supplier to a single UoM
         if res.get('warning', False) and res['warning'].get('message', False) and res['warning']['message'][0:48] == 'The selected supplier only sells this product by':
             del res['warning']
         
-        if product_id and uom_id:
-            uom = self.pool.get('product.uom').browse(cr,uid,uom_id,context=context)
-            qty_per_uom = 1.0 / uom.factor
+        if product and uom:
+            uom_browse = self.pool.get('product.uom').browse(cr,uid,uom,context=context)
+            qty_per_uom = 1.0 / uom_browse.factor
             value={
                 'qty_per_uom': qty_per_uom,
                 'unit_qty': qty * qty_per_uom
                    }
             res['value'].update(value)
-            res.setdefault('domain', {}).setdefault('product_uom', []).extend(['|', ('product_ids','in', [product_id]), ('product_ids', '!=', [])])
+            res.setdefault('domain', {}).setdefault('product_uom', []).extend(['|', ('product_ids','in', [product]), ('product_ids', '!=', [])])
         return res
 
-    product_id_change = onchange_product_id
-
     def onchange_unit_qty(self, cr, uid, ids, pricelist_id, product_id, qty, uom_id,
-            partner_id, date_order=False, fiscal_position_id=False, date_planned=False,
+            partner_id, date_order=False, fiscal_position_id=False,
             name=False, price_unit=False, unit_qty=0.0, qty_per_uom=0.0, context=None):
         """
         onchange handler of unit_qty.
@@ -86,18 +76,18 @@ class purchase_order_line(osv.osv):
 
     def _get_qty_per_uom(self, cr, uid, ids, name, data, context=None):
         res = {}
-        for pol in self.browse(cr, uid, ids, context):
-            uom = pol.product_uom
+        for sol in self.browse(cr, uid, ids, context):
+            uom = sol.product_uom
             if uom:
-                res[pol.id] = 1.0 / uom.factor
+                res[sol.id] = 1.0 / uom.factor
             else:
-                res[pol.id] = 1.0
+                res[sol.id] = 1.0
         return res
         
     def _get_unit_qty(self, cr, uid, ids, name, data, context=None):
         res = {}
-        for pol in self.browse(cr, uid, ids, context):
-            res[pol.id] = pol.product_qty * pol.qty_per_uom
+        for sol in self.browse(cr, uid, ids, context):
+            res[sol.id] = sol.product_uom_qty * pol.qty_per_uom
         return res
         
         
@@ -115,8 +105,8 @@ class purchase_order_line(osv.osv):
             #Search uom base reference.
             val['product_uom'] = product_uom.search(cr,uid,[('category_id','=', cat_id), ('factor', '=', 1), ('uom_type','=','reference')],context=context)[0]
             if 'unit_qty' in val:
-                uom_qty = val['unit_qty'] / val['product_qty']
-                val['product_qty'] = val['unit_qty']
+                uom_qty = val['unit_qty'] / val['product_uom_qty']
+                val['product_uom_qty'] = val['unit_qty']
                 val['price_unit'] = val['price_unit'] / uom_qty
         
         return True
@@ -128,7 +118,7 @@ class purchase_order_line(osv.osv):
             context={}
         
         self._search_replace_uom(cr, uid, vals, context=context)
-        return super(purchase_order_line,self).create(cr,uid,vals,context=context)
+        return super(sale_order_line,self).create(cr,uid,vals,context=context)
         
     def write(self, cr, uid, ids, vals, context=None):
         ''' Purchase order line write method overide to set product uom '''
@@ -137,6 +127,6 @@ class purchase_order_line(osv.osv):
             context = {}
         
         self._search_replace_uom(cr, uid, vals, context=context)
-        return super(purchase_order_line,self).write(cr, uid, ids, vals, context)
+        return super(sale_order_line,self).write(cr, uid, ids, vals, context)
     
-purchase_order_line()
+sale_order_line()

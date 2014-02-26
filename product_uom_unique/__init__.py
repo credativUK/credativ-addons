@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution    
-#    Copyright (C) 2013 credativ Ltd (<http://credativ.co.uk>).
+#    Copyright (C) 2014 credativ Ltd (<http://credativ.co.uk>).
 #    All Rights Reserved
 #    $Id$
 #
@@ -22,3 +22,4 @@
 ##############################################################################
 import purchase
 import product
+import sale

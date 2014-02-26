@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+-->
+<openerp>
+    <data>
+        <record id="sale_order_line_form_case" model="ir.ui.view">
+            <field name="name">sale.order.line.form.case</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form" />
+            <field name="arch" type="xml">
+                <xpath expr="/form/sheet/notebook/page[@string='Order Lines']/field[@name='order_line']/form/group/group[1]/div" position="after">
+                    <field name="unit_qty" readonly="0" on_change="onchange_unit_qty(parent.pricelist_id,product_id,product_uom_qty,product_uom,parent.partner_id, parent.date_order,parent.fiscal_position,name,price_unit,unit_qty,qty_per_uom,context)" context="{'force_product_uom': True}"/>
+                    <field name="qty_per_uom"/>
+                </xpath>
+                <xpath expr="/form/sheet/notebook/page[@string='Order Lines']/field[@name='order_line']/form/group/group[1]/div/field[@name='product_uom_qty']" position="attributes">
+                    <attribute name="string">Quantity of UOMs</attribute>
+                </xpath>
+                <xpath expr="/form/sheet/notebook/page[@string='Order Lines']/field[@name='order_line']/form/group/group[1]/div/field[@name='product_uom']" position="attributes">
+                    <attribute name="domain">['|', ('product_ids','in', [product_id]), ('product_ids', 'not in', [])]</attribute>
+                </xpath>
+            </field>
+        </record>
+	</data>
+</openerp>
