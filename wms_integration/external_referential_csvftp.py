@@ -188,7 +188,8 @@ class Connection(object):
                 time.sleep(wait_time)
  
         err_msg = '\n'.join(error_list)
-        self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=None, msg=err_msg, context=self._saved_ctx)
+        if self.reporter:
+            self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=None, msg=err_msg, context=self._saved_ctx)
         self._ftp_client = None
 
     def _disconnect(self):
