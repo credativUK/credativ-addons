@@ -32,6 +32,7 @@ import re
 import os
 import logging
 import datetime
+import urlparse
 
 _logger = logging.getLogger(__name__)
 DEBUG = True
@@ -168,13 +169,21 @@ class external_referential(wms_integration_osv.wms_integration_osv):
         if not referential:
             return super(external_referential, self).external_connection(cr, uid, id, DEBUG=DEBUG, context=context)
 
-        mo = re.search(r'ftp://(.*?):([0-9]+)', referential.location)
-        if not mo:
-            msg = 'Referential location could not be parsed as an FTP URI: %s' % (referential.location,)
+        msg = None
+        url = urlparse.urlparse(referential.location)
+        if url.scheme != 'ftp':
+            msg = 'Invalid scheme "%s" for a FTP URI: %s' % (url.scheme, referential.location,)
+        if not url.hostname:
+            msg = 'Missing host in FTP URI: %s' % (referential.location,)
+
+        if msg:
             _logger.error(msg)
             if reporter:
                 reporter.log_system_fail(cr, uid, 'external.referential', 'connect', id, exc=None, msg=msg, context=context)
-        (host, port) = mo.groups()
+
+        host = url.hostname
+        port = url.port or 21
+        path = url.path or '/'
 
         csv_opts = getattr(referential, 'output_options', {})
         csv_opts['fieldproc'] = self.make_fieldproc(csv_opts)
@@ -185,7 +194,8 @@ class external_referential(wms_integration_osv.wms_integration_osv):
                           cr=cr,
                           uid=uid,
                           host=host,
-                          port=int(port),
+                          port=port,
+                          path=path,
                           csv_writer_opts=csv_opts,
                           reporter=reporter,
                           debug=DEBUG)

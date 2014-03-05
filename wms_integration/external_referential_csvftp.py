@@ -28,7 +28,7 @@ import logging
 #from base_external_referentials.external_osv import ExternalSession
 from base_external_referentials import external_osv
 
-import os
+import os, os.path
 import re
 import time
 import socket
@@ -81,7 +81,7 @@ class Connection(object):
     >>> conn.finalize_export()
     '''
 
-    def __init__(self, username, password, host, referential_id, cr, uid, port=21, timeout=5, out_encoding='utf-8', csv_writer_opts={}, debug=False, logger=False, reporter=None):
+    def __init__(self, username, password, host, referential_id, cr, uid, port=21, path='', timeout=5, out_encoding='utf-8', csv_writer_opts={}, debug=False, logger=False, reporter=None):
         '''
         The constructor sets up the FTP connection.
 
@@ -118,6 +118,7 @@ class Connection(object):
         self.cr = cr
         self.uid = uid
         self.port = port
+        self.path = path
         self.timeout = timeout
         self._oe_model_name = 'external.referential'
         self.debug = debug
@@ -187,7 +188,8 @@ class Connection(object):
                 time.sleep(wait_time)
  
         err_msg = '\n'.join(error_list)
-        self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=None, msg=err_msg, context=self._saved_ctx)
+        if self.reporter:
+            self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=None, msg=err_msg, context=self._saved_ctx)
         self._ftp_client = None
 
     def _disconnect(self):
@@ -208,6 +210,10 @@ class Connection(object):
             del ctx['conn'] # To remove circular refs
         self._saved_ctx = ctx
 
+    def _translate_file(self, path):
+        relative_path = path.lstrip('/')
+        return os.path.join(self.path, relative_path)
+
     def ready(self):
         return self._ftp_client is not None
 
@@ -215,6 +221,7 @@ class Connection(object):
         if not context:
             context = {}
         self._saved_ctx = context
+        remote_path = self._translate_file(remote_csv_fn)
 
         try:
             self._oe_model_name = oe_model_name
@@ -224,14 +231,14 @@ class Connection(object):
             # retrieve the CSV
             self._import_tmp = open(self._import_tmp_fn, 'wb')
             if self.debug:
-                self.logger.debug('CSV import: About to call FTP command: RETR %s' % (remote_csv_fn,))
-            self._ftp_client.retrbinary('RETR %s' % (remote_csv_fn,), self._import_tmp.write)
+                self.logger.debug('CSV import: About to call FTP command: RETR %s' % (remote_path,))
+            self._ftp_client.retrbinary('RETR %s' % (remote_path,), self._import_tmp.write)
 
             self._import_tmp.close()
             os.close(self._import_tmp_fd)
 
             if self.debug:
-                self.logger.debug('CSV import: Retrieved %d bytes from %s (remote) into %s (local)' % (os.path.getsize(self._import_tmp_fn), remote_csv_fn, self._import_tmp.name))
+                self.logger.debug('CSV import: Retrieved %d bytes from %s (remote) into %s (local)' % (os.path.getsize(self._import_tmp_fn), remote_path, self._import_tmp.name))
 
             # find the external key name column
             self._id_col_name = external_key_name
@@ -243,7 +250,7 @@ class Connection(object):
             return True
         except IOError, X:
             msg = 'CSV import: Could not retrieve %s (remote) into %s (local): [Errno %d] %s' %\
-                (remote_csv_fn, self._import_tmp.name, X.errno, X.strerror)
+                (remote_path, self._import_tmp.name, X.errno, X.strerror)
             self.logger.error(msg)
             if self.reporter:
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=X, msg=msg, context=context)
@@ -252,7 +259,7 @@ class Connection(object):
             raise X
         except ftplib.all_errors, X:
             msg = 'CSV import: Could not retrieve %s (remote) into %s (local): %s' %\
-                (remote_csv_fn, self._import_tmp.name, X.message)
+                (remote_path, self._import_tmp.name, X.message)
             self.logger.error(msg)
             if self.reporter:
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=X, msg=msg, context=context)
@@ -270,6 +277,7 @@ class Connection(object):
         pwd = self._ftp_client.pwd()
         for d in dirs:
             try:
+                d = self._translate_file(d)
                 self._ftp_client.cwd(d)
                 res.extend(map(lambda f: d + '/' + f, filter(lambda f: matching.search(f), self._ftp_client.nlst())))
             except ftplib.error_perm, X:
@@ -344,10 +352,10 @@ class Connection(object):
         if not context:
             context = {}
         self.save_context(context)
+        self._export_remote_fn = self._translate_file(remote_csv_fn)
 
         try:
             self._oe_model_name = oe_model_name
-            self._export_remote_fn = remote_csv_fn
             (self._export_tmp_fd, self._export_tmp_fn) = tempfile.mkstemp(prefix='oe_')
 
             if self.debug:
@@ -647,7 +655,7 @@ class Connection(object):
 
     def rename_file(self, source, destination, context=None):
         if source and destination and source != destination:
-            self._rename.append([source, destination])
+            self._rename.append([self._translate_file(source), self._translate_file(destination)])
     
     def finalize_rename(self, context=None):
         if not context:
