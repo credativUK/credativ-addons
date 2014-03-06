@@ -60,6 +60,9 @@ class Connection(object):
     '''
     Connection implements import and export of CSV data over FTP.
 
+    init_import and rename_file functions should only be called with
+    file names obtained from find_importables()
+
     Synopnsis, import:
 
     >>> conn = Connection('username', 'password', 'host', 0, cr, uid)
@@ -221,7 +224,6 @@ class Connection(object):
         if not context:
             context = {}
         self._saved_ctx = context
-        remote_path = self._translate_file(remote_csv_fn)
 
         try:
             self._oe_model_name = oe_model_name
@@ -655,7 +657,7 @@ class Connection(object):
 
     def rename_file(self, source, destination, context=None):
         if source and destination and source != destination:
-            self._rename.append([self._translate_file(source), self._translate_file(destination)])
+            self._rename.append([source, destination])
     
     def finalize_rename(self, context=None):
         if not context:
