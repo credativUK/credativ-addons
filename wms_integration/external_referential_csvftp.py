@@ -75,10 +75,10 @@ class Connection(object):
     [{'id': '1', 'name': 'Foo', 'other': 'something'}, {'id': '2', 'name': 'Bar', 'other': 'something'}]
     >>> conn.finalize_import()
 
-    Synopsis, sync:
+    Synopsis, export:
 
     >>> conn = Connection('username', 'password', 'host', 0, cr, uid)
-    >>> conn.init_sync(import_csv_fn='OUT/data.csv', export_csv_fn='IN/data.csv', oe_model_name='foo.bar', external_key_name='id', column_headers=['id', 'name', 'other'], required_fields=['id', 'name'])
+    >>> conn.init_export(export_csv_fn='IN/data.csv', oe_model_name='foo.bar', external_key_name='id', column_headers=['id', 'name', 'other'], required_fields=['id', 'name'])
     >>> conn.call('update', records=[(1, {'id': '1', 'name': 'Baz'}), (2, {'id': '2', 'other': 'something else'})])
     >>> conn.call('create', records=[(3, {'id': '3', 'name': 'Bam'}), (5, {'id': '5', 'name': 'Bat'})])
     >>> conn.finalize_export()
@@ -494,17 +494,6 @@ class Connection(object):
             self.logger.error(msg)
             if self.reporter:
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'export', self.referential_id, exc=X, msg=msg, context=self._saved_ctx)
-
-    def init_sync(self, import_csv_fn, export_csv_fn, oe_model_name, external_key_name, column_headers, required_fields, context=None):
-        if not context:
-            context = {}
-        self.save_context(context)
-
-        self.init_import(import_csv_fn, oe_model_name, external_key_name, column_headers)
-        self._cache_import()
-        self.init_export(export_csv_fn, oe_model_name, external_key_name, column_headers, required_fields)
-
-        self.sync_ready = True
 
     def _read_import_ids(self):
         self._check_import_ready()
