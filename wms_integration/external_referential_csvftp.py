@@ -233,14 +233,14 @@ class Connection(object):
             # retrieve the CSV
             self._import_tmp = open(self._import_tmp_fn, 'wb')
             if self.debug:
-                self.logger.debug('CSV import: About to call FTP command: RETR %s' % (remote_path,))
-            self._ftp_client.retrbinary('RETR %s' % (remote_path,), self._import_tmp.write)
+                self.logger.debug('CSV import: About to call FTP command: RETR %s' % (remote_csv_fn,))
+            self._ftp_client.retrbinary('RETR %s' % (remote_csv_fn,), self._import_tmp.write)
 
             self._import_tmp.close()
             os.close(self._import_tmp_fd)
 
             if self.debug:
-                self.logger.debug('CSV import: Retrieved %d bytes from %s (remote) into %s (local)' % (os.path.getsize(self._import_tmp_fn), remote_path, self._import_tmp.name))
+                self.logger.debug('CSV import: Retrieved %d bytes from %s (remote) into %s (local)' % (os.path.getsize(self._import_tmp_fn), remote_csv_fn, self._import_tmp.name))
 
             # find the external key name column
             self._id_col_name = external_key_name
@@ -252,7 +252,7 @@ class Connection(object):
             return True
         except IOError, X:
             msg = 'CSV import: Could not retrieve %s (remote) into %s (local): [Errno %d] %s' %\
-                (remote_path, self._import_tmp.name, X.errno, X.strerror)
+                (remote_csv_fn, self._import_tmp.name, X.errno, X.strerror)
             self.logger.error(msg)
             if self.reporter:
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=X, msg=msg, context=context)
@@ -261,7 +261,7 @@ class Connection(object):
             raise X
         except ftplib.all_errors, X:
             msg = 'CSV import: Could not retrieve %s (remote) into %s (local): %s' %\
-                (remote_path, self._import_tmp.name, X.message)
+                (remote_csv_fn, self._import_tmp.name, X.message)
             self.logger.error(msg)
             if self.reporter:
                 self.reporter.log_system_fail(self.cr, self.uid, self._oe_model_name, 'connect', self.referential_id, exc=X, msg=msg, context=context)
