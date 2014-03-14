@@ -134,6 +134,7 @@ class sale_order_claim(osv.osv):
         exceed maximum refundable amount.
         '''
         for claim in self.browse(cr, uid, ids, context=context):
+            claim.max_refundable = round(float(claim.max_refundable), 2)
             if claim.total_refund > claim.max_refundable:
                 return False
         return True
