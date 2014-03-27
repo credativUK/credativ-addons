@@ -26,6 +26,7 @@ from openerp import SUPERUSER_ID
 import time
 import logging
 import traceback
+import pooler
 _logger = logging.getLogger(__name__)
 
 class ir_validation(osv.osv):
@@ -273,9 +274,18 @@ def _validate(self, cr, uid, ids, context=None):
     self.check_validation_rule(cr, uid, ids, 'post_write', context=context)
     return res
 
+def restart_pool(db_name, force_demo=False, status=None, update_module=False):
+    # Remove hooks here pre upgrade
+    if update_module:
+        orm.BaseModel.check_access_rule = orm.BaseModel.check_access_rule_old
+        orm.BaseModel._validate = orm.BaseModel._validate_old
+        pooler.restart_pool = pooler.restart_pool_old
+    return pooler.restart_pool_old(db_name, force_demo=force_demo, status=status, update_module=update_module)
+
 orm.BaseModel.check_access_rule_old = orm.BaseModel.check_access_rule
 orm.BaseModel._validate_old = orm.BaseModel._validate
 orm.BaseModel.check_validation_rule = check_validation_rule
+pooler.restart_pool_old = pooler.restart_pool
 
 class ir_module_module(osv.osv):
     _inherit = 'ir.module.module'
@@ -287,8 +297,11 @@ class ir_module_module(osv.osv):
             orm.BaseModel.check_access_rule_old = orm.BaseModel.check_access_rule
         if orm.BaseModel._validate.__code__ != orm.BaseModel._validate_old.__code__ and orm.BaseModel._validate.__code__ != _validate.__code__:
             orm.BaseModel._validate_old = orm.BaseModel._validate
+        if pooler.restart_pool.__code__ != pooler.restart_pool_old.__code__ and pooler.restart_pool.__code__ != restart_pool.__code__:
+            pooler.restart_pool_old = pooler.restart_pool
         orm.BaseModel.check_access_rule = check_access_rule
         orm.BaseModel._validate = _validate
+        pooler.restart_pool = restart_pool
         res = super(ir_module_module, self).check(cr, uid, ids, context)
 
 ir_module_module()
