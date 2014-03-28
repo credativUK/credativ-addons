@@ -26,39 +26,6 @@ import time
 from osv import osv, fields
 from tools.translate import _
 
-class purchase_order_wizard_order_edit(osv.osv_memory):
-    _name = "purchase.order.wizard_order_edit"
-    _description = "Edit Order Items"
-    _columns = {
-        'purchase_order_id' : fields.many2one('purchase.order', required=True),
-        }
-
-    def default_get(self, cr, uid, fields, context):
-        purchase_order_id = context and context.get('active_id', False) or False
-        res = super(purchase_order_wizard_order_edit, self).default_get(cr, uid, fields, context=context)
-        res.update({'purchase_order_id': purchase_order_id or False})
-        return res
-    
-    def edit_order(self, cr, uid, ids, context=None):
-        rec_id = context and context.get('active_id', False)
-        assert rec_id, _('Active ID is not set in Context')
-        purchase_obj = self.pool.get('purchase.order')
-
-        for data in self.browse(cr, uid, ids, context=context):
-            new_id = purchase_obj.copy_for_edit(cr, uid, data.purchase_order_id.id, context=context)
-
-        return {
-                'name': 'Edit Order',
-                'view_type': 'form',
-                'view_mode': 'form,tree',
-                'res_model': 'purchase.order',
-                'view_id': False,
-                'res_id': new_id,
-                'type': 'ir.actions.act_window',
-            }
-
-purchase_order_wizard_order_edit()
-
 class sale_order_wizard_order_edit(osv.osv_memory):
     _name = "sale.order.wizard_order_edit"
     _description = "Edit Order Items"
