@@ -456,7 +456,8 @@ class sale_order(osv.osv, order_edit):
             wkf_service = netsvc.LocalService('workflow')
 
         #8 Cancel MO,create new MO and run procurement scheduler
-        self._cancel_mo(cr,uid,original,context=context)
+        if self.pool.get('mrp.production'):
+            self._cancel_mo(cr,uid,original,context=context)
 
 
     def _unreconcile_refund_and_cancel(self, cr, uid, original_id, order, context=None):
@@ -495,11 +496,13 @@ class sale_order(osv.osv, order_edit):
                         created_move = created_moves.pop()
                     except IndexError:
                         raise osv.except_osv(_('Error!'), _('The edited order must include any done or assigned moves'))
-                    picking = created_move.picking_id
-                    move_pool.write(cr, uid, [old_move.id], {'sale_line_id': line_id, 'picking_id': picking.id})
-                    move_pool.write(cr, uid, created_move.id, {'sale_line_id': False, 'picking_id': False})
-                    created_move.action_cancel()
-                    picking.action_done()
+                    created_picking = created_move.picking_id
+                    if old_move.state in ('assigned', 'done'):
+                        # Keep original move linked to original picking
+                        move_pool.write(cr, uid, created_move.id, {'sale_line_id': False, 'picking_id': False})
+                        created_move.action_cancel()
+                        move_pool.write(cr, uid, old_move.id, {'sale_line_id': line_id})
+                        self.pool.get('stock.picking').write(cr, uid, old_move.picking_id.id, {'sale_id':line.order_id.id})
                 assert(len(created_moves) == 0)
 
     def action_ship_create(self, cr, uid, ids, context=None):
