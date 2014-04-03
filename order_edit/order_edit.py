@@ -498,11 +498,16 @@ class sale_order(osv.osv, order_edit):
                         raise osv.except_osv(_('Error!'), _('The edited order must include any done or assigned moves'))
                     created_picking = created_move.picking_id
                     if old_move.state in ('assigned', 'done'):
-                        # Keep original move linked to original picking
+                        # Keep original assigned and completed moves linked with original picking
                         move_pool.write(cr, uid, created_move.id, {'sale_line_id': False, 'picking_id': False})
                         created_move.action_cancel()
                         move_pool.write(cr, uid, old_move.id, {'sale_line_id': line_id})
                         self.pool.get('stock.picking').write(cr, uid, old_move.picking_id.id, {'sale_id':line.order_id.id})
+                    for picking_move in old_move.picking_id.move_lines:
+                        # Remove confirmed moves from original picking - they are re-created in the new picking
+                        if picking_move.state == ('confirmed'):
+                            move_pool.write(cr, uid, picking_move.id, {'sale_line_id': False, 'picking_id': False})
+                            picking_move.action_cancel()
                 assert(len(created_moves) == 0)
 
     def action_ship_create(self, cr, uid, ids, context=None):
