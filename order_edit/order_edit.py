@@ -110,17 +110,22 @@ class order_edit(object):
             return line_id
 
         line_moves = defaultdict(list)
+        other_moves = defaultdict(list)
         for m in moves:
             if m.state in ['done', 'assigned']:
                 line_id = add_product_order_line(m.product_id.id, m.product_qty)
                 line_moves[line_id].append(m)
+            else:
+                other_moves[m.product_id.id].append(m)
 
+        remain_moves = {}
         for product, edit_total in edit_totals.iteritems():
             remainder = edit_total - done_totals.get(product, 0)
             if remainder > 0:
-                add_product_order_line(product.id, remainder)
+                line_id = add_product_order_line(product.id, remainder)
+                remain_moves[line_id] = other_moves.get(product.id)
 
-        return line_moves
+        return line_moves, remain_moves
 
     def check_consolidation(self, cr, uid, ids, context=None):
         # TODO: edit with available moves
@@ -128,14 +133,15 @@ class order_edit(object):
         # need to change confirm button to run an action that warns user of the available move
         # and then trigger the workflow to continue the current behaviour
         line_moves = None
+        remain_moves = None
         for order in self.browse(cr, uid, ids, context=context):
             original_ids = None
             if order.origin:
                 original_ids = self.search(cr, uid, [('name', '=', order.origin)], context=context)
             if original_ids:
-                line_moves = self._consolidate_edit_lines(cr, uid, original_ids,
+                line_moves, remain_moves = self._consolidate_edit_lines(cr, uid, original_ids,
                                                           order, context)
-        return line_moves
+        return line_moves, remain_moves
 
     def copy_for_edit(self, cr, uid, id_, context=None):
         if context is None:
@@ -481,11 +487,13 @@ class sale_order(osv.osv, order_edit):
         else:
             return False
 
-    def _fixup_created_picking(self, cr, uid, line_moves, context):
+    def _fixup_created_picking(self, cr, uid, line_moves, remain_moves, context):
         # This is a post confirm hook
         # - post-action hook: replace new stuff generated in the action with old stuff
         # identified in the pre-action hook
         move_pool = self.pool.get('stock.move')
+        pick_pool = self.pool.get('stock.picking')
+        wf_service = netsvc.LocalService("workflow")
 
         if line_moves is not None:
             for line_id, old_moves in line_moves.iteritems():
@@ -496,32 +504,58 @@ class sale_order(osv.osv, order_edit):
                         created_move = created_moves.pop()
                     except IndexError:
                         raise osv.except_osv(_('Error!'), _('The edited order must include any done or assigned moves'))
-                    created_picking = created_move.picking_id
-                    if old_move.state in ('assigned', 'done'):
-                        # Keep original assigned and completed moves linked with original picking
-                        move_pool.write(cr, uid, created_move.id, {'sale_line_id': False, 'picking_id': False})
-                        created_move.action_cancel()
-                        move_pool.write(cr, uid, old_move.id, {'sale_line_id': line_id})
-                        self.pool.get('stock.picking').write(cr, uid, old_move.picking_id.id, {'sale_id':line.order_id.id})
-                    for picking_move in old_move.picking_id.move_lines:
-                        # Remove confirmed moves from original picking - they are re-created in the new picking
-                        if picking_move.state == ('confirmed'):
-                            move_pool.write(cr, uid, picking_move.id, {'sale_line_id': False, 'picking_id': False})
-                            picking_move.action_cancel()
+                    # Move old stock_move and stock_picking to new order
+                    picking = created_move.picking_id
+                    move_pool.write(cr, uid, [old_move.id], {'sale_line_id': line_id})
+                    pick_pool.write(cr, uid, old_move.picking_id.id, {'sale_id':line.order_id.id})
+                    # Cancel and remove new replaced stock_move and stock_picking
+                    move_pool.write(cr, uid, created_move.id, {'sale_line_id': False, 'picking_id': False})
+                    created_move.action_cancel()
+                    picking.refresh()
+                    if not picking.move_lines:
+                        pick_pool.write(cr, uid, picking.id, {'sale_id': False})
+                        wf_service.trg_validate(uid, 'stock.picking', picking.id, 'button_cancel', cr)
+                        wf_service.trg_validate(uid, 'stock.picking', picking.id, 'button_cancel', cr)
+                        pick_pool.action_cancel(cr, uid, [picking.id])
                 assert(len(created_moves) == 0)
+
+        if remain_moves is not None:
+            picking = None
+            old_picking_copy = None
+            for line_id, old_moves in remain_moves.iteritems():
+                line = self.pool.get('sale.order.line').browse(cr, uid, line_id)
+                created_moves = [x for x in line.move_ids]
+                if not picking and not old_picking_copy:
+                    picking = old_moves and old_moves[0].picking_id or None
+                    if picking:
+                        old_picking_copy = pick_pool.copy(cr, uid, picking.id, {'move_lines': [], 'sale_id': line.order_id.id, 'name': '/'})
+                if not old_picking_copy or not created_moves:
+                    continue
+                for created_move in created_moves:
+                    new_picking = created_move.picking_id
+                    move_pool.write(cr, uid, created_move.id, {'sale_line_id': line_id, 'picking_id': old_picking_copy})
+                    new_picking.refresh()
+                    if not new_picking.move_lines:
+                        pick_pool.write(cr, uid, new_picking.id, {'sale_id': False})
+                        wf_service.trg_validate(uid, 'stock.picking', new_picking.id, 'button_cancel', cr)
+                        wf_service.trg_validate(uid, 'stock.picking', new_picking.id, 'button_cancel', cr)
+                        pick_pool.action_cancel(cr, uid, [new_picking.id])
+            if old_picking_copy:
+                wf_service.trg_validate(uid, 'stock.picking', old_picking_copy, 'button_confirm', cr)
+            # Old confirmed moves get canceled during refund
 
     def action_ship_create(self, cr, uid, ids, context=None):
         # run on order confirm, after action_wait
 
 #        # Sale order edit
 #        # -  pre-action hook: find what has been edited
-        line_moves = self.check_consolidation(cr, uid, ids, context)
+        line_moves, remain_moves = self.check_consolidation(cr, uid, ids, context)
 
         # -    action: run original action
         res = super(sale_order, self).action_ship_create(cr, uid, ids, context=context)
 
 #        # - post-action hook: replace new stuff generated in the action with old stuff
-        self._fixup_created_picking(cr, uid, line_moves, context)
+        self._fixup_created_picking(cr, uid, line_moves, remain_moves, context)
 
         for order in self.browse(cr, uid, ids, context=context):
             original_id = self.get_edit_original(cr, uid, order, context=context)
