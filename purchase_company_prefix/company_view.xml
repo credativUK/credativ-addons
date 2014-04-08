@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="res_company_purchase_prefix" model="ir.ui.view">
+            <field name="name">res.company.purchase.prefix</field>
+            <field name="model">res.company</field>
+            <field name="priority">20</field>
+            <field name="inherit_id" ref="base.view_company_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//group[@name='account_grp']" position="after">
+                    <group name="purchase_grp" string="Purchase">
+                        <field name="purchase_prefix"/>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+	</data>
+</openerp>

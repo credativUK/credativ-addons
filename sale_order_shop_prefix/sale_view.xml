@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="sale_shop_sale_prefix" model="ir.ui.view">
+            <field name="name">sale.shop.sale.prefix</field>
+            <field name="model">sale.shop</field>
+            <field name="priority">20</field>
+            <field name="inherit_id" ref="sale.view_shop_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='company_id']" position="after">
+                    <field name="sale_prefix"/>
+                </xpath>
+            </field>
+        </record>
+	</data>
+</openerp>
