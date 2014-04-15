@@ -35,8 +35,9 @@
         ],
     'init_xml': [
         ],
-    'update_xml': [
-        'sale_report_view.xml'
+    'data': [
+        'security/ir.model.access.csv',
+        'sale_report_view.xml',
     ],
     'demo_xml': [
     ],

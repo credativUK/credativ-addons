@@ -122,7 +122,7 @@
         <field name="help">This report performs analysis in different currencies on your sales orders based on delivery. Analysis check your sales revenues and sort it by different group criteria (salesman, partner, product, etc.) Use this report to perform analysis on sales which have been delivered. If you want to analyse your turnover, you should use the Invoice Analysis report in the Accounting application.</field>
     </record>
 
-    <menuitem action="action_sales_analysis_multi" id="menu_view_sale_report_multi" parent="base.next_id_64" sequence="11"/>
+    <menuitem action="action_sales_analysis_multi" id="menu_view_sale_report_multi" parent="base.next_id_64" sequence="11" groups="base.group_sale_manager"/>
 
 </data>
 </openerp>
