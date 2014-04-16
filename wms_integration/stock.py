@@ -308,12 +308,16 @@ class stock_warehouse(osv.osv):
                     ext_qty = 0
                 if not internal_qty:
                     internal_qty = 0
-                diff = int(ext_qty) - int(internal_qty)
+                ext_qty = int(ext_qty)
+                internal_qty = int(internal_qty)
+                diff = ext_qty - internal_qty
                 if diff != 0:
                     message += "%s: %s \n" % (product, diff)
-                    lines_to_export.append([product, diff])
+                    lines_to_export.append([product, diff, internal_qty, ext_qty])
             # Create csv file
-            file_exported = get_csv_format([ (_('SKU'), 'string'), (_('Difference'), 'number')], lines_to_export)
+            file_exported = get_csv_format([(_('SKU'), 'string'), (_('Difference'), 'number'),
+                                            (_('ERP stock'), 'number'), (_('External WMS Stock'), 'number')],
+                                           lines_to_export)
             # Create attachment
             attachment_id = False
             if file_exported:
