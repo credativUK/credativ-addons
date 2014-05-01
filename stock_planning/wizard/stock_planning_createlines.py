@@ -65,7 +65,6 @@ class stock_planning_createlines(osv.osv_memory):
                 products_id1 = [x for x, in cr.fetchall()]
             else:
                 categ_ids = f.product_categ_id.id and [f.product_categ_id.id] or []
-                import ipdb;ipdb.set_trace()
                 prod_categ_ids = prod_categ_obj.search(cr,uid,[('parent_id','child_of',categ_ids)])
                 products_id1 = product_obj.search(cr,uid,[('categ_id','in',prod_categ_ids)])
             if len(products_id1)==0:

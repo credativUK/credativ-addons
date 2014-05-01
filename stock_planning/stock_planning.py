@@ -68,7 +68,7 @@ stock_period()
 # A lot of changes in 1.1
 class stock_sale_forecast(osv.osv):
     _name = "stock.sale.forecast"
-
+    _rec_name = "product_id"
     _columns = {
         'company_id':fields.many2one('res.company', 'Company', required=True),
         'create_uid': fields.many2one('res.users', 'Responsible'),
@@ -131,6 +131,8 @@ class stock_sale_forecast(osv.osv):
         'user_id': lambda obj, cr, uid, context: uid,
         'state': 'draft',
         'company_id': lambda self,cr,uid,c: self.pool.get('res.company')._company_default_get(cr, uid, 'stock.sale.forecast', context=c),
+        'analyze_company': '1',
+        'product_amt': 0.0,
     }
 
     def action_validate(self, cr, uid, ids, *args):
@@ -296,6 +298,7 @@ stock_sale_forecast()
 # A lot of changes by contributor in ver 1.1
 class stock_planning(osv.osv):
     _name = "stock.planning"
+    _rec_name = "product_id"
 
     def _get_in_out(self, cr, uid, val, date_start, date_stop, direction, done, context=None):
         if context is None:
@@ -468,7 +471,7 @@ class stock_planning(osv.osv):
                 help = 'All sales forecasts for selected Warehouse of selected Product during selected Period.'),
         'stock_simulation': fields.float('Stock Simulation', readonly =True, \
                 help = 'Stock simulation at the end of selected Period.\n For current period it is: \n' \
-                       'Initial Stock - Already Out + Already In - Expected Out + Incoming Left.\n' \
+                       'Initial Stock - Completed Outgoing + Completed Incoming - Expected Out + Incoming Left.\n' \
                         'For periods ahead it is: \nInitial Stock - Planned Out Before + Incoming Before - Planned Out + Planned In.'),
         'incoming': fields.float('Confirmed In', readonly=True, \
                 help = 'Quantity of all confirmed incoming moves in calculated Period.'),
@@ -478,7 +481,7 @@ class stock_planning(osv.osv):
                 help = 'Quantity left to Planned incoming quantity. This is calculated difference between Planned In and Confirmed In. ' \
                         'For current period Already In is also calculated. This value is used to create procurement for lacking quantity.'),
         'outgoing_left': fields.float('Expected Out', readonly=True, \
-                help = 'Quantity expected to go out in selected period besides Confirmed Out. As a difference between Planned Out and Confirmed Out. ' \
+                help = 'Quantity expected to go out in selected period besides Confirmed Out. As a difference between Planned Out and Already Out. ' \
                         'For current period Already Out is also calculated'),
         'to_procure': fields.float(string='Planned In', required=True, \
                 help = 'Enter quantity which (by your plan) should come in. Change this value and observe Stock simulation. ' \
@@ -496,9 +499,9 @@ class stock_planning(osv.osv):
                                     'Between start date of current period and one day before start of calculated period.'),
         'stock_start': fields.float('Initial Stock', readonly=True, \
                             help= 'Stock quantity one day before current period.'),
-        'already_out': fields.float('Already Out', readonly=True, \
+        'already_out': fields.float('Completed Outgoing', readonly=True, \
                             help= 'Quantity which is already dispatched out of this warehouse in current period.'),
-        'already_in': fields.float('Already In', readonly=True, \
+        'already_in': fields.float('Completed Incoming', readonly=True, \
                             help= 'Quantity which is already picked up to this warehouse in current period.'),
         'stock_only': fields.boolean("Stock Location Only", help = "Check to calculate stock location of selected warehouse only. " \
                                         "If not selected calculation is made for input, stock and output location of warehouse."),
@@ -517,6 +520,8 @@ class stock_planning(osv.osv):
         'to_procure': 0.0,
         'planned_outgoing': 0.0,
         'company_id': lambda self,cr,uid,c: self.pool.get('res.company')._company_default_get(cr, uid, 'stock.planning', context=c),
+        'minimum_op': 0.0,
+        'maximum_op': 0.0,
     }
 
     _order = 'period_id'

@@ -5,7 +5,7 @@
         <menuitem
             id="menu_stock_planning_createlines_parent"
             parent="stock.menu_stock_configuration"
-            name="Stock Forcasting"
+            name="Stock Forecasting"
             groups='base.group_sale_manager'
             sequence="5"/>
 
@@ -232,7 +232,7 @@
 
         <!-- Planning section -->
 
-        <menuitem id="menu_stock_planning_manual" name="Master Procurement Schedule" parent="procurement.menu_stock_sched" sequence="10"/>
+        <menuitem id="menu_stock_planning_manual" name="Master Procurement Schedule" parent="stock.menu_stock_root" sequence="10"/>
 
         <record id="view_stock_planning_form" model="ir.ui.view">
             <field name="name">stock.planning.form</field>
@@ -274,21 +274,21 @@
                             <field name="outgoing_left"/>
                             <field name="to_procure"/>
                             <field name="incoming"/>
-                            <label for="incoming_left"/>
-                            <div>
-                                <field name="incoming_left" class="oe_inline"/>
-                                <button name="procure_incomming_left" icon="gtk-convert" string="Make Procurement" type="object" class="oe_inline"/>
-                                <button name="internal_supply" string="Make Picking" help="Supply from Another Warehouse" icon="gtk-convert" type="object" class="oe_inline"/>
-                            </div>
+                            <!--label for="incoming_left"/-->
+                            <field name="incoming_left"/>
+                            <field name="procure_to_stock"/>
+                            <field name="stock_supply_location"/>
                             <field name="stock_only"/>
+                            <div colspan="2">
+                                <button name="procure_incomming_left" icon="gtk-convert" string="Make Procurement" type="object"/>
+                                <button name="internal_supply" string="Supply from Another Warehouse" help="Supply from Another Warehouse" icon="gtk-convert" type="object"/>
+                            </div>
                             <separator string="Calculated Period Simulation" colspan="2"/>
                             <field name="outgoing_before"/>
                             <field name="incoming_before"/>
                             <field name="stock_simulation"/>
-                            <field name="procure_to_stock"/>
                             <separator string="Internal Supply" colspan="2"/>
                             <field name="supply_warehouse_id" domain = "[('company_id','=',company_id)] "/>
-                            <field name="stock_supply_location"/>
                         </group>
                     </group>
                     <group string="Procurement History" colspan="4">
