@@ -58,17 +58,19 @@ class stock_planning_createlines(osv.osv_memory):
         prod_categ_obj = self.pool.get('product.category')
         planning_lines = []
         for f in self.browse(cr, uid, ids, context=context):
+            products_id1 = []
             if f.forecasted_products:
                 cr.execute("SELECT product_id \
                                 FROM stock_sale_forecast \
                                 WHERE (period_id = %s) AND (warehouse_id = %s)", (f.period_id.id, f.warehouse_id.id))
                 products_id1 = [x for x, in cr.fetchall()]
             else:
-                categ_ids = f.product_categ_id.id and [f.product_categ_id.id] or []
-                prod_categ_ids = prod_categ_obj.search(cr,uid,[('parent_id','child_of',categ_ids)])
-                products_id1 = product_obj.search(cr,uid,[('categ_id','in',prod_categ_ids)])
+                if f.product_categ_id:
+                    categ_ids = [f.product_categ_id.id]
+                    prod_categ_ids = prod_categ_obj.search(cr,uid,[('parent_id','child_of',categ_ids)])
+                    products_id1 = product_obj.search(cr,uid,[('categ_id','in',prod_categ_ids)])
             if len(products_id1)==0:
-                raise osv.except_osv(_('Error!'), _('No forecasts for selected period or no products available in selected category !'))
+                raise osv.except_osv(_('Error!'), _('No forecasts for selected period or no products available in selected category!'))
 
             for p in product_obj.browse(cr, uid, products_id1,context=context):
                 if len(planning_obj.search(cr, uid, [('product_id','=',p.id),
