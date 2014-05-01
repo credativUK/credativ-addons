@@ -101,6 +101,7 @@ class stock_sale_forecast_createlines(osv.osv_memory):
             "view_mode": 'tree,form',
             'res_model': 'stock.sale.forecast',
             'type': 'ir.actions.act_window',
+            'name': 'Sales Forecast',
         }
 
 stock_sale_forecast_createlines()

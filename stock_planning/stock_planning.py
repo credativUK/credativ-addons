@@ -194,7 +194,10 @@ class stock_sale_forecast(osv.osv):
             coeff_def2uom = 1
             if (product_uom != product.uom_id.id):
                 coeff_def2uom, round_value = self._from_default_uom_factor(cr, uid, product_id, product_uom, {})
-            qty = rounding(coeff_def2uom * product_amt/(product.product_tmpl_id.list_price), round_value)
+            try:
+                qty = rounding(coeff_def2uom * product_amt/(product.product_tmpl_id.list_price), round_value)
+            except ZeroDivisionError as e:
+                raise osv.except_osv(_('Zero Division Error!'), _('Product List price(Sale price) cannot be zero'))
         res = {'value': {'product_qty': qty}}
         return res
 
@@ -479,10 +482,10 @@ class stock_planning(osv.osv):
                 help = 'Quantity of all confirmed outgoing moves in calculated Period.'),
         'incoming_left': fields.float('Incoming Left', readonly=True,  \
                 help = 'Quantity left to Planned incoming quantity. This is calculated difference between Planned In and Confirmed In. ' \
-                        'For current period Already In is also calculated. This value is used to create procurement for lacking quantity.'),
+                        'For current period Completed Incoming is also calculated. This value is used to create procurement for lacking quantity.'),
         'outgoing_left': fields.float('Expected Out', readonly=True, \
-                help = 'Quantity expected to go out in selected period besides Confirmed Out. As a difference between Planned Out and Already Out. ' \
-                        'For current period Already Out is also calculated'),
+                help = 'Quantity expected to go out in selected period besides Confirmed Out. As a difference between Planned Out and Completed Outgoing. ' \
+                        'For current period Completed Outgoing is also calculated'),
         'to_procure': fields.float(string='Planned In', required=True, \
                 help = 'Enter quantity which (by your plan) should come in. Change this value and observe Stock simulation. ' \
                         'This value should be equal or greater than Confirmed In.'),
@@ -495,7 +498,7 @@ class stock_planning(osv.osv):
                             help= 'Planned Out in periods before calculated. '\
                                     'Between start date of current period and one day before start of calculated period.'),
         'incoming_before': fields.float('Incoming Before', readonly = True, \
-                            help= 'Confirmed incoming in periods before calculated (Including Already In). '\
+                            help= 'Confirmed incoming in periods before calculated (Including Completed Incoming). '\
                                     'Between start date of current period and one day before start of calculated period.'),
         'stock_start': fields.float('Initial Stock', readonly=True, \
                             help= 'Stock quantity one day before current period.'),
@@ -650,7 +653,7 @@ class stock_planning(osv.osv):
                                         \n Warehouse Forecast: %s \
                                         \n Initial Stock: %s \
                                         \n Planned Out: %s    Planned In: %s \
-                                        \n Already Out: %s    Already In: %s \
+                                        \n Completed Outgoing: %s    Completed Incoming: %s \
                                         \n Confirmed Out: %s    Confirmed In: %s \
                                         \n Planned Out Before: %s    Confirmed In Before: %s \
                                         \n Expected Out: %s    Incoming Left: %s \
@@ -693,7 +696,7 @@ class stock_planning(osv.osv):
                                     \n Warehouse Forecast: %s \
                                     \n Initial Stock: %s \
                                     \n Planned Out: %s  Planned In: %s \
-                                    \n Already Out: %s  Already In: %s \
+                                    \n Completed Outgoing: %s  Completed Incoming: %s \
                                     \n Confirmed Out: %s   Confirmed In: %s \
                                     \n Planned Out Before: %s   Confirmed In Before: %s \
                                     \n Expected Out: %s   Incoming Left: %s \
