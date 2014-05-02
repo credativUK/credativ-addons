@@ -134,6 +134,7 @@ class stock_planning_createlines(osv.osv_memory):
             "view_mode": 'tree,form',
             'res_model': 'stock.planning',
             'type': 'ir.actions.act_window',
+            'name': 'Stock Planning Lines',
         }
 
 stock_planning_createlines()

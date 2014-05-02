@@ -108,6 +108,7 @@ class stock_period_createlines(osv.osv_memory):
             "view_mode": 'tree,form',
             'res_model': 'stock.period',
             'type': 'ir.actions.act_window',
+            'name': 'Stock Periods',
         }
 
 stock_period_createlines()
