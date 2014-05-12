@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+        <record model="ir.ui.view" id="view_account_tax_invoice_tax_inherit">
+            <field name="name">account.tax.invoice.tax</field>
+            <field name="model">account.tax</field>
+            <field name="inherit_id" ref="account.view_tax_form" />
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <data>
+                    <xpath expr="//field[@name='price_include']" position="after">
+                            <field name="enable_invoice_entry"/>
+                    </xpath>
+                </data>
+            </field>
+        </record>
+    </data>
+</openerp>
