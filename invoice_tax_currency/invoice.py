@@ -76,7 +76,7 @@ class account_tax(osv.osv):
     _inherit = 'account.tax'
     
     _columns = {
-        'enable_invoice_entry': fields.boolean('Enable invoice currency', help='Force accounting entries to use invoice currency for Tax reporting')
+        'enable_invoice_entry': fields.boolean('Use Currency Amount', help='Check if you wish this tax to be calculated using currency amount instead of amounting company currency.'),
         }
 
 account_tax()
