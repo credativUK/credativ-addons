@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="sale_order_line_tax_domain" model="ir.ui.view">
+            <field name="name">sale.order.line.tax.domain</field>
+            <field name="model">sale.order</field>
+            <field name="priority">20</field>
+            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='order_line']/tree//field[@name='tax_id']" position="replace">
+                    <field name="tax_id" widget="many2many_tags" domain="[('parent_id','=',False),('type_tax_use','&lt;&gt;','purchase'),('company_id','=',parent.company_id)]"/>
+                </xpath>
+                <xpath expr="//field[@name='order_line']/form//field[@name='tax_id']" position="replace">
+                    <field name="tax_id" widget="many2many_tags" domain="[('parent_id','=',False),('type_tax_use','&lt;&gt;','purchase'),('company_id','=',parent.company_id)]"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</openerp>
+   <!--//form/notebook/page[@string='Order Lines']/tree/field[@name='tax_id']-->
+   <!--//field[@name='order_line']/tree//field[@name='price_unit']-->
