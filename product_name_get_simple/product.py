@@ -49,3 +49,5 @@ class Product(osv.Model):
                     for record in self.read(cr, uid, ids, ['default_code', 'name'], context=context) ]
         else:
             return super(Product, self).name_get(cr, uid, ids, context=context)
+
+Product()
