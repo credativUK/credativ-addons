@@ -28,6 +28,11 @@
     "author" : "credativ Ltd",
     "website" : "http://credativ.co.uk",
     "category" : "",
-    "depends" : ["product"],
+    "depends" : ["product", "sale", "purchase"],
+    "update_xml": [
+        "product_view.xml",
+        "sale_view.xml",
+        "purchase_view.xml",
+    ],
     "auto_install": False,
 }
