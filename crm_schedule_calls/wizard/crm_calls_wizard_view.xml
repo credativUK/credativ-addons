@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+        <record model="ir.ui.view" id="crm_calls_wizard_view">
+            <field name="name">crm.calls.wizard.form</field>
+            <field name="model">crm.calls.wizard</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Schedule multiple calls">
+                    <separator string="Call Details" colspan="4"/>
+                    <field name="name"/>
+                    <field name="date" string="Planned Date"/>
+                    <newline/>
+                    <field name="categ_id" string="Type" widget="selection" domain="[('object_id.model', '=', 'crm.phonecall')]"/>
+                    <field name="user_id"/>
+                    <field name="section_id" widget="selection"/>
+                    <separator string="Notes" colspan="4"/>
+                    <field name="note" colspan="4" nolabel="1"/>
+                    <separator string="" colspan="4"/>
+                    <group colspan="4" col="3">
+                        <button name="action_cancel" string="_Cancel" icon="gtk-cancel" special="cancel" />
+                        <button name="action_schedule" type="object" string="Schedule calls" icon="gtk-ok"/>
+                    </group>
+                </form>
+            </field>
+        </record>
+
+        <record model="ir.actions.act_window" id="crm_calls_wizard_act">
+            <field name="name">Schedule Calls</field>
+            <field name="res_model">crm.calls.wizard</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="crm_calls_wizard_view"/>
+            <field name="target">new</field>
+        </record>
+
+        <record model="ir.values" id="crm_calls_wizard_value">
+            <field name="model_id" ref="crm.model_crm_lead" />
+            <field name="name">Schedule Calls</field>
+            <field name="key2">client_action_multi</field>
+            <field name="value" eval="'ir.actions.act_window,' + str(ref('crm_calls_wizard_act'))" />
+            <field name="key">action</field>
+            <field name="model">crm.lead</field>
+        </record>
+
+    </data>
+</openerp>
