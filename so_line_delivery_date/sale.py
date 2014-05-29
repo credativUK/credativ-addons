@@ -37,14 +37,47 @@ class sale_order(osv.osv):
                     continue
         return res
 
+    def write(self, cr, uid, ids, vals, context=None):
+        if context is None:
+            context = {}
+
+        res = super(sale_order, self).write(cr, uid, ids, vals, context=context)
+
+        id_list = isinstance(ids, list) and ids[:] or [ids]
+        self_browses = self.browse(cr, uid, ids, context=context)
+        for self_browse in self_browses:
+            if self_browse.requested_delivery_date and not self_browse.delivery_date_per_line:
+                line_pool = self.pool.get('sale.order.line')
+                lids = line_pool.search(cr, uid, [('order_id', '=', self_browse.id)], context=context)
+                if lids:
+                    line_pool.write(cr, uid, lids, {'requested_delivery_date' : self_browse.requested_delivery_date}, context=context)
+        return res
+
+
     _columns = { 
         'requested_delivery_dates': fields.function(_fnct_requested_delivery_dates, string='Requested Delivery Dates', type='bool', help="Do any lines have requested delivery dates set?", readonly=True),
+        'requested_delivery_date' : fields.date('Requested Delivery Date', select=True, help="Date on which customer has requested delivery."),
+        'delivery_date_per_line':fields.related('company_id', 'delivery_date_per_line', type='boolean', relation='res.company', string='Delivery dates per-line.'), 
     }
 
 sale_order()
 
 class sale_order_line(osv.osv):
     _inherit = 'sale.order.line'
+
+    def create(self, cr, uid, vals, context=None):
+        if context is None:
+            context = {}
+
+        com = vals.get('company_id', False)
+        if com:
+            com_pool = self.pool.get('res.company')
+            com_pool.browse(cr, uid, com, context=context)
+            if not com.delivery_date_per_line:
+                order_pool = self.pool.get('sale.order')
+                order = order_pool.browse(cr, uid, vals.get('order_id'), context=context)
+                vals.update({'requested_delivery_date' : order.requested_delivery_date})
+        return super(sale_order_line, self).create(cr, uid, vals, context=context)
 
     def onchange_delay(self, cr, uid, ids, delay, context=None):
         context = context or {}
@@ -127,9 +160,9 @@ class sale_order_line(osv.osv):
         'default_delivery_date_when_confirmed': fields.date('Default Delivery Date When Confirmed'),
         'default_delivery_date': fields.function(_fnct_default_delivery_date, string='Default Delivery Date', type='date', help="Date on which delivery is projected, assuming customer has not requested a specific date."),
     }
-    _defaults = {
-        'requested_delivery_date': False,
-    }
+    #_defaults = {
+    #    'requested_delivery_date': False,
+    #}
 
 sale_order_line()
 
