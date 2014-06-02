@@ -30,7 +30,7 @@
   <story>
     <para style="SMALL">[[repeatIn(objects,'payment')]]</para>
     <condPageBreak height="21cm"/>
-    <para style="SMALL">[[ setLang(payment.lang) ]]</para>
+    <para style="SMALL">[[ setLang(payment.partner_id.lang) ]]</para>
     <spacer length="30"/>
     <blockTable colWidths="286.0,224.0" style="Tableau2">
       <tr>
