@@ -28,6 +28,9 @@
         'sale',
         'sale_stock',
     ],
+    'data' : [
+        'security/sale_security.xml',
+    ],
     'category' : 'Sales Management',
     'description': '''
 Add functionality to set specific delivery dates on each sale order line.
@@ -37,6 +40,7 @@ Add functionality to set specific delivery dates on each sale order line.
     'demo_xml' : [],
     'update_xml' : [
         'sale_view.xml',
+        'res_config_view.xml',
     ],
     'installable': True
 }
