@@ -31,7 +31,7 @@ class account_invoice_line(osv.osv):
         company_currency = inv.company_id.currency_id
         #Change tax amount to invoice currency
         for vals in res:
-            vals['tax_amount'] = cur_obj.compute(cr, uid, company_currency.id,inv.currency_id.id, vals['tax_amount'], context={'date': inv.date_invoice})
+            vals['tax_amount'] = cur_obj.compute(cr, uid, company_currency.id,inv.currency_id.id, vals.get('tax_amount', 0), context={'date': inv.date_invoice})
         return res
 
 account_invoice_line()
