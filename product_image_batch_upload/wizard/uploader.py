@@ -61,7 +61,7 @@ class product_image_uploader(osv.TransientModel):
     # Apply images in uploaded zipfile to products.
     def upload(self, cr, uid, ids, context=None):
         self_browse = self.browse(cr, uid, ids[0], context=context)
-        zip_str = StringIO(b64decode(self_browse.zipfile))
+        zip_str = StringIO.StringIO(b64decode(self_browse.zipfile))
         zf = ZipFile(zip_str, 'a')
 
         id_map = self._build_id_map(cr, uid, zf.namelist(), context=context)
