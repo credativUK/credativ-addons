@@ -51,11 +51,22 @@ class product_image_uploader(osv.TransientModel):
     # Writes images stored in zipfile to objects specified in id_map
     def _write_images(self, cr, uid, id_map, zipfile, context=None):
         prod_obj = self.pool.get('product.product')
+        corrupt = []
         for name in zipfile.namelist():
             ids = id_map.get(name)
             if ids:
                 img_b64enc = b64encode(zipfile.open(name).read())
-                prod_obj.write(cr, uid, ids, {'image' : img_b64enc}, context=context)
+                try:
+                    prod_obj.write(cr, uid, ids, {'image' : img_b64enc}, context=context)
+                except IOError as e:
+                    if e.message == 'cannot identify image file':
+                        corrupt.append(name)
+        if corrupt:
+            raise except_osv(
+                                _('Warning: Invalid image data.'),
+                                _('Unable to process the following files:\n' + '\n'.join(corrupt) + '\n\nAll other images were imported successfully.')
+                            )
+
 
 
     # Apply images in uploaded zipfile to products.
@@ -63,6 +74,12 @@ class product_image_uploader(osv.TransientModel):
         self_browse = self.browse(cr, uid, ids[0], context=context)
         zip_str = StringIO.StringIO(b64decode(self_browse.zipfile))
         zf = ZipFile(zip_str, 'a')
+
+        if not zf.namelist():
+            raise except_osv(
+                                _('Error: File is either empty or not a zip file.'),
+                                _('Please upload a valid zip file.')
+                            )
 
         id_map = self._build_id_map(cr, uid, zf.namelist(), context=context)
         self._write_images(cr, uid, id_map, zf, context=context)
