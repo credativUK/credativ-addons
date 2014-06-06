@@ -44,7 +44,7 @@ class sale_order(osv.osv):
         res = super(sale_order, self).write(cr, uid, ids, vals, context=context)
 
         id_list = isinstance(ids, list) and ids[:] or [ids]
-        self_browses = self.browse(cr, uid, ids, context=context)
+        self_browses = self.browse(cr, uid, id_list, context=context)
         for self_browse in self_browses:
             if self_browse.requested_delivery_date and not self_browse.delivery_date_per_line:
                 line_pool = self.pool.get('sale.order.line')
