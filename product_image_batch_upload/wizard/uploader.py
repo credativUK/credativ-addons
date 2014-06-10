@@ -1,6 +1,7 @@
 import os
 from osv import osv, fields
 from osv.osv import except_osv
+from openerp import sql_db
 from tools.translate import _
 
 try:
@@ -48,6 +49,7 @@ class product_image_uploader(osv.TransientModel):
         return id_map
 
 
+
     # Writes images stored in zipfile to objects specified in id_map
     def _write_images(self, cr, uid, id_map, zipfile, context=None):
         prod_obj = self.pool.get('product.product')
@@ -82,7 +84,16 @@ class product_image_uploader(osv.TransientModel):
                             )
 
         id_map = self._build_id_map(cr, uid, zf.namelist(), context=context)
-        self._write_images(cr, uid, id_map, zf, context=context)
+
+        # Create a new cursor that is safe to manually commit.
+        cr2 = sql_db.db_connect(cr.dbname).cursor()
+
+        try:
+            self._write_images(cr2, uid, id_map, zf, context=context)
+        except except_osv as e:
+            raise e
+        finally:
+            cr2.commit()
         return {}
 
 
