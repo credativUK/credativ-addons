@@ -72,8 +72,8 @@ class sale_order_line(osv.osv):
         com = vals.get('company_id', False)
         if com:
             com_pool = self.pool.get('res.company')
-            com_pool.browse(cr, uid, com, context=context)
-            if not com.delivery_date_per_line:
+            com_browse = com_pool.browse(cr, uid, com, context=context)
+            if not com_browse.delivery_date_per_line:
                 order_pool = self.pool.get('sale.order')
                 order = order_pool.browse(cr, uid, vals.get('order_id'), context=context)
                 vals.update({'requested_delivery_date' : order.requested_delivery_date})
