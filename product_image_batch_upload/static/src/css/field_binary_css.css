@@ -1,0 +1,13 @@
+.field_binary {
+    width      : 400px;
+}
+
+.oe_form_binary_file_save {
+    visibility : hidden;
+    display    : none;
+}
+
+.oe_form_binary_file_clear {
+    visibility : hidden;
+    display    : none;
+}
