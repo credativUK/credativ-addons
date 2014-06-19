@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record model="ir.ui.view" id="crm_case_form_view_leads_zr">
+            <field name="name">CRM - Leads Form</field>
+            <field name="model">crm.lead</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="crm.crm_case_form_view_leads"/>
+            <field name="arch" type="xml">
+                <field name="zip" position="after">
+                    <field name="region_group_names"/>
+                </field>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="crm_case_tree_view_leads_zr">
+            <field name="name">Leads</field>
+            <field name="model">crm.lead</field>
+            <field name="type">tree</field>
+            <field name="inherit_id" ref="crm.crm_case_tree_view_leads"/>
+            <field name="arch" type="xml">
+                <field name="phone" position="after">
+                    <field name="region_group_names"/>
+                </field>
+            </field>
+        </record>
+
+        <record id="view_crm_case_leads_filter_zr" model="ir.ui.view">
+            <field name="name">CRM - Leads Search</field>
+            <field name="model">crm.lead</field>
+            <field name="type">search</field>
+            <field name="inherit_id" ref="crm.view_crm_case_leads_filter"/>
+            <field name="arch" type="xml">
+                <xpath expr="//newline" position="before">
+                    <field filter_domain="['|', ('region_group_id_select', '=', self), ('partner_address_id.region_group_id_select', '=', self)]" name="region_group_id_select"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="crm_case_form_view_oppor_zr">
+            <field name="name">Opportunities</field>
+            <field name="model">crm.lead</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="crm.crm_case_form_view_oppor"/>
+            <field name="arch" type="xml">
+                <field name="zip" position="after">
+                    <field name="region_group_names"/>
+                </field>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="crm_case_tree_view_oppor_zr">
+            <field name="name">Opportunities Tree</field>
+            <field name="model">crm.lead</field>
+            <field name="type">tree</field>
+            <field name="inherit_id" ref="crm.crm_case_tree_view_oppor"/>
+            <field name="arch" type="xml">
+                <field name="country_id" position="after">
+                    <field name="region_group_names"/>
+                </field>
+            </field>
+        </record>
+
+        <record id="view_crm_case_opportunities_filter_zr" model="ir.ui.view">
+            <field name="name">CRM - Opportunities Search</field>
+            <field name="model">crm.lead</field>
+            <field name="type">search</field>
+            <field name="inherit_id" ref="crm.view_crm_case_opportunities_filter"/>
+            <field name="arch" type="xml">
+                <xpath expr="//newline" position="before">
+                    <field filter_domain="['|', ('region_group_id_select', '=', self), ('partner_address_id.region_group_id_select', '=', self)]" name="region_group_id_select"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>

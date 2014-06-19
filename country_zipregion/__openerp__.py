@@ -21,13 +21,14 @@
 ##############################################################################
 {
     'name' : 'Zip Region',
-    'version' : '1.0.0.0',
+    'version' : '1.1.0.0',
     'author' : 'credativ Ltd',
     'website' : 'http://credativ.co.uk',
     'depends' : [
         'base',
         'stock',
         'sale',
+        'crm',
     ],
     'category' : 'Custom Modules',
     'description': '''
@@ -43,6 +44,7 @@ A new way of grouping addresses by their country and Zip code using RegEx.
         'res_partner_view.xml',
         'sale_view.xml',
         'stock_view.xml',
+        'crm_view.xml',
     ],
     'active': False,
     'installable': True
