@@ -18,4 +18,27 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-import product
+{
+    "name": "Conscise product description",
+    "description":
+        """
+        Changes how some product descriptions are displayed:
+          - kanban view displays only the name
+          - sale order line product to just show code, description just the name
+        """,
+    "version": "1.0",
+    "author" : "credativ Ltd",
+    "website" : "http://credativ.co.uk",
+    "category" : "",
+    "depends" : [
+        "sale",
+        "purchase",
+        "product_name_get_simple",
+        ],
+    "data" : [
+        "product_view.xml",
+        "sale_view.xml",
+        "purchase_view.xml",
+        ],
+    "auto_install": False,
+}

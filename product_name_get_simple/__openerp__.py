@@ -19,7 +19,7 @@
 #
 ##############################################################################
 {
-    "name": "Conscise product description",
+    "name": "Product name/description split",
     "description":
         """
         Makes it possible to show just the product code or just the product name on a view.
@@ -28,11 +28,6 @@
     "author" : "credativ Ltd",
     "website" : "http://credativ.co.uk",
     "category" : "",
-    "depends" : ["product", "sale", "purchase"],
-    "update_xml": [
-        "product_view.xml",
-        "sale_view.xml",
-        "purchase_view.xml",
-    ],
+    "depends" : ["product"],
     "auto_install": False,
 }
