@@ -31,18 +31,18 @@ class crm_lead(osv.osv):
         for arg in args:
             if arg[0] in ('region_group_id_select', 'region_group_ids'):
                 if arg[1] == '=' and arg[2] == False:
-                    where = "IS NULL"
+                    where = "zrg.id IS NULL"
                 elif arg[1] == '!=' and arg[2] == False:
-                    where = "IS NOT NULL"
+                    where = "zrg.id IS NOT NULL"
                 else:
                     where = "zrg.id = %s" % (arg[2],)
                 
                 cr.execute("""SELECT crm.id FROM crm_lead crm
                     LEFT OUTER JOIN res_partner_address rpa ON rpa.id = crm.partner_address_id
-                    INNER JOIN res_zip_region zr ON (zr.country_id = crm.country_id AND COALESCE(crm.zip, '') ~* COALESCE(zr.zip_regex, ''))
+                    LEFT OUTER JOIN res_zip_region zr ON (zr.country_id = crm.country_id AND COALESCE(crm.zip, '') ~* COALESCE(zr.zip_regex, ''))
                                                  OR (zr.country_id = rpa.country_id AND COALESCE(rpa.zip, '') ~* COALESCE(zr.zip_regex, ''))
-                    INNER JOIN res_zip_region_rel zrr ON zrr.region_id = zr.id
-                    INNER JOIN res_zip_region_group zrg ON zrr.region_group_id = zrg.id
+                    LEFT OUTER JOIN res_zip_region_rel zrr ON zrr.region_id = zr.id
+                    LEFT OUTER JOIN res_zip_region_group zrg ON zrr.region_group_id = zrg.id
                     WHERE %s GROUP BY crm.id""" % (where,))
                 ids = map(lambda x:x[0], cr.fetchall())
                 if ids: newargs.append(('id', 'in', ids))
