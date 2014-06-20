@@ -43,12 +43,13 @@ class CrmLead(osv.osv):
             WHERE cl1.id IN (%s);""" % (",".join(str(id) for id in ids)))
 
         for lead_id, phonecall_id, phonecall_date, phonecall_days in cr.fetchall():
+            res[lead_id] = {}
             if 'last_phonecall_id' in field_names:
-                res[res[lead]]['last_phonecall_id'] = phonecall_id
+                res[lead_id]['last_phonecall_id'] = phonecall_id
             if 'date_last_phonecall' in field_names:
-                res[res[lead]]['date_last_phonecall'] = phonecall_date
+                res[lead_id]['date_last_phonecall'] = phonecall_date
             if 'days_last_phonecall' in field_names:
-                res[res[lead]]['days_last_phonecall'] = phonecall_days
+                res[lead_id]['days_last_phonecall'] = phonecall_days
         return res
 
     def _date_last_search(self, cr, uid, obj, name, args, context):
