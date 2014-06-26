@@ -101,7 +101,7 @@ class StockOverviewReport(osv.osv_memory):
                 'search_view_id': search_id,
                 'type': 'ir.actions.act_window',
                 'nodestroy':True,
-                'context': '{"search_default_has_stock": True}',
+                'context': '{"search_default_has_stock": True, "product_display_format": "code"}',
             }
         return res
 
