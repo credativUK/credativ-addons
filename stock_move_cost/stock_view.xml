@@ -22,7 +22,7 @@
             <field name="inherit_id" ref="stock.view_inventory_form"/>
             <field name="arch" type="xml">
                 <xpath expr="/form/sheet/notebook/page[@string='General Information']/field[@name='inventory_line_id']/tree/field[@name='product_uom']" position="after">
-                    <field name="net_cost"/>
+                    <field name="financial_impact"/>
                 </xpath>
             </field>
         </record>

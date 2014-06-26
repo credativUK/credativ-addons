@@ -8,8 +8,8 @@ class stock_move(osv.osv):
 
 
     _columns = {
-            'product_unit_cost' : fields.float('Unit Cost', help="The product's unit cost at the time of this move's creation.", readonly=True),
-            'inventory_line_id' : fields.many2one('stock.inventory.line', 'Inventory Line'),
+            'product_unit_cost' : fields.float('Unit Cost', help='The product\'s unit cost at the time of this move\'s creation.', readonly=True),
+            'inventory_line_id' : fields.many2one('stock.inventory.line', 'Inventory Line', help='The Stock Inventory Line from which this move was generated.'),
     }
 
 
@@ -86,7 +86,7 @@ class stock_inventory_line(osv.osv):
     _inherit = 'stock.inventory.line'
 
 
-    def _calc_net_cost(self, cr, uid, ids, field_name, arg, context=None):
+    def _calc_financial_impact(self, cr, uid, ids, field_name, arg, context=None):
         res = {}
         ids = isinstance(ids, list) and ids or [ids]
         for id in ids:
@@ -110,9 +110,9 @@ class stock_inventory_line(osv.osv):
                 # this move is to or away from the location specified
                 # on the inventory line.
                 if line_loc == dst:
-                    total += net_prc
-                elif line_loc == src:
                     total -= net_prc
+                elif line_loc == src:
+                    total += net_prc
 
             res[id] = total
         return res
@@ -120,7 +120,7 @@ class stock_inventory_line(osv.osv):
 
 
     _columns = {
-            'net_cost' : fields.function(_calc_net_cost, type='float', string='Net Cost'),
+            'financial_impact' : fields.function(_calc_financial_impact, type='float', string='Financial Impact', help='Change in total value of stock.'),
     }
 
 
