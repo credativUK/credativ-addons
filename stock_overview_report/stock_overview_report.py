@@ -73,7 +73,7 @@ class StockOverviewReport(osv.osv_memory):
                 for warehouse_id in warehouse_obj.search(cr, uid, [('company_id', '=', company_id),], context=context):
                     ctx = context.copy()
                     ctx.update({'shop': False, 'warehouse': warehouse_id, 'location': False,
-                                'to_date': wizard.date and wizard.date.strftime(DEFAULT_SERVER_DATETIME_FORMAT) or False})
+                                'to_date': wizard.date and or False})
                     product_ids = product_obj.search(cr, uid, [], context=context)
                     for product in product_obj.read(cr, uid, product_ids, self._get_report_fields(), context=ctx):
                         data = self._prepare_data_line(cr, uid, product, {
@@ -93,7 +93,7 @@ class StockOverviewReport(osv.osv_memory):
 
             res = {
                 'domain': "[('wizard_id','=',%d)]" % (wizard.id,),
-                'name': _('Stock Overview Report for %s') % ((wizard.date or datetime.now()).strftime(DEFAULT_SERVER_DATETIME_FORMAT),),
+                'name': _('Stock Overview Report for %s') % ((wizard.date or datetime.now().strftime(DEFAULT_SERVER_DATETIME_FORMAT)),),
                 'view_type': 'form',
                 'view_mode': 'tree',
                 'res_model': 'stock.overview.report.line',
