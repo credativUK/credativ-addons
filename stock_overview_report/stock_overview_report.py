@@ -38,7 +38,7 @@ class StockOverviewReport(osv.osv_memory):
      }
 
     def _get_report_fields(self):
-        return ['uom_id', 'qty_available', 'virtual_available', 'incoming_qty', 'outgoing_qty']
+        return ['uom_id', 'qty_available', 'virtual_available', 'incoming_qty', 'outgoing_qty', 'categ_id']
 
     def _prepare_data_line(self, cr, uid, data, default=None):
         if default is None:
@@ -48,6 +48,7 @@ class StockOverviewReport(osv.osv_memory):
         res.update({
                 'product_id': data['id'],
                 'uom_id': data.get('uom_id', [None,])[0],
+                'categ_id': data.get('categ_id', [None,])[0],
                 'qty_available': data.get('qty_available'),
                 'virtual_available': data.get('virtual_available'),
                 'incoming_qty': data.get('incoming_qty'),
@@ -100,8 +101,9 @@ class StockOverviewReport(osv.osv_memory):
                 'views': [(view_id, 'tree'),],
                 'search_view_id': search_id,
                 'type': 'ir.actions.act_window',
-                'nodestroy':True,
-                'context': '{"search_default_has_stock": True, "product_display_format": "code"}',
+                'nodestroy': True,
+                'limit': 100000,
+                'context': '{"search_default_has_stock": True, "product_display_format": "code", "search_default_group_company_id": True, "search_default_group_category_id": True, "search_default_group_warehouse_id": True}',
             }
         return res
 
@@ -115,7 +117,7 @@ class StockOverviewReportLine(osv.osv_memory):
     _columns = {
         'wizard_id': fields.many2one('stock.overview.report', 'Stock Overview Report'),
         'product_id': fields.many2one('product.product', 'Product'),
-        'categ_id': fields.related('product_id', 'categ_id', type='many2one', relation='product.category', string='Product Category', readonly=True),
+        'categ_id': fields.many2one('product.category', string='Primary Category', readonly=True),
         'categ_ids': fields.related('product_id', 'categ_ids', type='many2many', relation='product.category', string='Product Categories', readonly=True),
         'company_id': fields.many2one('res.company', 'Company'),
         'warehouse_id': fields.many2one('stock.warehouse', 'Warehouse'),
