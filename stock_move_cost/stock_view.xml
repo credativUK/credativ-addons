@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="stock_move_cost_view" model="ir.ui.view">
+            <field name="name">stock.move.cost.view</field>
+            <field name="model">stock.move</field>
+            <field name="inherit_id" ref="stock.view_move_form"/>
+            <field name="arch" type="xml">
+                <field name="product_id" position="after">
+                    <field name="product_unit_cost"/>
+                </field>
+                <field name="product_id" position="attributes">
+                    <attribute name="onchange">onchange_product_id(product_id, location_id, location_dest_id, uom_id=product_uom_id, False)"</attribute>
+                </field>
+            </field>
+        </record>
+
+        <record id="stock_move_cost_inventory_view" model="ir.ui.view">
+            <field name="name">stock.move.cost.inventory.view</field>
+            <field name="model">stock.inventory</field>
+            <field name="inherit_id" ref="stock.view_inventory_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="/form/sheet/notebook/page[@string='General Information']/field[@name='inventory_line_id']/tree/field[@name='product_uom']" position="after">
+                    <field name="financial_impact"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
