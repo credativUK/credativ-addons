@@ -33,7 +33,7 @@ class stock_move(osv.osv):
         return values
 
 
-    def onchange_product_id(self, uom_id=False, *args, **kwargs):
+    def onchange_product_id(self, *args, **kwargs):
         #super_kwargs = **kwargs
         res = super(stock_move, self).onchange_product_id(*args, **kwargs)
         if not res.get('value'):
