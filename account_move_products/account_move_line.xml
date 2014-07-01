@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="account_move_product_form_view_inherit" model="ir.ui.view">
+            <field name="name">account.move.product.form.inherit</field>
+            <field name="model">account.move</field>
+            <field name="inherit_id" ref="account.view_move_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="/form//field[@name='line_id']/form//field[@name='quantity']" position="before">
+                    <field name="product_id"/>
+                </xpath>
+                <xpath expr="/form//field[@name='line_id']/tree//field[@name='name']" position="after">
+                    <field name="product_id"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="account_move_line_product_form_view" model="ir.ui.view">
+            <field name="name">account.move.line.product.form</field>
+            <field name="model">account.move.line</field>
+            <field name="inherit_id" ref="account.view_move_line_form"/>
+            <field name="arch" type="xml">
+                <field name="quantity" position="before">
+                    <field name="product_id"/>
+                </field>
+            </field>
+        </record>
+
+        <record id="account_move_line_product_tree_view" model="ir.ui.view">
+            <field name="name">account.move.line.product.tree</field>
+            <field name="model">account.move.line</field>
+            <field name="inherit_id" ref="account.view_move_line_tree"/>
+            <field name="arch" type="xml">
+                <field name="name" position="after">
+                    <field name="product_id"/>
+                </field>
+            </field>
+        </record>
+
+        <record id="account_move_line_product_filter" model="ir.ui.view">
+            <field name="name">account.move.line.product.filter</field>
+            <field name="model">account.move.line</field>
+            <field name="inherit_id" ref="account.view_account_move_line_filter"/>
+            <field name="arch" type="xml">
+                <field name="partner_id" position="after">
+                    <field name="product_id"/>
+                </field>
+                <filter string="Partner" position="after">
+                    <filter string="Product" icon="terp-product" domain="[]" context="{'group_by' : 'product_id'}"/>
+                </filter>
+            </field>
+        </record>
+
+    </data>
+</openerp>
