@@ -37,8 +37,7 @@
                 </filter>
             </field>
         </record>
-        
-        
+
         <record id="account_move_product_tree_view" model="ir.ui.view">
             <field name="name">account.move.product.form</field>
             <field name="model">account.move</field>
