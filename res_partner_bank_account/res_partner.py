@@ -59,6 +59,19 @@ class account_invoice(orm.Model):
             'payment_detail': fields.text('Additional payment details')
     }
 
+    def create(self, cr, uid, vals, context=None):
+        partner_id = vals.get('partner_id')
+        if partner_id:
+            partner = self.pool.get('res.partner').read(cr, uid, partner_id, ['property_payment_account','company_id'])
+            payment_detail = ''
+            if partner['property_payment_account']:
+                payment_detail = self.pool.get('res.partner.bank').read(cr, uid, partner['property_payment_account'][0], [])['payment_detail']
+            vals.update({
+                    'partner_bank_id': partner['property_payment_account'][0],
+                    'payment_detail': payment_detail,
+                })
+        return super(account_invoice, self).create(cr, uid, vals, context=context)
+
     def onchange_partner_id(self, cr, uid, ids, type, partner_id, date_invoice=False, payment_term=False, partner_bank_id=False, company_id=False):
         res = super(account_invoice, self).onchange_partner_id(cr, uid, ids, type, partner_id)
         partner = self.pool.get('res.partner').read(cr, uid, partner_id, ['property_payment_account','company_id'])
