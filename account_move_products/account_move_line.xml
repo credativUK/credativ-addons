@@ -2,8 +2,8 @@
 <openerp>
     <data>
 
-        <record id="account_move_product_form_view" model="ir.ui.view">
-            <field name="name">account.move.product.form</field>
+        <record id="account_move_line_product_form_view" model="ir.ui.view">
+            <field name="name">account.move.line.product.form</field>
             <field name="model">account.move.line</field>
             <field name="inherit_id" ref="account.view_move_line_form"/>
             <field name="arch" type="xml">
@@ -13,8 +13,8 @@
             </field>
         </record>
 
-        <record id="account_move_product_tree_view" model="ir.ui.view">
-            <field name="name">account.move.product.tree</field>
+        <record id="account_move_line_product_tree_view" model="ir.ui.view">
+            <field name="name">account.move.line.product.tree</field>
             <field name="model">account.move.line</field>
             <field name="inherit_id" ref="account.view_move_line_tree"/>
             <field name="arch" type="xml">
@@ -24,8 +24,8 @@
             </field>
         </record>
 
-        <record id="account_move_product_filter" model="ir.ui.view">
-            <field name="name">account.move.product.filter</field>
+        <record id="account_move_line_product_filter" model="ir.ui.view">
+            <field name="name">account.move.line.product.filter</field>
             <field name="model">account.move.line</field>
             <field name="inherit_id" ref="account.view_account_move_line_filter"/>
             <field name="arch" type="xml">
@@ -35,6 +35,18 @@
                 <filter string="Partner" position="after">
                     <filter string="Product" icon="terp-product" domain="[]" context="{'group_by' : 'product_id'}"/>
                 </filter>
+            </field>
+        </record>
+        
+        
+        <record id="account_move_product_tree_view" model="ir.ui.view">
+            <field name="name">account.move.product.form</field>
+            <field name="model">account.move</field>
+            <field name="inherit_id" ref="account.view_move_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//tree/field[@name='name']" position="after">
+                    <field name="product_id"/>
+                </xpath>
             </field>
         </record>
 
