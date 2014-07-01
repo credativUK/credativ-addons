@@ -33,7 +33,7 @@
 
         <menuitem id="menu_product_image_uploader_base"
                   name="Upload Images"
-                  parent="base.menu_product"
+                  parent="product.prod_config_main"
                   sequence="40"
                   action="act_product_open_image_uploader"/>
 
