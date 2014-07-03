@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="view_order_form_approval" model="ir.ui.view">
+            <field name="name">sale.order.form.approval</field>
+            <field name="model">sale.order</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="arch" type="xml">
+                <data>
+                    <button name="action_cancel_draft" position="replace">
+                        <button name="action_cancel_draft" states="cancel,pending" string="Set to Draft" type="object" icon="gtk-convert"/>
+                    </button>
+                    <button name="cancel" position="replace">
+                        <button name="cancel" states="draft,pending" string="Cancel Order" icon="gtk-cancel"/>
+                    </button>
+                    <button name="order_confirm" position="replace">
+                        <button name="order_pending" states="draft" string="Confirm Order" icon="gtk-apply"/>
+                        <button name="order_confirm" states="draft,pending" string="Approve Order" icon="gtk-apply" groups="base.group_sale_manager"/>
+                    </button>
+                </data>
+            </field>
+        </record>
+
+        <record id="view_sales_order_filter_approval" model="ir.ui.view">
+            <field name="name">sale.order.list.select.approval</field>
+            <field name="model">sale.order</field>
+            <field name="type">search</field>
+            <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+            <field name="arch" type="xml">
+                <xpath expr="//filter[@string='Quotations']" position="after">
+                    <filter icon="terp-document-new" string="Pending Approval" domain="[('state','=','pending')]" help="Sales Order that are pending approval"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
