@@ -105,9 +105,9 @@ class stock_inventory_line(osv.osv):
                 # this move is to or away from the location specified
                 # on the inventory line.
                 if line_loc == dst:
-                    total -= net_prc
-                elif line_loc == src:
                     total += net_prc
+                elif line_loc == src:
+                    total -= net_prc
 
             res[id] = total
         return res
