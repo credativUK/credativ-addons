@@ -47,6 +47,7 @@ class res_partner(orm.Model):
 
     def create(self, cr, uid, vals, context=None):
         if not 'property_payment_account' in vals and vals.get('company_id'):
+            property_obj = self.pool.get('ir.property')
             acc = property_obj.get(cr, uid, 'property_payment_account', 'res.partner', context={'force_company': vals.get('company_id')})
             if acc:
                 vals.update({'property_payment_account': acc.id})
