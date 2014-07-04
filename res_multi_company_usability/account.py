@@ -124,7 +124,7 @@ class AccountTaxCode(osv.osv):
             return []
         if isinstance(ids, (int, long)):
             ids = [ids]
-        reads = self.read(cr, uid, ids, ['name','code','company_id'], context, load='_classic_write')
+        reads = self.read(cr, uid, ids, ['name','code','company_id'], context)
         return [(x['id'], "%s (%s)" % ((x['code'] and (x['code'] + ' - ') or '') + x['name'], x['company_id'][1])) \
                 for x in reads]
 
