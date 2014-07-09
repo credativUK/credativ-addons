@@ -51,7 +51,7 @@ class stock_return_picking(osv.osv_memory):
         for move in moves:
             mid = move.get('move_id')
             if mid:
-                dst = move_obj.read(cr, uid, mid, ['location_dest_id'], context=context)['location_dest_id']
+                dst = move_obj.read(cr, uid, mid, ['location_id'], context=context)['location_id']
                 move.update({'location_dest_id' : dst and dst[0] or False})
             new_moves.append(move)
         res.update({'product_return_moves' : new_moves})
