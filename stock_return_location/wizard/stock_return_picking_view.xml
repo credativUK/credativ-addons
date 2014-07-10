@@ -9,7 +9,7 @@
             <field name="inherit_id" ref="stock.stock_return_memory_tree_in"/>
             <field name="arch" type="xml">
                 <field name="quantity" position="after">
-                    <field name="location_dest_id"/>
+                    <field name="location_dest_id" domain="[('usage','!=','view')]"/>
                 </field>
             </field>
         </record>
@@ -20,7 +20,7 @@
             <field name="inherit_id" ref="stock.stock_return_memory_form_in"/>
             <field name="arch" type="xml">
                 <field name="quantity" position="after">
-                    <field name="location_dest_id"/>
+                    <field name="location_dest_id" domain="[('usage','!=','view')]"/>
                 </field>
             </field>
         </record>
