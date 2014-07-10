@@ -36,7 +36,7 @@ class sale_order(osv.osv):
     _inherit='sale.order'
     
     _columns = {
-        'categ_id': fields.many2one('sale.order.category','Category', required=True, change_default=True,help="Select category for the current sale order"),
+        'categ_id': fields.many2one('sale.order.category','Category', change_default=True,help="Select category for the current sale order"),
     }
 
 sale_order()
