@@ -35,6 +35,19 @@ class purchase_order(osv.osv):
         order =  super(purchase_order, self).create(cr, uid, vals, context=context)
         return order
 
+    def copy(self, cr, uid, id, default=None, context=None):
+        """ base method override to change PO name"""
+
+        #Can't set name in default as it been updated by sequence call in base method
+        copy_id = super(purchase_order,self).copy(cr,uid,id,default=default,context=context)
+        vals = {}
+        company = self.browse(cr,uid,id,context).company_id or False
+        prefix = company and company.purchase_prefix or ''
+        sequence = self.pool.get('ir.sequence').get(cr, uid, 'purchase.order') or '/'
+        vals['name'] = '%s%s' % (prefix, sequence)
+        self.write(cr,uid,copy_id,vals,context=context)
+        return copy_id
+
 purchase_order()
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
