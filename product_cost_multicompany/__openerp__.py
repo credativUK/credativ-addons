@@ -28,6 +28,8 @@
         'stock',
         'purchase',
         'account',
+        'procurement',
+        'product_variant_multi',
     ],
     'category' : 'Generic Modules/Product',
     'description': '''

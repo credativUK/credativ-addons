@@ -56,6 +56,7 @@ class stock_move(osv.osv):
         return res
 
     def write(self, cr, uid, ids, values, context=None):
+        context = context or {}
         prod_id = values.get('product_id')
         uom = values.get('product_uom')
         ctx = context.copy()
@@ -74,10 +75,16 @@ class stock_move(osv.osv):
 
 
     def create(self, cr, uid, values, context=None):
+        context = context or {}
         prod_id = values.get('product_id' , False)
         uom = values.get('product_uom', False)
         ctx = context.copy()
-        company_id = values['company_id']
+        if 'company_id' in values:
+            company_id = values['company_id']
+        else:
+            location = self.pool.get('stock.location').browse(cr, uid, values['location_id'])
+            location_dest = self.pool.get('stock.location').browse(cr, uid, values['location_dest_id'])
+            company_id = location.company_id.id or location_dest.company_id.id
         ctx['company_id'] = company_id
         cost_val = self._get_product_cost(cr, uid, [], prod_id, uom, context=ctx)
         values.update(cost_val)

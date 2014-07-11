@@ -7,10 +7,12 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
         <record id="view_product_standard_price_form_mc" model="ir.ui.view">
             <field name="name">product.product.standard.price.form.mc</field>
             <field name="model">product.product</field>
-            <field name="inherit_id" ref="stock.view_product_standard_price_form" />
+            <!-- FIXME: Inherit from product_variant_multi since this module nukes most of the product view instead of inheriting nicely -->
+            <field name="inherit_id" ref="product_variant_multi.product_normal_variant_form_view" />
             <field name="arch" type="xml">
                 <xpath expr="//group[@name='procurement']//field[@name='cost_method']" position="replace" />
-                <xpath expr="//group[@name='procurement']//group[@name='cost_prices']" position="replace">
+                <xpath expr="//label[@string='Cost Price']/following-sibling::div" position="replace" />
+                <xpath expr="//label[@string='Cost Price']" position="replace">
                     <group name="cost_prices" colspan="2" col="2">
                         <field name="standard_price" invisible="1"/>
                         <field name="cost_method" colspan="2" on_change="onchange_cost_method(cost_method,standard_price_multi)"/>

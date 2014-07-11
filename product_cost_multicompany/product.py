@@ -76,8 +76,18 @@ class ProductProduct(osv.Model):
         'standard_price_multi': fields.one2many('product.price.multi', 'product_id', string='Multi Company Standard Prices')
     }
 
-    # Functions to override
-    #def price_get(self, cr, uid, ids, ptype='list_price', context=None):
+    def create(self, cr, uid, vals, context=None):
+        # Get the company from the user for create to avoid exception when writing to standard_price
+        context = context or {}
+        ctx = context.copy()
+        company_id = self.pool.get('res.users').browse(cr, uid, uid).company_id.id
+        ctx['company_id'] = company_id
+        for a in range(0, len(vals.get('standard_price_multi'))):
+            if vals['standard_price_multi'][a][2]['company_id'] == company_id:
+                vals['standard_price'] = vals['standard_price_multi'][a][2].get('standard_price', vals['standard_price'])
+                del vals['standard_price_multi'][a]
+                break
+        return super(ProductProduct, self).create(cr, uid, vals, context=ctx)
 
     def onchange_cost_method(self, cr, uid, ids, cost_method, standard_price_multi):
         # If we are becoming 'standard' we just change
@@ -235,7 +245,7 @@ class ProductPriceMulti(osv.Model):
     _order = 'product_id asc, company_id asc'
 
     _columns = {
-        "product_id" : fields.many2one('product.product', string='Product', required=True),
+        "product_id" : fields.many2one('product.product', string='Product', required=True, ondelete='cascade'),
         "company_id" : fields.many2one('res.company', string='Company', required=True),
         "currency_id" : fields.related('company_id', 'currency_id', type='many2one', relation='res.currency', string='Company Currency', readonly=True),
         "cost_method" : fields.related('product_id', 'cost_method', type='selection',

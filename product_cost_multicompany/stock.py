@@ -24,6 +24,7 @@ from openerp.tools.translate import _
 import openerp.addons.decimal_precision as dp
 from operator import itemgetter
 from itertools import groupby
+import netsvc
 
 class StockPicking(osv.Model):
     _inherit = 'stock.picking'
@@ -77,8 +78,9 @@ class StockPicking(osv.Model):
                 # Average price computation
                 if (pick.type == 'in') and (move.product_id.cost_method == 'average'):
                     assert move.company_id.id == pick.company_id.id, "Move and picking company IDs do not match. Account moves cannot be created."
-                    assert move.location_dest_id.company_id.id, "Internal picking must be going to a location owned by a company."
-                    company = move.location_dest_id.company_id
+                    import ipdb; ipdb.set_trace()
+                    #assert move.location_dest_id.company_id.id, "Internal picking must be going to a location owned by a company."
+                    company = move.location_dest_id.company_id or move.company_id
                     loc_ids = location_obj.search(cr, uid,[('usage','=','internal'), ('company_id', '=', company.id)])
                     ctx = {'company_id': company.id, 'location': loc_ids}
                     product = product_obj.browse(cr, uid, move.product_id.id, context=ctx)
@@ -342,11 +344,12 @@ class StockMove(osv.Model):
 
     def _get_reference_accounting_values_for_valuation(self, cr, uid, move, context=None):
         res = super(StockMove, self)._get_reference_accounting_values_for_valuation(cr, uid, move, context=context)
+        default_uom = move.product_id.uom_id.id
+        company = move.location_id.company_id or move.location_dest_id.company_id or move.company_id
+        reference_currency_id = company.currency_id.id
         if not (move.product_id.cost_method == 'average' and move.price_unit):
             qty = self.pool.get('product.uom')._compute_qty(cr, uid, move.product_uom.id, move.product_qty, default_uom)
-            if context is None:
-                context = {}
-            product = self.pool.get('product.product').browse(cr, uid, move.product_id.id, context={'company_id': move.company_id.id})
+            product = self.pool.get('product.product').browse(cr, uid, move.product_id.id, context={'company_id': company.id})
             amount_unit = product.standard_price
             reference_amount = amount_unit * qty
             return reference_amount, reference_currency_id
@@ -361,7 +364,7 @@ class StockPartialPicking(osv.TransientModel):
             return {'cost': move.purchase_line_id.price_unit,
                     'currency': move.picking_id.purchase_id.pricelist_id.currency_id.id}
         # Otherwise take our standard_price from the company of the stock move (if transfer between companies, this will be the source company)
-        company = move.company_id
+        company = move.location_id.company_id or move.location_dest_id.company_id or move.company_id
         product = self.pool.get('product.product').browse(cr, uid, move.product_id.id, context={'company_id': company.id})
         return {'cost': product.standard_price, 'currency': company.currency_id.id}
 
