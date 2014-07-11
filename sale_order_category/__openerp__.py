@@ -34,5 +34,9 @@
     "update_xml" : [
         "sale_order_view.xml",
         ],
+    "data" : [
+        'security/sale_security.xml',
+        'security/ir.model.access.csv',
+        ],
     "auto_install": False,
 }
