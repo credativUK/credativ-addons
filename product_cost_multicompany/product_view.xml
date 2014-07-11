@@ -9,20 +9,22 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
             <field name="model">product.product</field>
             <field name="inherit_id" ref="stock.view_product_standard_price_form" />
             <field name="arch" type="xml">
-                <xpath expr="//label[@string='Cost Price']/following-sibling::div" position="replace" />
-                <xpath expr="//label[@string='Cost Price']" position="replace">
-                    <separator string="Multi Company Standard Prices" colspan="4"/>
-                    <field name="standard_price" invisible="1"/>
-                    <field name="cost_method" colspan="2" on_change="onchange_cost_method(cost_method,standard_price_multi)"/>
-                    <field name="standard_price_multi" colspan="4" nolabel="1">
-                        <tree editable="bottom">
-                            <field name="company_id"/>
-                            <field name="currency_id"/>
-                            <field name="cost_method" invisible="1"/>
-                            <field name="standard_price" attrs="{'readonly': [('cost_method', '=', 'average')]}"/>
-                            <button name="action_update_price" string="Update" type="object" icon="gtk-convert" attrs="{'invisible': [('cost_method', '!=', 'average')]}"/>
-                        </tree>
-                    </field>
+                <xpath expr="//group[@name='procurement']//field[@name='cost_method']" position="replace" />
+                <xpath expr="//group[@name='procurement']//group[@name='cost_prices']" position="replace">
+                    <group name="cost_prices" colspan="2" col="2">
+                        <field name="standard_price" invisible="1"/>
+                        <field name="cost_method" colspan="2" on_change="onchange_cost_method(cost_method,standard_price_multi)"/>
+                        <separator string="Multi Company Standard Prices" colspan="4"/>
+                        <field name="standard_price_multi" colspan="4" nolabel="1">
+                            <tree editable="bottom">
+                                <field name="company_id"/>
+                                <field name="currency_id"/>
+                                <field name="cost_method" invisible="1"/>
+                                <field name="standard_price" attrs="{'readonly': [('cost_method', '=', 'average')]}"/>
+                                <button name="action_update_price" string="Update" type="object" icon="gtk-convert" attrs="{'invisible': [('cost_method', '!=', 'average')]}"/>
+                            </tree>
+                        </field>
+                    </group>
                 </xpath>
             </field>
         </record>
