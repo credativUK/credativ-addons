@@ -65,4 +65,16 @@ class AccountAnalyticLine(osv.Model):
         res.update({'amount': result})
         return res
 
+class ResCurrency(osv.Model):
+    _inherit = 'res.currency'
+
+    def _get_conversion_rate(self, cr, uid, from_currency, to_currency, context=None):
+        # If the companies don't match, the base currencies may also not match.
+        # Change the from currency to the same company as the to currency by matching the currency names and company_id
+        if to_currency.company_id.id != from_currency.company_id.id:
+            new_from_currency_id = self.search(cr, uid, [('name', '=', from_currency.name), ('company_id', '=', to_currency.company_id.id)])
+            if new_from_currency_id:
+                from_currency = self.browse(cr, uid, new_from_currency_id)[0]
+        return super(ResCurrency, self)._get_conversion_rate(cr, uid, from_currency, to_currency, context=context)
+
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

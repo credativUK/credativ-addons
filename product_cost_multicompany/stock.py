@@ -78,7 +78,6 @@ class StockPicking(osv.Model):
                 # Average price computation
                 if (pick.type == 'in') and (move.product_id.cost_method == 'average'):
                     assert move.company_id.id == pick.company_id.id, "Move and picking company IDs do not match. Account moves cannot be created."
-                    import ipdb; ipdb.set_trace()
                     #assert move.location_dest_id.company_id.id, "Internal picking must be going to a location owned by a company."
                     company = move.location_dest_id.company_id or move.company_id
                     loc_ids = location_obj.search(cr, uid,[('usage','=','internal'), ('company_id', '=', company.id)])
@@ -124,8 +123,6 @@ class StockPicking(osv.Model):
                                  'price_currency_id': product_currency})
 
                         product_avail[product.id] += qty
-
-
 
             for move in too_few:
                 product_qty = move_product_qty[move.id]
@@ -424,5 +421,16 @@ class StockLocation(osv.Model):
                         amount = currency_obj.round(cr, uid, currency, amount)
                         result[loc_id][f] += amount
         return result
+
+class StockLocation(osv.Model):
+    _inherit = 'stock.location'
+
+    def picking_type_get(self, cr, uid, from_location, to_location, context=None):
+        # Use chained picking type if one available
+        if from_location.chained_picking_type:
+            res = from_location.chained_picking_type
+        else:
+            res = super(StockLocation, self).picking_type_get(cr, uid, from_location, to_location, context=context)
+        return res
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
