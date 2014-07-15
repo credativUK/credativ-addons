@@ -82,9 +82,9 @@ class ProductProduct(osv.Model):
         ctx = context.copy()
         company_id = self.pool.get('res.users').browse(cr, uid, uid).company_id.id
         ctx['company_id'] = company_id
-        for a in range(0, len(vals.get('standard_price_multi'))):
+        for a in range(0, len(vals.get('standard_price_multi', []))):
             if vals['standard_price_multi'][a][2]['company_id'] == company_id:
-                vals['standard_price'] = vals['standard_price_multi'][a][2].get('standard_price', vals['standard_price'])
+                vals['standard_price'] = vals['standard_price_multi'][a][2].get('standard_price', vals.get('standard_price', 0.0))
                 del vals['standard_price_multi'][a]
                 break
         return super(ProductProduct, self).create(cr, uid, vals, context=ctx)

@@ -76,10 +76,10 @@ class StockPicking(osv.Model):
                     too_many.append(move)
 
                 # Average price computation
-                if (pick.type == 'in') and (move.product_id.cost_method == 'average'):
+                if (pick.type == 'in') and (move.product_id.cost_method == 'average') and (move.location_dest_id.company_id):
                     assert move.company_id.id == pick.company_id.id, "Move and picking company IDs do not match. Account moves cannot be created."
-                    #assert move.location_dest_id.company_id.id, "Internal picking must be going to a location owned by a company."
-                    company = move.location_dest_id.company_id or move.company_id
+                    assert move.location_dest_id.company_id.id, "Internal picking must be going to a location owned by a company."
+                    company = move.location_dest_id.company_id
                     loc_ids = location_obj.search(cr, uid,[('usage','=','internal'), ('company_id', '=', company.id)])
                     ctx = {'company_id': company.id, 'location': loc_ids}
                     product = product_obj.browse(cr, uid, move.product_id.id, context=ctx)
