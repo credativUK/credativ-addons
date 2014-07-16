@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+        <record id="res_partner_payment_account" model="ir.ui.view">
+            <field name="name">res.partner.view.payment_account</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="account.view_partner_property_form" />
+            <field name="arch" type="xml">
+                <data>
+                    <field name="company_id" position="attributes">
+                        <attribute name="on_change">onchange_company_id(company_id)</attribute>
+                    </field>
+                    <field name="credit_limit" position="after">
+                        <field name="property_payment_account"/>
+                    </field>
+                </data>
+
+            </field>
+        </record>
+        <record id="res_partner_bank_details" model="ir.ui.view">
+            <field name="name">res.partner.bank.view.details</field>
+            <field name="model">res.partner.bank</field>
+            <field name="inherit_id" ref="base.view_partner_bank_form" />
+            <field name="arch" type="xml">
+                 <group name="owner" position="before">
+                      <field name="payment_detail"/>
+                 </group>
+            </field>
+        </record>
+        <record id="account_invoice_details" model="ir.ui.view">
+            <field name="name">account.invoice.view.details</field>
+            <field name="model">account.invoice</field>
+            <field name="inherit_id" ref="account.invoice_form" />
+            <field name="arch" type="xml">
+                 <field name="payment_ids" position="after">
+                      <div class="oe_clear">
+                            <label for="payment_detail"/>
+                      </div>
+                      <field name="payment_detail"/>
+                 </field>
+            </field>
+        </record>
+    </data>
+</openerp>
+
+

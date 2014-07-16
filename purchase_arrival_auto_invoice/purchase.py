@@ -42,9 +42,9 @@ class purchase_order(osv.osv):
         wiz_obj = self.pool.get('stock.invoice.onshipping')
         pick_obj = self.pool.get('stock.picking')
         for id in ids:
-            pick_ids = pick_obj.search(cr, uid, [('purchase_id','=',id)], context=None)
+            pick_ids = pick_obj.search(cr, uid, [('purchase_id','=',id)], context=context)
 
-            # Identify which of these picking aren't already invoiced.
+            # Identify pickings associated with this PO which require invoicing.
             pick_data = pick_obj.read(cr, uid, pick_ids, ['invoice_state'], context=context)
             pick_ids_2bi = [pd['id'] for pd in pick_data if pd['invoice_state'] == '2binvoiced']
 
@@ -57,13 +57,18 @@ class purchase_order(osv.osv):
                                  'active_model' : 'stock.picking',
                                })
 
-                # Get and use the values that the wizard would have used by default, and create the invoice.
-                wiz_defs = wiz_obj.default_get(cr, uid, ['journal_id','group','invoice_date'], context=context)
+                # Get and use the values that the wizard would have used by default,
+                # and create the invoice(s).
+                wiz_fields = ['journal_id','group','invoice_date']
+                wiz_defs = wiz_obj.default_get(cr, uid, wiz_fields, context=context)
                 inv_res = self._create_invoice(cr, uid, ids, wiz_defs, context=context)
-                inv_id = inv_res.get(pick_ids_2bi[0], False)
+                p2bi = pick_ids_2bi
+                inv_ids = [inv_res.get(p2bi[i], False) for i in range(len(p2bi))]
+                inv_ids = [iid for iid in inv_ids if iid]
 
-                # Send the signal to validate the newly-created invoice.
-                wf_service.trg_validate(uid, 'account.invoice', inv_id, 'invoice_open', cr)
+                # Send the signal to validate each newly-created invoice.
+                for inv_id in inv_ids:
+                    wf_service.trg_validate(uid, 'account.invoice', inv_id, 'invoice_open', cr)
 
         return ret
 

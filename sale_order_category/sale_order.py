@@ -1,9 +1,10 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution   
+#    OpenERP, Open Source Management Solution
 #    Copyright (C) 2014 credativ Ltd (<http://credativ.co.uk>).
 #    All Rights Reserved
+#    $Id$
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -20,22 +21,23 @@
 #
 ##############################################################################
 
-from osv import osv
+from openerp.osv import fields, osv
+
+
+class sale_order_category(osv.osv):
+    _name = "sale.order.category"
+    _description = "Sale Order Category"
+    _columns = {
+        'name': fields.char('Name', size=64, required=True, translate=True, select=True),
+    }
+
 
 class sale_order(osv.osv):
-    _inherit = "sale.order"
-
-    def onchange_shop_id(self, cr, uid, ids, shop_id, partner_id=None, context=None):
-        '''Change company_id on changing shop'''
-
-        res = super(sale_order,self).onchange_shop_id(cr, uid, ids, shop_id, partner_id, context=context)
-        v = res.get('value',{})
-        if shop_id:
-            shop = self.pool.get('sale.shop').browse(cr, uid, shop_id, context=context)
-            if shop.company_id:
-                v['company_id'] = shop.company_id.id
-        res['value'] = v
-        return res
+    _inherit='sale.order'
+    
+    _columns = {
+        'categ_id': fields.many2one('sale.order.category','Category', change_default=True,help="Select category for the current sale order"),
+    }
 
 sale_order()
 

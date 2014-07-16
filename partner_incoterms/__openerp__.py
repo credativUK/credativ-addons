@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution   
+#    OpenERP, Open Source Management Solution
 #    Copyright (C) 2014 credativ Ltd (<http://credativ.co.uk>).
 #    All Rights Reserved
 #
@@ -19,24 +19,30 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-
-from osv import osv
-
-class sale_order(osv.osv):
-    _inherit = "sale.order"
-
-    def onchange_shop_id(self, cr, uid, ids, shop_id, partner_id=None, context=None):
-        '''Change company_id on changing shop'''
-
-        res = super(sale_order,self).onchange_shop_id(cr, uid, ids, shop_id, partner_id, context=context)
-        v = res.get('value',{})
-        if shop_id:
-            shop = self.pool.get('sale.shop').browse(cr, uid, shop_id, context=context)
-            if shop.company_id:
-                v['company_id'] = shop.company_id.id
-        res['value'] = v
-        return res
-
-sale_order()
-
+{
+    'name' : 'Partner Incoterms',
+    'version' : '1.0.0.0',
+    'author' : 'credativ Ltd',
+    'website' : 'http://credativ.co.uk',
+    'depends' : [
+        'base', 
+        'purchase', 
+        'sale_stock',
+    ],
+    'category' : 'Generic Modules/Purchase',
+    'description': '''
+Adds a purchase and sale Incoterm to the partner object which
+will be copied onto Purchase / Sales Order incoterms as default.
+''',
+    'init_xml' : [
+    ],
+    'demo_xml' : [
+    ],
+    'update_xml' : [
+        'partner_view.xml',
+        'purchase_view.xml',
+    ],
+    'active': False,
+    'installable': True
+}
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

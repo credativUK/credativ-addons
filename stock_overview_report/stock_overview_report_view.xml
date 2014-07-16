@@ -47,6 +47,7 @@
                     <field name="product_id"/>
                     <field name="company_id"/>
                     <field name="warehouse_id"/>
+                    <field name="categ_id"/>
                     <field name="uom_id" groups="product.group_uom"/>
                     <field name="qty_available"/>
                     <field name="incoming_qty"/>
@@ -70,8 +71,9 @@
                     <group expand="0" string="Group By...">
                         <filter string="Product" icon="terp-accessories-archiver" domain="[]" context="{'group_by':'product_id'}"/>
                         <filter string="UoM" icon="terp-stock_effects-object-colorize" domain="[]" context="{'group_by':'uom_id'}" groups="product.group_uom"/>
-                        <filter string="Company" icon="terp-go-home" domain="[]" context="{'group_by':'company_id'}" groups="base.group_multi_company"/>
-                        <filter string="Warehouse" icon="terp-go-home" domain="[]" context="{'group_by':'warehouse_id'}"/>
+                        <filter name="group_company_id" string="Company" icon="terp-go-home" domain="[]" context="{'group_by':'company_id'}" groups="base.group_multi_company"/>
+                        <filter name="group_category_id" string="Primary Category" icon="terp-stock_effects-object-colorize" domain="[]" context="{'group_by':'categ_id'}"/>
+                        <filter name="group_warehouse_id" string="Warehouse" icon="terp-go-home" domain="[]" context="{'group_by':'warehouse_id'}"/>
                     </group>
                 </search>
             </field>

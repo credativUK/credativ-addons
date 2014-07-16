@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<openerp>
+    <data>
+
+        <record id="stock_return_location_memory_tree_in" model="ir.ui.view">
+            <field name="name">stock.return.location.picking.memory.tree</field>
+            <field name="model">stock.return.picking.memory</field>
+            <field name="inherit_id" ref="stock.stock_return_memory_tree_in"/>
+            <field name="arch" type="xml">
+                <field name="quantity" position="after">
+                    <field name="location_dest_id" domain="[('usage','!=','view')]"/>
+                </field>
+            </field>
+        </record>
+
+        <record id="stock_return_location_memory_form_in" model="ir.ui.view">
+            <field name="name">stock.return.location.picking.memory.form</field>
+            <field name="model">stock.return.picking.memory</field>
+            <field name="inherit_id" ref="stock.stock_return_memory_form_in"/>
+            <field name="arch" type="xml">
+                <field name="quantity" position="after">
+                    <field name="location_dest_id" domain="[('usage','!=','view')]"/>
+                </field>
+            </field>
+        </record>
+
+    </data>
+</openerp>

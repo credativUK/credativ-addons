@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution   
+#    OpenERP, Open Source Management Solution
 #    Copyright (C) 2014 credativ Ltd (<http://credativ.co.uk>).
 #    All Rights Reserved
 #
@@ -20,23 +20,18 @@
 #
 ##############################################################################
 
-from osv import osv
+from osv import osv, fields
 
 class sale_order(osv.osv):
-    _inherit = "sale.order"
-
-    def onchange_shop_id(self, cr, uid, ids, shop_id, partner_id=None, context=None):
-        '''Change company_id on changing shop'''
-
-        res = super(sale_order,self).onchange_shop_id(cr, uid, ids, shop_id, partner_id, context=context)
-        v = res.get('value',{})
-        if shop_id:
-            shop = self.pool.get('sale.shop').browse(cr, uid, shop_id, context=context)
-            if shop.company_id:
-                v['company_id'] = shop.company_id.id
-        res['value'] = v
+    _inherit = 'sale.order'
+    
+    def onchange_partner_id(self, cr, uid, ids, partner_id, context=None):
+        res = super(sale_order, self).onchange_partner_id(cr, uid, ids, partner_id, context=context)
+        if partner_id:
+            partner = self.pool.get('res.partner').browse(cr, uid, partner_id, context=context)
+            if partner.default_sale_incoterm_id:
+                res['value']['incoterm'] = partner.default_sale_incoterm_id.id
         return res
 
-sale_order()
 
-# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+sale_order()
