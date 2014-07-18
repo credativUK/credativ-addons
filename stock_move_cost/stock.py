@@ -24,7 +24,7 @@ class stock_move(osv.osv):
     _inherit = 'stock.move'
 
     _columns = {
-            'product_unit_cost' : fields.float('Unit Cost', help="The product's unit cost at the time of this move's creation.", readonly=True),
+            'product_unit_cost' : fields.float('Unit Cost', help="The product's unit cost at the time of this move's creation, in the company currency", readonly=True),
             'inventory_line_id' : fields.many2one('stock.inventory.line', 'Inventory Line', help='The Stock Inventory Line from which this move was generated.'),
     }
 
@@ -33,11 +33,15 @@ class stock_move(osv.osv):
     }
 
     def _get_product_cost(self, cr, uid, ids, prod_id, *args, **kwargs):
+        context = kwargs.get('context') or {}
         values = {'product_unit_cost' : 0.0}
+        if not context.get('company_id'):
+            company_id = self.pool.get('res.users').browse(cr, uid, uid).company_id.id
+            context['company_id'] = company_id
         if prod_id:
             uom_obj = self.pool.get('product.uom')
             prod_obj = self.pool.get('product.product')
-            prod_inf = prod_obj.read(cr, uid, prod_id, ['standard_price','uom_id'], context=kwargs.get('context'))
+            prod_inf = prod_obj.read(cr, uid, prod_id, ['standard_price','uom_id'], context=context)
             prod_cst = prod_inf.get('standard_price')
             prod_uom = prod_inf.get('uom_id', (None,))[0]
             if prod_cst and prod_uom:
@@ -52,20 +56,39 @@ class stock_move(osv.osv):
         return res
 
     def write(self, cr, uid, ids, values, context=None):
+        context = context or {}
         prod_id = values.get('product_id')
         uom = values.get('product_uom')
-        if prod_id:
-            cost_val = self._get_product_cost(cr, uid, ids, prod_id, uom, context=context)
+        ctx = context.copy()
+        if not prod_id:
+            return super(stock_move, self).write(cr, uid, ids, values, context=context)
+        for move in self.browse(cr, uid, ids, context=ctx):
+            if 'company_id' in values:
+                company_id = values['company_id']
+            else:
+                company_id = move.company_id.id
+            ctx['company_id'] = company_id
+            cost_val = self._get_product_cost(cr, uid, ids, prod_id, uom, context=ctx)
             values.update(cost_val)
-        return super(stock_move, self).write(cr, uid, ids, values, context=context)
+            super(stock_move, self).write(cr, uid, [move.id,], values, context=context)
+        return True
 
 
     def create(self, cr, uid, values, context=None):
+        context = context or {}
         prod_id = values.get('product_id' , False)
         uom = values.get('product_uom', False)
-        cost_val = self._get_product_cost(cr, uid, [], prod_id, uom, context=context)
+        ctx = context.copy()
+        if 'company_id' in values:
+            company_id = values['company_id']
+        else:
+            location = self.pool.get('stock.location').browse(cr, uid, values['location_id'])
+            location_dest = self.pool.get('stock.location').browse(cr, uid, values['location_dest_id'])
+            company_id = location.company_id.id or location_dest.company_id.id
+        ctx['company_id'] = company_id
+        cost_val = self._get_product_cost(cr, uid, [], prod_id, uom, context=ctx)
         values.update(cost_val)
-        return super(stock_move, self).create(cr, uid, values, context=context)
+        return super(stock_move, self).create(cr, uid, values, context=ctx)
 
 stock_move()
 
