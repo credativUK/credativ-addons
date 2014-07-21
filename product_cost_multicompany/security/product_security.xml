@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+  <data noupdate="0">
+    <record model="ir.rule" id="product_price_multi_rule_manager">
+      <field name="name">product_price_multi_manager</field>
+      <field name="model_id" ref="model_product_price_multi"/>
+      <field name="global" eval="True"/>
+      <field name="domain_force">[(1,'=',1)]</field>
+      <field name="groups" eval="[(4, ref('stock.group_stock_user'))]"/>
+      <field name="perm_read" eval="True"/>
+      <field name="perm_write" eval="True"/>
+      <field name="perm_unlink" eval="False"/>
+      <field name="perm_create" eval="True"/>
+    </record>
+    <record model="ir.rule" id="product_price_multi_rule">
+      <field name="name">product_price_multi</field>
+      <field name="model_id" ref="model_product_price_multi"/>
+      <field name="global" eval="True"/>
+      <field name="domain_force">[(1,'=',1)]</field>
+      <field name="perm_read" eval="True"/>
+      <field name="perm_write" eval="False"/>
+      <field name="perm_unlink" eval="False"/>
+      <field name="perm_create" eval="False"/>
+    </record>
+  </data>
+</openerp>
