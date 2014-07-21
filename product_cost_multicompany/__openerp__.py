@@ -40,7 +40,10 @@ This makes average pricing impossible.
 This module adds functionality to read and write cost price based on the company of the related object, in the company currency.
 Average pricing is the primary focus of this module, so modifications are made to stock moves so the related account moves are correct.
 ''',
-    'init_xml' : [],
+    'init_xml' : [
+        'security/product_security.xml',
+        'security/ir.model.access.csv',
+        ],
     'demo_xml' : [],
     'update_xml' : [
         "product_view.xml",
