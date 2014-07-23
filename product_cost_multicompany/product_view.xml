@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+-->
+<openerp>
+    <data>
+        <record id="view_product_standard_price_form_mc" model="ir.ui.view">
+            <field name="name">product.product.standard.price.form.mc</field>
+            <field name="model">product.product</field>
+            <!-- FIXME: Inherit from product_variant_multi since this module nukes most of the product view instead of inheriting nicely -->
+            <field name="inherit_id" ref="product_variant_multi.product_normal_variant_form_view" />
+            <field name="arch" type="xml">
+                <xpath expr="//group[@name='procurement']//field[@name='cost_method']" position="replace" />
+                <xpath expr="//label[@string='Cost Price']/following-sibling::div" position="replace" />
+                <xpath expr="//label[@string='Cost Price']" position="replace">
+                    <group name="cost_prices" colspan="2" col="2">
+                        <field name="standard_price" invisible="1"/>
+                        <field name="cost_method" colspan="2" on_change="onchange_cost_method(cost_method,standard_price_multi)"/>
+                        <separator string="Multi Company Standard Prices" colspan="4"/>
+                        <field name="standard_price_multi" colspan="4" nolabel="1">
+                            <tree editable="bottom">
+                                <field name="company_id"/>
+                                <field name="currency_id"/>
+                                <field name="cost_method" invisible="1"/>
+                                <field name="standard_price" attrs="{'readonly': [('cost_method', '=', 'average')]}"/>
+                                <button name="action_update_price" string="Update" type="object" icon="gtk-convert" attrs="{'invisible': [('cost_method', '!=', 'average')]}"/>
+                            </tree>
+                        </field>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_product_price_multi_tree" model="ir.ui.view">
+            <field name="name">product.price.multi.tree</field>
+            <field name="model">product.price.multi</field>
+            <field name="arch" type="xml">
+                <tree string="Multi Company Standard Prices">
+                    <field name="product_id"/>
+                    <field name="company_id"/>
+                    <field name="currency_id"/>
+                    <field name="cost_method"/>
+                    <field name="standard_price" attrs="{'readonly': [('cost_method', '=', 'average')]}"/>
+                    <button name="action_update_price" string="Update" type="object" icon="gtk-convert" attrs="{'invisible': [('cost_method', '!=', 'average')]}"/>
+                </tree>
+            </field>
+        </record>
+    </data>
+</openerp>
+
