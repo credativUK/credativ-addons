@@ -19,33 +19,18 @@
 #
 ##############################################################################
 
-{
-    'name' : 'Multi Company Usability',
-    'version' : '1.0.0',
-    'author' : 'credativ',
-    'website' : 'http://credativ.co.uk',
-    'depends' : [
-        'account',
-        'stock',
-    ],
-    'category' : 'Accounting & Finance',
-    'description': '''
-Modifies the name_get functions of various account objects and prefixes them with the
-company name. This makes selection of accounts, fiscal years etc less ambigious when
-multiple companies share the same naming scheme.
 
-Note:
-* This does not affect name_search at this moment so matching will not work using this format.
-* The decision was taken to replace the name_get instead of add to it for performance reasons,
-  this may affect compatability with other modules which also affect name_get.
-''',
-    'init_xml' : [],
-    'demo_xml' : [],
-    'update_xml' : [],
-    'active': True,
-    'installable': True,
-    'auto_install': False,
-    'application': True,
-}
+from openerp.osv import osv, fields
 
-# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+class stock_invoice_onshipping(osv.osv_memory):
+    _inherit = "stock.invoice.onshipping"
+
+    def _get_journal_id(self, cr, uid, context=None):
+        res = super(stock_invoice_onshipping, self)._get_journal_id(cr, uid, context=context)
+        journal_obj = self.pool.get('account.journal')
+        res_name_get = journal_obj.name_get(cr, uid, [val[0] for val in res], context=context)
+        return res_name_get
+
+    _columns = {
+        'journal_id': fields.selection(_get_journal_id, 'Destination Journal',required=True),
+    }
