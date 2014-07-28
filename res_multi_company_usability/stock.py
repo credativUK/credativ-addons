@@ -20,12 +20,17 @@
 ##############################################################################
 
 
-from openerp.osv import osv
+from openerp.osv import osv, fields
 
 class stock_invoice_onshipping(osv.osv_memory):
     _inherit = "stock.invoice.onshipping"
 
     def _get_journal_id(self, cr, uid, context=None):
-        res = super(stock.invoice.onshipping, self)._get_journal_id(cr, uid, context=context)
+        res = super(stock_invoice_onshipping, self)._get_journal_id(cr, uid, context=context)
         journal_obj = self.pool.get('account.journal')
-        return journal_obj.name_get(cr, uid, [val[0] for val in res], context=context): 
+        res_name_get = journal_obj.name_get(cr, uid, [val[0] for val in res], context=context)
+        return res_name_get
+
+    _columns = {
+        'journal_id': fields.selection(_get_journal_id, 'Destination Journal',required=True),
+    }

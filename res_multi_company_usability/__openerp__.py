@@ -26,6 +26,7 @@
     'website' : 'http://credativ.co.uk',
     'depends' : [
         'account',
+        'stock',
     ],
     'category' : 'Accounting & Finance',
     'description': '''
