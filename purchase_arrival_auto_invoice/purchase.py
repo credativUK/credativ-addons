@@ -41,6 +41,7 @@ class purchase_order(osv.osv):
         wf_service = netsvc.LocalService('workflow')
         wiz_obj = self.pool.get('stock.invoice.onshipping')
         pick_obj = self.pool.get('stock.picking')
+        journal_obj = self.pool.get('account.journal')
         for id in ids:
             pick_ids = pick_obj.search(cr, uid, [('purchase_id','=',id)], context=context)
 
@@ -58,10 +59,26 @@ class purchase_order(osv.osv):
                                })
 
                 # Get and use the values that the wizard would have used by default,
-                # and create the invoice(s).
                 wiz_fields = ['journal_id','group','invoice_date']
                 wiz_defs = wiz_obj.default_get(cr, uid, wiz_fields, context=context)
-                inv_res = self._create_invoice(cr, uid, ids, wiz_defs, context=context)
+
+                # If a multicompany setup is in use, the default journal might be wrong
+                # for the picking's company (in which case an error will be triggered later).
+                # Find a more suitable journal_id.
+                journal_all_ids = [j[0] for j in wiz_obj._get_journal_id(cr, uid, context=context)]
+                pick_company_id = pick_obj.browse(cr, uid, pick_ids_2bi[0]).company_id.id
+                journal_ids = journal_obj.search(cr, uid, [('id', 'in', journal_all_ids), ('company_id', '=', pick_company_id)], context=context)
+                if journal_ids:
+                    wiz_defs.update({'journal_id': journal_ids[0]})
+
+                # Prepare context and create the invoice(s).
+                ctx = context.copy()
+                if not ctx.get('company_id'):
+                    ctx['company_id'] = pick_company_id
+                if not ctx.get('force_company'):
+                    ctx['force_company'] = pick_company_id
+
+                inv_res = self._create_invoice(cr, uid, ids, wiz_defs, context=ctx)
                 p2bi = pick_ids_2bi
                 inv_ids = [inv_res.get(p2bi[i], False) for i in range(len(p2bi))]
                 inv_ids = [iid for iid in inv_ids if iid]
