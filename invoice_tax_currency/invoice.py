@@ -43,7 +43,7 @@ class account_invoice_tax(osv.osv):
         '''Update Tax amount '''
 
         cur_obj = self.pool.get('res.currency')
-        res = super(account_invoice_tax,self).amount_changeamount_change(cr, uid, ids, amount, currency_id, company_id, date_invoice)
+        res = super(account_invoice_tax,self).amount_change(cr, uid, ids, amount, currency_id, company_id, date_invoice)
         factor = 1
         if ids:
             factor = self.read(cr, uid, ids[0], ['factor_tax'])['factor_tax']
