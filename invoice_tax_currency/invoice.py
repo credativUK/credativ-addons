@@ -48,7 +48,8 @@ class account_invoice_tax(osv.osv):
         if ids:
             factor = self.read(cr, uid, ids[0], ['factor_tax'])['factor_tax']
         if currency_id:
-            amount = cur_obj.round(cr, uid, currency_id, amount*factor)
+            currency = cur_obj.browse(cr, uid, currency_id)
+            amount = cur_obj.round(cr, uid, currency, amount*factor)
             res['value']['tax_amount'] = amount
         return res
 
