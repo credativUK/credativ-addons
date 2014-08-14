@@ -22,7 +22,7 @@
     "name": "Delivery order date",
     "description":
         """
-        Add categories to sale orders
+        Scheduled time of delivery orders automatically sets expected date of stock moves to its value. Also makes expected date of stock moves invisible for delivery orders, so that it can only be modified through the delivery order itself
         """,
     "version": "1.0",
     "author" : "credativ Ltd",
