@@ -5,13 +5,21 @@
         <record id="view_picking_form_delivery_address_selection" model="ir.ui.view">
             <field name="name">stock.picking.form.delivery.address.selection</field>
             <field name="model">stock.picking.out</field>
+            <field name="priority">32</field>
             <field name="inherit_id" ref="stock.view_picking_form"/>
             <field name="arch" type="xml">
-                <field name="partner_id" position="after">
+                <field name="partner_id" position="before">
                     <field name="related_addresses" invisible="1"/>
+                    <field name="main_partner_id" string="Customer" on_change="onchange_partner_in(main_partner_id)"/>
+                </field>
+                <field name="partner_id" position="attributes">
+                    <attribute name="string">Delivery Address</attribute>
+                    <!-- Onchange functionality is taken over by main_partner_id
+                         (which mimics the original partner_id). -->
+                    <attribute name="on_change"></attribute>
                     <!-- To set a domain based on a many2many, use [0][2] 
                          to 'dereference' Odoo's internal representation. -->
-                    <field name="delivery_address" domain="[('id','in',related_addresses[0][2])]"/>
+                    <attribute name="domain">[('id','in',related_addresses[0][2])]</attribute>
                 </field>
             </field>
         </record>
