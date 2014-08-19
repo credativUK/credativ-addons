@@ -11,12 +11,13 @@
                 <field name="partner_id" position="before">
                     <field name="related_addresses" invisible="1"/>
                     <field name="main_partner_id" string="Customer" on_change="onchange_partner_in(main_partner_id)"/>
+                    <field name="move_lines" invisible="1"/>
                 </field>
                 <field name="partner_id" position="attributes">
                     <attribute name="string">Delivery Address</attribute>
-                    <!-- Onchange functionality is taken over by main_partner_id
+                    <!-- Original onchange functionality is taken over by main_partner_id
                          (which mimics the original partner_id). -->
-                    <attribute name="on_change"></attribute>
+                    <attribute name="on_change">onchange_delivery_address(partner_id, move_lines)</attribute>
                     <!-- To set a domain based on a many2many, use [0][2] 
                          to 'dereference' Odoo's internal representation. -->
                     <attribute name="domain">[('id','in',related_addresses[0][2])]</attribute>
