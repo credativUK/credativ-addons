@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="view_send_invoice_notify" model="ir.ui.view">
+            <field name="name">Send Invoice Notifications</field>
+            <field name="model">account.invoice.wizard_notify</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Send Invoice Notifications">
+                    <label colspan="2" string="Send Invoice Notifications?"/>
+                    <group col="2" colspan="2">
+                        <button special="cancel" string="_Cancel" icon="gtk-cancel"/>
+                        <button name="send" string="_Send" type="object" icon="terp-gtk-go-back-rtl"/>
+                    </group>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_send_invoice_notify" model="ir.actions.act_window">
+            <field name="name">Send Invoice Notifications</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">account.invoice.wizard_notify</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_send_invoice_notify"/>
+            <field name="target">new</field>
+        </record>
+
+        <record model="ir.values" id="send_invoice_notify">
+            <field name="model_id" ref="account.model_account_invoice" />
+            <field name="object" eval="1" />
+            <field name="name">Send Invoice Notifications</field>
+            <field name="key2">client_action_multi</field>
+            <field name="value" eval="'ir.actions.act_window,' + str(ref('action_send_invoice_notify'))" />
+            <field name="key">action</field>
+            <field name="model">account.invoice</field>
+        </record>
+    </data>
+</openerp>

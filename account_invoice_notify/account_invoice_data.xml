@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <!-- User Groups -->
+        <record id="group_invoice_notify" model="res.groups">
+            <field name="name">Invoice Notifications</field>
+        </record>
+
+        <!-- Server Action -->
+        <record id="ir_actions_server_invoice_notify" model="ir.actions.server">
+            <field name="code">
+usr_obj = self.pool.get('res.users')
+inv_obj = self.pool.get('account.invoice')
+
+context = context or {}
+
+user_search = [('groups_id', '=', 'Invoice Notifications')]
+if context.get('_user_ids'):
+    user_search.append(('id', 'in', context.get('_user_ids')))
+
+users = usr_obj.search(cr, uid, user_search, context=context)
+
+for user_id in users:
+    #types = context.get('_invoice_types', ('in_invoice', 'out_invoice', 'in_refund', 'out_refund'))
+    types = context.get('_invoice_types', ('in_invoice',))
+    states = context.get('_invoice_states', ('draft', 'proforma', 'proforma2'))
+    invoice_search = [
+                      ('company_id', '=', object.id),
+                      ('user_id', '=', user_id),
+                      ('type', 'in', types),
+                      ('state', 'in', states),
+                     ]
+    if context.get('_invoice_ids'):
+        invoice_search.append(('id', 'in', context.get('_invoice_ids')))
+
+    invoices = inv_obj.search(cr, uid, invoice_search, context=context)
+    if invoices:
+        inv_obj.send_invoice_notification(cr, uid, invoices, user_id=user_id, context=context)
+            </field>
+            <field name="state">code</field>
+            <field name="type">ir.actions.server</field>
+            <field name="model_id" ref="base.model_res_company"/>
+            <field name="condition">True</field>
+            <field name="name">Send Account Invoice Notifications</field>
+        </record>
+
+        <!--Email template -->
+        <record id="email_template_invoice_notify" model="email.template">
+            <field name="name">Send Account Invoice Notifications</field>
+            <field name="email_from">${user.user_email or ''}</field>
+            <field name="subject">Invoices for approval / authorisation</field>
+            <field name="email_to">${object.user_email}</field>
+            <field name="model_id" ref="base.model_res_users"/>
+            <field name="lang">${object.context_lang}</field>
+            <field name="body_html"><![CDATA[
+<div style="font-family: 'Lucica Grande', Ubuntu, Arial, Verdana, sans-serif; font-size: 12px; color: rgb(34, 34, 34); background-color: #FFF; ">
+
+    <p>Hello${object.name and ' ' or ''}${object.name or ''},</p>
+
+    <p>The following invoices for ${ctx.get('invoices') and ctx.get('invoices')[0].company_id.name or 'OpenERP'} have been assigned to you for approval / authorisation. Please login to OpenERP to review and approve for payment:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <td>ID</td>
+                <td>Partner</td>
+                <td>Invoice Date</td>
+                <td>Reference</td>
+                <td>Amount</td>
+            </tr>
+        </thead>
+        <tbody>
+            % for invoice in ctx.get('invoices', []):
+            <tr>
+                <td>${invoice.id}</td>
+                <td>${invoice.partner_id.name}</td>
+                <td>${invoice.date_invoice}</td>
+                <td>${invoice.reference}</td>
+                <td>${invoice.amount_total}</td>
+            </tr>
+            % endfor
+        </tbody>
+    </table>
+
+    <p>Please do not reply to this email.</p>
+
+</div>
+            ]]></field>
+            <field name="body_text"><![CDATA[
+Hello${object.name and ' ' or ''}${object.name or ''},
+
+The following invoices for ${ctx.get('invoices') and ctx.get('invoices')[0].company_id.name or 'OpenERP'} have been assigned to you for approval / authorisation. Please login to OpenERP to review and approve for payment:
+
+${" %-6.6s | %-20.20s | %-12.12s | %-12.12s | %-8.8s" % ('ID', 'Partner', 'Invoice Date', 'Reference', 'Amount')}
+% for invoice in ctx.get('invoices', []):
+${" %-6.6s | %-20.20s | %-12.12s | %-12.12s | %-8.8s" % (invoice.id, invoice.partner_id.name, invoice.date_invoice, invoice.reference, invoice.amount_total)}
+% endfor
+
+Please do not reply to this email.
+            ]]></field>
+        </record>
+
+        <!-- Cron job -->
+        <record forcecreate="True" id="ir_cron_server_invoice_notify" model="ir.cron">
+            <field name="name">Send Account Invoice Notifications</field>
+            <field eval="False" name="active"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+            <field eval="False" name="doall"/>
+            <field eval="'res.company'" name="model"/>
+            <field eval="'scheduler_send_invoice_notification'" name="function"/>
+            <field eval="'()'" name="args"/>
+        </record>
+
+    </data>
+</openerp>
