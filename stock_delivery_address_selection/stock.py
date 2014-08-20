@@ -48,7 +48,6 @@ class StockPicking(osv.Model):
         return children
 
 
-
     def _find_top_level_partner(self, cr, uid, ptnr_id, context=None):
         ptnr_obj = self.pool.get('res.partner')
         parent = ptnr_obj.read(cr, uid, ptnr_id, ['parent_id'], context=context)
@@ -58,11 +57,9 @@ class StockPicking(osv.Model):
             return self._find_top_level_partner(cr, uid, parent['parent_id'][0], context=context)
 
 
-
     def _calc_related_addresses(self, cr, uid, ids, name, arg, context=None, partner_id=None):
         res = {}
         ptnrs = []
-
         if not partner_id:
             # Standard 'function field' calculation
             ptnrs = self.read(cr, uid, ids, ['partner_id'], context=context)
@@ -73,7 +70,6 @@ class StockPicking(osv.Model):
             [ptnrs.append({'id' : id, 'partner_id' : [partner_id]}) for id in ids]
         else:
             ptnrs = [{'id' : '', 'partner_id' : [partner_id]}]
-
         for ptnr in ptnrs:
             id = ptnr['id']
             if not ptnr['partner_id']:
@@ -85,10 +81,8 @@ class StockPicking(osv.Model):
         return res
 
 
-
     def onchange_partner_in(self, cr, uid, ids, partner_id=None, context=None):
         res = super(StockPicking, self).onchange_partner_in(cr, uid, ids, partner_id=partner_id, context=context)
-
         rel_adds = []
         res['value'] = res.get('value', {})
         if partner_id:
@@ -101,20 +95,22 @@ class StockPicking(osv.Model):
         return res
 
 
-    def onchange_delivery_address(self, cr, uid, ids, partner_id=False, move_lines=None, context=None):
-        res = {}
+    def onchange_delivery_address(self, cr, uid, ids, partner_id=False, main_partner_id=False, move_lines=None, context=None):
+        res = {'value' : {}}
+        new_delivery_addr = partner_id or main_partner_id or False
+        if new_delivery_addr != partner_id:
+            res['value'].update({'partner_id' : new_delivery_addr})
         if not move_lines:
             return res
-        move_obj = self.pool.get('stock.move')
-        res['value'] = {'move_lines' : []}
+        res['value'].update({'move_lines' : []})
         for move_tuple in move_lines:
             if move_tuple[0] == 0:          # New line
                 new_vals = move_tuple[2]
-                new_vals.update({'partner_id' : partner_id})
+                new_vals.update({'partner_id' : new_delivery_addr})
                 res['value']['move_lines'].append((0, 0, new_vals))
             elif move_tuple[0] in (1,4):    # Existing line
                 move_id = move_tuple[1]
-                new_vals = {'partner_id' : partner_id}
+                new_vals = {'partner_id' : new_delivery_addr}
                 res['value']['move_lines'].append((1, move_id, new_vals))
             else:
                 res['value']['move_lines'].append(move_tuple)
@@ -139,7 +135,9 @@ class StockPicking(osv.Model):
 
 
 class StockPickingOut(osv.Model):
+
     _inherit = 'stock.picking.out'
+
 
     def _get_related_addresses(self, cr, uid, ptnr_id, context=None):
         ptnr_obj = self.pool.get('res.partner')
@@ -163,7 +161,6 @@ class StockPickingOut(osv.Model):
     def _calc_related_addresses(self, cr, uid, ids, name, arg, context=None, partner_id=None):
         res = {}
         ptnrs = []
-
         if not partner_id:
             # Standard 'function field' calculation
             ptnrs = self.read(cr, uid, ids, ['partner_id'], context=context)
@@ -174,7 +171,6 @@ class StockPickingOut(osv.Model):
             [ptnrs.append({'id' : id, 'partner_id' : [partner_id]}) for id in ids]
         else:
             ptnrs = [{'id' : '', 'partner_id' : [partner_id]}]
-
         for ptnr in ptnrs:
             id = ptnr['id']
             if not ptnr['partner_id']:
@@ -186,10 +182,8 @@ class StockPickingOut(osv.Model):
         return res
 
 
-
     def onchange_partner_in(self, cr, uid, ids, partner_id=None, context=None):
         res = super(StockPickingOut, self).onchange_partner_in(cr, uid, ids, partner_id=partner_id, context=context)
-
         rel_adds = []
         res['value'] = res.get('value', {})
         delivery_address = False
@@ -204,20 +198,22 @@ class StockPickingOut(osv.Model):
         return res
 
 
-    def onchange_delivery_address(self, cr, uid, ids, partner_id=False, move_lines=None, context=None):
-        res = {}
+    def onchange_delivery_address(self, cr, uid, ids, partner_id=False, main_partner_id=False, move_lines=None, context=None):
+        res = {'value' : {}}
+        new_delivery_addr = partner_id or main_partner_id or False
+        if new_delivery_addr != partner_id:
+            res['value'].update({'partner_id' : new_delivery_addr})
         if not move_lines:
             return res
-        move_obj = self.pool.get('stock.move')
-        res['value'] = {'move_lines' : []}
+        res['value'].update({'move_lines' : []})
         for move_tuple in move_lines:
             if move_tuple[0] == 0:          # New line
                 new_vals = move_tuple[2]
-                new_vals.update({'partner_id' : partner_id})
+                new_vals.update({'partner_id' : new_delivery_addr})
                 res['value']['move_lines'].append((0, 0, new_vals))
             elif move_tuple[0] in (1,4):    # Existing line
                 move_id = move_tuple[1]
-                new_vals = {'partner_id' : partner_id}
+                new_vals = {'partner_id' : new_delivery_addr}
                 res['value']['move_lines'].append((1, move_id, new_vals))
             else:
                 res['value']['move_lines'].append(move_tuple)
@@ -237,5 +233,4 @@ class StockPickingOut(osv.Model):
             'main_partner_id' : fields.many2one('res.partner', 'Customer', help='Address to which the products will be delivered.'),
             'related_addresses' : fields.function(_calc_related_addresses, type='many2many', relation='res.partner'),
     }
-
 
