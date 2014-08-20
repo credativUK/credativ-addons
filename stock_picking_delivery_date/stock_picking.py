@@ -30,25 +30,27 @@ class stock_picking_out(osv.osv):
     _inherit='stock.picking.out'
 
     def create(self, cr, user, vals, context=None):
-        
+        print "create child"
         new_id = super(stock_picking_out, self).create(cr, user, vals, context)
-        #Update newly created stock moves 
-        sql_str = """update stock_move set
-                    date_expected='%s'
-                where
-                    picking_id=%s """ % (vals['min_date'], new_id)
-        cr.execute(sql_str)
+
+        #Update newly created stock moves if scheduled time
+        if 'min_date' in vals and vals['min_date']:
+            move_obj = self.pool.get('stock.move')
+            picking_moves = move_obj.search(cr, user, [('picking_id','=', new_id)])
+            move_obj.write(cr, user, picking_moves, {'date_expected':vals['min_date']})
         return new_id
 
     def _set_minimum_date(self, cr, uid, ids, name, value, arg, context=None):
+        print "set minimum date child";
         pick_obj = self.pool.get('stock.picking.out')
         if not value:
             return False
 
         sql_str = """update stock_picking set
-                    min_date='%s'
+                    min_date='%s',
+                    max_date='%s'
                 where
-                    id=%s """ % (value, ids)
+                    id=%s """ % (value,value, ids)
         cr.execute(sql_str)
         sql_str = """update stock_move set
                     date_expected='%s'
@@ -58,11 +60,13 @@ class stock_picking_out(osv.osv):
         return True
     
     def get_min_max_date(self, cr, uid, ids, field_name, arg, context=None):
+        print "min max date child"
         res = {}
         for pick in ids:
             res[pick] = {}
-            res[pick]['min_date'] = self.pool.get('stock.picking').browse(cr, uid, pick, context=context)['min_date']
-            res[pick]['max_date'] = self.pool.get('stock.picking').browse(cr, uid, pick, context=context)['max_date']
+            picking = self.pool.get('stock.picking').browse(cr, uid, pick, context=context)
+            res[pick]['min_date'] = picking['min_date']
+            res[pick]['max_date'] = picking['max_date']
         return res
     
     def _set_maximum_date(self, cr, uid, ids, name, value, arg, context=None):
@@ -90,7 +94,9 @@ class stock_move(osv.osv):
     _inherit = 'stock.move'
     
     def _default_date_expected(self, cr, uid, context=None):
+        print "default date expected"
         if 'date_expected' in context and context['date_expected']:
+            print "context OK"
             return context['date_expected']
         else:
             return time.strftime('%Y-%m-%d %H:%M:%S')
