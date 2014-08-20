@@ -30,7 +30,6 @@ class stock_picking_out(osv.osv):
     _inherit='stock.picking.out'
 
     def create(self, cr, user, vals, context=None):
-        print "create child"
         new_id = super(stock_picking_out, self).create(cr, user, vals, context)
 
         #Update newly created stock moves if scheduled time
@@ -41,7 +40,6 @@ class stock_picking_out(osv.osv):
         return new_id
 
     def _set_minimum_date(self, cr, uid, ids, name, value, arg, context=None):
-        print "set minimum date child";
         pick_obj = self.pool.get('stock.picking.out')
         if not value:
             return False
@@ -60,7 +58,6 @@ class stock_picking_out(osv.osv):
         return True
     
     def get_min_max_date(self, cr, uid, ids, field_name, arg, context=None):
-        print "min max date child"
         res = {}
         for pick in ids:
             res[pick] = {}
@@ -94,7 +91,6 @@ class stock_move(osv.osv):
     _inherit = 'stock.move'
     
     def _default_date_expected(self, cr, uid, context=None):
-        print "default date expected"
         if 'date_expected' in context and context['date_expected']:
             print "context OK"
             return context['date_expected']
