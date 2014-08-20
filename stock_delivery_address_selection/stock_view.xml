@@ -17,7 +17,7 @@
                     <attribute name="string">Delivery Address</attribute>
                     <!-- Original onchange functionality is taken over by main_partner_id
                          (which mimics the original partner_id). -->
-                    <attribute name="on_change">onchange_delivery_address(partner_id, move_lines)</attribute>
+                    <attribute name="on_change">onchange_delivery_address(partner_id, main_partner_id, move_lines)</attribute>
                     <!-- To set a domain based on a many2many, use [0][2] 
                          to 'dereference' Odoo's internal representation. -->
                     <attribute name="domain">[('id','in',related_addresses[0][2])]</attribute>
