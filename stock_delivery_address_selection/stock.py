@@ -85,7 +85,9 @@ class StockPicking(osv.Model):
         res = super(StockPicking, self).onchange_partner_in(cr, uid, ids, partner_id=partner_id, context=context)
         rel_adds = []
         res['value'] = res.get('value', {})
+        delivery_address = False
         if partner_id:
+            delivery_address = partner_id
             rel_adds = self._calc_related_addresses(cr, uid, ids, None, None, partner_id=partner_id, context=context)
             if ids:
                 rel_adds = rel_adds[ids[0]]
@@ -127,7 +129,7 @@ class StockPicking(osv.Model):
 
 
     _columns = {
-            'main_partner_id' : fields.many2one('res.partner', 'Customer', help='Address to which the products will be delivered.'),
+            'main_partner_id' : fields.many2one('res.partner', 'Customer', states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}),
             'related_addresses' : fields.function(_calc_related_addresses, type='many2many', relation='res.partner'),
     }
 
@@ -230,7 +232,7 @@ class StockPickingOut(osv.Model):
 
 
     _columns = {
-            'main_partner_id' : fields.many2one('res.partner', 'Customer', help='Address to which the products will be delivered.'),
+            'main_partner_id' : fields.many2one('res.partner', 'Customer', states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}),
             'related_addresses' : fields.function(_calc_related_addresses, type='many2many', relation='res.partner'),
     }
 
