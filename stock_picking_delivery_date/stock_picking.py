@@ -92,7 +92,6 @@ class stock_move(osv.osv):
     
     def _default_date_expected(self, cr, uid, context=None):
         if 'date_expected' in context and context['date_expected']:
-            print "context OK"
             return context['date_expected']
         else:
             return time.strftime('%Y-%m-%d %H:%M:%S')
