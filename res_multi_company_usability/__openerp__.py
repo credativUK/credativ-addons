@@ -27,6 +27,7 @@
     'depends' : [
         'account',
         'stock',
+        'analytic',
     ],
     'category' : 'Accounting & Finance',
     'description': '''
