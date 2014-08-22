@@ -21,7 +21,6 @@
 
 import account
 import res_currency
-<<<<<<< HEAD
 import stock
 import analytic
 
