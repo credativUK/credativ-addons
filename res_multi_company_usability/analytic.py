@@ -19,34 +19,23 @@
 #
 ##############################################################################
 
-{
-    'name' : 'Multi Company Usability',
-    'version' : '1.0.0',
-    'author' : 'credativ',
-    'website' : 'http://credativ.co.uk',
-    'depends' : [
-        'account',
-        'stock',
-        'analytic',
-    ],
-    'category' : 'Accounting & Finance',
-    'description': '''
-Modifies the name_get functions of various account objects and prefixes them with the
-company name. This makes selection of accounts, fiscal years etc less ambigious when
-multiple companies share the same naming scheme.
 
-Note:
-* This does not affect name_search at this moment so matching will not work using this format.
-* The decision was taken to replace the name_get instead of add to it for performance reasons,
-  this may affect compatability with other modules which also affect name_get.
-''',
-    'init_xml' : [],
-    'demo_xml' : [],
-    'update_xml' : [],
-    'active': True,
-    'installable': True,
-    'auto_install': False,
-    'application': True,
-}
+from openerp import tools
+from openerp.osv import osv
 
-# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+class account_analytic_account(osv.osv):
+    _inherit = 'account.analytic.account'
+    
+
+    def name_get(self, cr, uid, ids, context=None):
+        res = []
+        if not ids:
+            return res
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+        for id in ids:
+            elmt = self.browse(cr, uid, id, context=context)
+            company = self.read(cr, uid, id,['company_id'], context=context)['company_id']
+            company_name = company and (' (' + company[1] + ')')  or ''
+            res.append((id, self._get_one_full_name(elmt) + company_name ))
+        return res
