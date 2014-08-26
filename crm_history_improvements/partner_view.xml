@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_crm_partner_info_form_uni1" model="ir.ui.view">
+            <field name="name">res.partner.crm.info.uni1</field>
+            <field name="model">res.partner</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="crm_claim.view_claim_partner_info_form1"/>
+            <field name="arch" type="xml">
+                <field name="opportunity_ids" position="attributes">
+                    <attribute name="attrs">{'default_limit': 10}</attribute>
+                </field>
+                <field name="meeting_ids" position="attributes">
+                    <attribute name="attrs">{'default_limit': 10}</attribute>
+                </field>
+                <field name="phonecall_ids" position="attributes">
+                    <attribute name="attrs">{'default_limit': 10}</attribute>
+                </field>
+                <field name="claims_ids" position="attributes">
+                    <attribute name="attrs">{'default_limit': 10}</attribute>
+                </field>
+            </field>
+        </record>
+
+        <record id="view_crm_partner_info_form_uni2" model="ir.ui.view">
+            <field name="name">res.partner.crm.info.uni2</field>
+            <field name="model">res.partner</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="mail.view_emails_partner_info_form"/>
+            <field name="arch" type="xml">
+                <field name="emails" position="attributes">
+                    <attribute name="attrs">{'default_limit': 10}</attribute>
+                </field>
+            </field>
+        </record>
+    </data>
+</openerp>
