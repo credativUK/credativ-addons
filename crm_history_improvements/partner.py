@@ -27,7 +27,6 @@ class ResPartner(osv.Model):
     def _link_emails_to_partners(self, cr, uid, context=None):
         """Find all emails with no partner_id set and attempt to link them to a partner"""
 
-        import ipdb; ipdb.set_trace()
         lead_sql = """
             UPDATE mail_message mail SET partner_id = lead.partner_id
             FROM crm_lead lead
