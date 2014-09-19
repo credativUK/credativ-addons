@@ -252,7 +252,7 @@ class ProductPriceMulti(osv.Model):
     def write(self, cr, uid, ids, values, context=None):
         if 'company_id' in values:
             for price in self.browse(cr, uid, ids, context=context):
-                if price.company_id != values['company_id'] and price.cost_method == 'average':
+                if price.company_id.id != values['company_id'] and price.cost_method == 'average':
                     raise osv.except_osv("Error!", "It is not possible to change the Company for a price line when Average Price is used.")
         return super(ProductPriceMulti, self).write(cr, uid, ids, values, context=context)
 
