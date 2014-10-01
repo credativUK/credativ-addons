@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <!--Inherit magento backend view to add new button field -->
+        <!--TODO Make this button work-->
+        <record id="view_magento_backend_form_pricelist_inherit" model="ir.ui.view">
+            <field name="name">magento.backend.form.pricelist.inherit</field>
+            <field name="model">magento.backend</field>
+            <field name="inherit_id" ref="magentoerpconnect.view_magento_backend_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//button[@name='update_product_stock_qty']" position="after">
+                    <div>
+                        <label string="Import pricelist since" class="oe_inline"/>
+                        <field name="import_pricelist_from_date"
+                            class="oe_inline"
+                            nolabel="1"/>
+                    </div>
+                    <button name="import_product_pricelist"
+                                        type="object"
+                                        class="oe_highlight"
+                                        string="Import Pricelist"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!--Inherit magento backend view to add new button field -->
+        <record id="view_magento_website_form_pricelist_inherit" model="ir.ui.view">
+            <field name="name">magento.website.form.pricelist.inherit</field>
+            <field name="model">magento.website</field>
+            <field name="inherit_id" ref="magentoerpconnect.view_magento_website_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//button[@name='import_partners']" position="after">
+                    <div>
+                        <label string="Import Pricelist since" class="oe_inline"/>
+                        <field name="import_pricelist_from_date"
+                            class="oe_inline"
+                            nolabel="1"/>
+                    </div>
+                    <button name="import_product_pricelist"
+                                        type="object"
+                                        class="oe_highlight"
+                                        string="Import Pricelist"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!--Inherit magento backend view to add new button field -->
+        <record id="view_magento_storeview_form_pricelist_inherit" model="ir.ui.view">
+            <field name="name">magento.storeview.form.pricelist.inherit</field>
+            <field name="model">magento.storeview</field>
+            <field name="inherit_id" ref="magentoerpconnect.view_magento_storeview_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='no_sales_order_sync']" position="after">
+                    <field name="sync_pricelist"/>
+                    <field name="pricelist_id" attrs="{'required': [('sync_pricelist', '=', True)],
+                           'invisible': [('sync_pricelist', '=', False)]}"/>
+                </xpath>
+                <xpath expr="//button[@name='import_sale_orders']" position="after">
+                    <div>
+                        <label string="Import Pricelist since" class="oe_inline"
+                               attrs="{'invisible': [('sync_pricelist', '=', False)]}"/>
+                        <field name="import_pricelist_from_date"
+                            class="oe_inline"
+                            nolabel="1"
+                            readonly="1"
+                            attrs="{'invisible': [('sync_pricelist', '=', False)]}"/>
+                    </div>
+                    <button name="import_product_pricelist"
+                            type="object"
+                            class="oe_highlight"
+                            string="Import Pricelist"
+                            attrs="{'invisible': [('sync_pricelist', '=', False)]}"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
