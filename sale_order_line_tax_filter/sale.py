@@ -25,10 +25,16 @@ from osv import osv
 class sale_order(osv.osv):
     _inherit = "sale.order"
 
-    def onchange_shop_id(self, cr, uid, ids, shop_id, partner_id=None, context=None):
+    def onchange_shop_id(self, cr, uid, ids, shop_id, *args, **kwargs):
         '''Change company_id on changing shop'''
+        if 'context' in kwargs:
+            context = kwargs['context']
+        elif args:
+            context = args[0]
+        else:
+            context = {}
 
-        res = super(sale_order,self).onchange_shop_id(cr, uid, ids, shop_id, partner_id=partner_id, context=context)
+        res = super(sale_order,self).onchange_shop_id(cr, uid, ids, shop_id, *args, **kwargs)
         v = res.get('value',{})
         if shop_id:
             shop = self.pool.get('sale.shop').browse(cr, uid, shop_id, context=context)
