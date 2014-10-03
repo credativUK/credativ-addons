@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_partner_inherit_followup_by_partner" model="ir.ui.view">
+            <field name="name">res.partner.followup.form.by.partner</field>
+            <field name="inherit_id" ref="account_followup.view_partner_inherit_followup_form"/>
+            <field name="model">res.partner</field>
+            <field name="groups_id" eval="[(4, ref('account.group_account_invoice'))]"/>
+            <field name="arch" type="xml" >
+                <field name="payment_responsible_id" position="before">
+                    <field name="followup_email"/>
+                </field>
+            </field>
+        </record>
+
+    </data>
+</openerp>
