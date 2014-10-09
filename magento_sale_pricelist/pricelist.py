@@ -111,6 +111,8 @@ def pricelist_import_batch(session, model_name, backend_id, filters=None):
         filters = {}
     assert 'magento_store_view_id' in filters, (
             'Missing information about Magento store view ID')
+    session.context['store_view_id'] = filters.pop('store_view_id')
+    session.context['magento_store_view_id'] = filters.get('magento_store_view_id')
     env = get_environment(session, model_name, backend_id)
     importer = env.get_connector_unit(PricelistBatchImport)
     importer.run(filters=filters)
