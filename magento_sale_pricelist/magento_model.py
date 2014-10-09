@@ -81,14 +81,12 @@ class magento_storeview(orm.Model):
 
         if not hasattr(ids, '__iter__'):
             ids = [ids]
-        #self.check_magento_structure(cr, uid, ids, context=context)
+
+        session = ConnectorSession(cr, uid, context=context)
         for storeview in self.browse(cr, uid, ids, context=context):
             import_start_time = datetime.now()
             if not storeview.sync_pricelist:
                 continue
-            session = ConnectorSession(cr, uid, context=context)
-            session.context['store_view_id'] = int(storeview.id)
-            session.context['magento_store_view_id'] = int(storeview.magento_id)
             if storeview.import_pricelist_from_date:
                 from_date = datetime.strptime(
                     storeview.import_pricelist_from_date,
@@ -98,7 +96,8 @@ class magento_storeview(orm.Model):
             pricelist_import_batch.delay(
                 session, 'magento.product.pricelist', storeview.backend_id.id,
                 {'magento_store_view_id': int(storeview.magento_id),
-                    'from_date': from_date})
+                    'from_date': from_date,
+                    'store_view_id': int(storeview.id)})
             next_time = import_start_time - timedelta(seconds=IMPORT_DELTA_BUFFER)
             next_time = next_time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)
             self.write(cr, uid, ids, {'import_pricelist_from_date': next_time},
