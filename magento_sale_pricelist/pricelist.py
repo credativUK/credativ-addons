@@ -92,7 +92,7 @@ class ProductPricelistAdapter(GenericAdapter):
         if filters is None:
             filters = {}
         if from_date:
-            filters['updated_at'] = {'from_date': from_date}
+            filters['updated_at'] = {'from': from_date.strftime('%Y/%m/%d %H:%M:%S')}
         #TODO Check if this can be used as checkpoint
         with magentolib.API(self.magento.location,
                             self.magento.username,
