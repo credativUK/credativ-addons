@@ -35,6 +35,7 @@ from openerp.addons.magentoerpconnect.unit.import_synchronizer import (
                                        )
 from openerp.addons.magentoerpconnect.related_action import link
 from openerp.addons.connector.connector import Binder
+from openerp.addons.magentoerpconnect.product import ProductImport
 _logger = logging.getLogger(__name__)
 
 
@@ -170,7 +171,8 @@ class PricelistImport(MagentoImportSynchronizer):
 
 
     def _create(self, data):
-        raise NotImplementedError('Unable to create product when updating price lists. Please import products first.')
+        _logger.info('Magento Product create. More info: %s ',
+                     data)
 
     def _update(self, binding_id, data):
         store_view_obj = self.session.pool.get('magento.storeview')
@@ -201,6 +203,7 @@ class PricelistImport(MagentoImportSynchronizer):
                 'price_surcharge':data.get('list_price',0.0),
                 'price_version_id':version,
                 'product_id':product_binder.openerp_id.id,
+                'base': 1,
                 }
             pricelist_item_ids = pricelist_item_obj.create(self.session.cr, self.session.uid, item_values, context=self.session.context)
         else:
@@ -210,6 +213,7 @@ class PricelistImport(MagentoImportSynchronizer):
                 'price_round': 0.0,
                 'price_min_margin': 0.0,
                 'price_max_margin': 0.0,
+                'base':1,
                 }
             pricelist_item_obj.write(self.session.cr, 
                                             self.session.uid, 
@@ -217,6 +221,17 @@ class PricelistImport(MagentoImportSynchronizer):
                                             item_values, 
                                             context=self.session.context)
         return True
+
+    def _import_dependencies(self):
+        ''' Import product if not found in openerp '''
+
+        record = self.magento_record
+        _logger.debug('Pricelist Product Import : %s', record)
+        if 'product_id' in record:
+            self._import_dependency(record.get('product_id'),
+                                    'magento.product.product',
+                                    ProductImport)
+
 
     def _get_binding_id(self):
         binder = self.get_binder_for_model('magento.product.product')
