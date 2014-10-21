@@ -1,4 +1,6 @@
+from openerp import netsvc
 from osv import osv, fields
+from tools.safe_eval import safe_eval
 
 
 class stock_return_picking_memory(osv.osv_memory):
@@ -23,9 +25,18 @@ class stock_return_picking(osv.osv_memory):
 
 
     def create_returns(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+
         move_obj = self.pool.get('stock.move')
+        pick_obj = self.pool.get('stock.picking')
         mem_obj  = self.pool.get('stock.return.picking.memory')
-        ret = super(stock_return_picking, self).create_returns(cr, uid, ids, context=context)
+        wf_service = netsvc.LocalService("workflow")
+
+        return_context = context.copy()
+        return_context['confirm_return'] = False
+        ret = super(stock_return_picking, self).create_returns(cr, uid, ids, context=return_context)
+
         prm_datas = self.read(cr, uid, ids, ['product_return_moves'], context=context)
         for prm_data in prm_datas:
             mem_ids = prm_data['product_return_moves']
@@ -40,6 +51,10 @@ class stock_return_picking(osv.osv_memory):
                 for new_move_id in new_move_ids:
                     move_id = move_data['id']
                     move_obj.write(cr, uid, new_move_id, {'location_dest_id' : move_to_dest[move_id]}, context=context)
+
+            new_picking = pick_obj.search(cr, uid, safe_eval(ret['domain']), context=context).pop()
+            wf_service.trg_validate(uid, 'stock.picking', new_picking, 'button_confirm', cr)
+            pick_obj.force_assign(cr, uid, [new_picking], context)
         return ret
 
 
