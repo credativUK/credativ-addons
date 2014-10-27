@@ -61,16 +61,20 @@ class account_invoice(orm.Model):
     }
 
     def create(self, cr, uid, vals, context=None):
+        partner_obj = self.pool.get('res.partner')
         partner_id = vals.get('partner_id')
         if partner_id:
-            partner = self.pool.get('res.partner').read(cr, uid, partner_id, ['property_payment_account','company_id'])
-            payment_account_id = False
+            company = partner_obj.read(cr, uid, partner_id, ['company_id'], context=context)['company_id']
+            payment_account = False
             payment_detail = ''
-            if partner['property_payment_account']:
-                payment_account_id = partner['property_payment_account'][0]
-                payment_detail = self.pool.get('res.partner.bank').read(cr, uid, payment_account_id, [])['payment_detail']
+            if company:
+                ctx = dict(context, force_company=company[0], company_id=company[0])
+                payment_account = partner_obj.read(cr, uid, partner_id, ['property_payment_account'], context=ctx)['property_payment_account']
+            if payment_account:
+                payment_account = payment_account[0]
+                payment_detail = self.pool.get('res.partner.bank').read(cr, uid, payment_account, ['payment_detail'], context=context)['payment_detail']
             vals.update({
-                    'partner_bank_id': payment_account_id,
+                    'partner_bank_id': payment_account,
                     'payment_detail': payment_detail,
                 })
         return super(account_invoice, self).create(cr, uid, vals, context=context)
