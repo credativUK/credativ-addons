@@ -34,7 +34,7 @@ class StockMove(osv.Model):
                      FROM move_relation mr, stock_move_history_ids sm
                      WHERE sm.%s = mr.%s
                  )
-                 SELECT child_id FROM move_relation''' % (relation, relation, inverse_relation)
+                 SELECT %s FROM move_relation''' % (relation, relation, inverse_relation, inverse_relation)
         cr.execute(sql, (str(id),))
         res = cr.fetchall()
         return [i[0] for i in res]
