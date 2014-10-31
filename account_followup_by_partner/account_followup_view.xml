@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="view_account_followup_print_by_partner" model="ir.ui.view">
+            <field name="name">account.followup.print.by.partner</field>
+            <field name="model">account_followup.print</field>
+            <field name="inherit_id" ref="account_followup.view_account_followup_print"/>
+            <field name="arch" type="xml">
+                <xpath expr="/form/p" position="after">
+                    <p class ="oe_grey">
+                        Follow-up emails will only be sent if the 'Email Followups' is set for the partner
+                        otherwise the email action is skipped for this partner.
+                    </p>
+                </xpath>
+           </field>
+        </record>
+
+    </data>
+</openerp>
