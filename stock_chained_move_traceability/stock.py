@@ -27,13 +27,17 @@ class StockMove(osv.Model):
     def _find_related_moves(self, cr, uid, id, relation, context=None):
         moves = []
         inverse_relation = relation == 'child_id' and 'parent_id' or 'child_id'
-        sql = 'SELECT %s FROM stock_move_history_ids WHERE %s = %s'
-        cr.execute(sql, (relation, inverse_relation, str(id)))
+        sql = '''WITH RECURSIVE move_relation(child_id, parent_id) AS (
+                     SELECT child_id, parent_id from stock_move_history_ids where %s = %%s
+                     UNION ALL
+                     SELECT sm.child_id, sm.parent_id
+                     FROM move_relation mr, stock_move_history_ids sm
+                     WHERE sm.%s = mr.%s
+                 )
+                 SELECT child_id FROM move_relation''' % (relation, relation, inverse_relation)
+        cr.execute(sql, (str(id),))
         res = cr.fetchall()
-        if res:
-            moves.append(res[0][0])
-            moves.extend(self._find_related_moves(cr, uid, res[0][0], relation, context=context))
-        return moves
+        return [i[0] for i in res]
 
 
     def _calc_chained_moves(self, cr, uid, ids, fields, arg, context=None):
