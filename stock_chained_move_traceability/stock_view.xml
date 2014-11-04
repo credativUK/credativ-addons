@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="stock_move_cost_view" model="ir.ui.view">
+            <field name="name">stock.chained.move.traceability.view</field>
+            <field name="model">stock.move</field>
+            <field name="inherit_id" ref="stock.view_move_picking_form"/>
+            <field name="arch" type="xml">
+                <group string="Locations" position="after">
+                    <group string="Chained Moves">
+                        <field name="chained_moves"/>
+                    </group>
+                </group>
+            </field>
+        </record>
+
+    </data>
+</openerp>
