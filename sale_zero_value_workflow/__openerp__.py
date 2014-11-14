@@ -28,15 +28,15 @@
         zero value.
         ''',
     'version': '1.0',
-    'author' : 'credativ Ltd',
-    'website' : 'http://credativ.co.uk',
-    'category' : '',
-    'depends' : [
+    'author': 'credativ Ltd',
+    'website': 'http://credativ.co.uk',
+    'category': '',
+    'depends': [
         'sale_stock',
         ],
-    'data' : [
+    'data': [
         'sale_workflow.xml',
         ],
     'installable': True,
-    'active' : False,
+    'active': False,
 }
