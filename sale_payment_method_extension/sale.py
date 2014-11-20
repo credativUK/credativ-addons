@@ -30,25 +30,40 @@ from openerp.addons.magentoerpconnect import sale
 class SaleOrderImportMapper(sale.SaleOrderImportMapper):
     _model_name = 'magento.sale.order'
 
+    def _get_payment_method(self, method_name, company_id=False, shop_id=False):
+        return self.session.search('payment.method',
+                                [
+                                    ('name', '=', method_name),
+                                    ('company_id', '=', company_id),
+                                    ('shop_id', '=', shop_id),
+                                ])
+
     @mapping
     def payment(self, record):
+        method_name = record['payment']['method']
         company_id = False
-        if not self.session.context.get('company_id', False):
-            binder = self.get_binder_for_model('magento.storeview')
-            storeview_id = binder.to_openerp(record['store_id'])
-            assert storeview_id is not None, 'cannot import sale orders Payment from non existing storeview'
-            storeview = self.session.browse('magento.storeview', storeview_id)
-            company_id = storeview.store_id.openerp_id.company_id or False
+
+        binder = self.get_binder_for_model('magento.storeview')
+        storeview_id = binder.to_openerp(record['store_id'])
+        assert storeview_id is not None, 'cannot import sale orders Payment from non existing storeview'
+        storeview = self.session.browse('magento.storeview', storeview_id)
+
+        shop_id = storeview.store_id.openerp_id.id
+        company_id = self.session.context.get('company_id', False)
+        if not company_id:
+            company_id = storeview.store_id.company_id or False
             if company_id:
                 company_id = company_id.id
-        method_ids = self.session.search('payment.method',
-                                [['name', '=', record['payment']['method']],
-                                ['company_id', '=', company_id],
-                                ['shop_id','=',storeview.store_id.id],
-                                ])
+
+        method_ids = self._get_payment_method(method_name, company_id, shop_id)
+        if not method_ids:
+            method_ids = self._get_payment_method(method_name, company_id)
+        if not method_ids:
+            method_ids = self._get_payment_method(method_name)
         assert method_ids, ("method %s should exist because the import fails "
                             "in SaleOrderImport._before_import when it is "
                             " missing" % record['payment']['method'])
+
         method_id = method_ids[0]
         return {'payment_method_id': method_id}
 

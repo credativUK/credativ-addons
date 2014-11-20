@@ -35,7 +35,7 @@ class payment_method(orm.Model):
     }
 
     _sql_constraints = [
-        ('shop_company_uniq', 'unique (shop_id, company_id)',
+        ('shop_company_uniq', 'unique (name, shop_id, company_id)',
             'The Shop on payment method must be unique per company!'),
     ]
 
