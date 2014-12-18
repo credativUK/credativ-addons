@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+        <record id="account_aged_balance_view_partner" model="ir.ui.view">
+            <field name="name">Aged Partner Balance</field>
+            <field name="model">account.aged.trial.balance</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="account.account_aged_balance_view" />
+            <field name="arch" type="xml">
+                <field name="journal_ids" position="after">
+                    <notebook tabpos="up" colspan="4">
+                        <page string="Filters" name="filters">
+                            <field name="partner_filter_id"/>
+                        </page>
+                    </notebook>
+                </field>
+            </field>
+        </record>
+
+    </data>
+</openerp>
