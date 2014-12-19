@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+        <record id="view_account_followup_print_partner" model="ir.ui.view">
+            <field name="name">account.followup.print.form</field>
+            <field name="model">account.followup.print</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="account_followup.view_account_followup_print" />
+            <field name="arch" type="xml">
+                <field name="date" position="after">
+                    <field name="partner_filter_id"/>
+                </field>
+            </field>
+        </record>
+
+    </data>
+</openerp>
