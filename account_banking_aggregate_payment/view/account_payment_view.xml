@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_payment_order_form_inherit_aggregate" model="ir.ui.view">
+            <field name="name">Aggregate payment</field>
+            <field name="model">payment.order</field>
+            <field name="inherit_id" ref="account_payment.view_payment_order_form" />
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <data>
+                    <field name="mode" position="after">
+                        <field name="aggregate"/>
+                    </field>
+                    <xpath expr="//field[@name='line_ids']/form/notebook/page[@string='Information']" position="inside">
+                        <separator colspan="4" string="Aggregated invoice lines"/>
+                        <field name="move_ids" nolabel="1"/>
+                    </xpath>
+                </data>
+            </field>
+        </record>
+
+    </data>
+</openerp>
+
