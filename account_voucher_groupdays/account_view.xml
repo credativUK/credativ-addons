@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+        <record model="ir.ui.view" id="view_voucher_tree_groupdays">
+            <field name="name">account.voucher.tree.groupdays</field>
+            <field name="model">account.voucher</field>
+            <field name="inherit_id" ref="account_voucher.view_voucher_tree"/>
+            <field name="arch" type="xml">
+                <field name="date" position="after">
+                    <field name="date_day" invisible="1" />
+                    <field name="date_week" invisible="1" />
+                </field>
+            </field>
+        </record>
+
+        <record id="view_voucher_filter_groupdays" model="ir.ui.view">
+            <field name="name">account.voucher.select.groupdays</field>
+            <field name="model">account.voucher</field>
+            <field name="inherit_id" ref="account_voucher.view_voucher_filter"/>
+            <field name="arch" type="xml">
+                <filter string="State" position="after">
+                    <separator orientation="vertical"/>
+                    <filter string="Date" domain="[]" context="{'group_by':'date'}" icon="terp-go-month"/>
+                    <filter string="Date (Week)" domain="[]" context="{'group_by':'date_week'}" icon="terp-go-month"/>
+                    <filter string="Date (Day)" domain="[]" context="{'group_by':'date_day'}" icon="terp-go-month"/>
+                </filter>
+            </field>
+        </record>
+
+        <record id="view_voucher_filter_customer_pay_groupdays" model="ir.ui.view">
+            <field name="name">account.voucher.select.groupdays</field>
+            <field name="model">account.voucher</field>
+            <field name="inherit_id" ref="account_voucher.view_voucher_filter_customer_pay"/>
+            <field name="arch" type="xml">
+                <filter string="State" position="after">
+                    <separator orientation="vertical"/>
+                    <filter string="Date" domain="[]" context="{'group_by':'date'}" icon="terp-go-month"/>
+                    <filter string="Date (Week)" domain="[]" context="{'group_by':'date_week'}" icon="terp-go-month"/>
+                    <filter string="Date (Day)" domain="[]" context="{'group_by':'date_day'}" icon="terp-go-month"/>
+                </filter>
+            </field>
+        </record>
+
+        <record id="view_voucher_filter_vendor_pay_groupdays" model="ir.ui.view">
+            <field name="name">account.voucher.select.groupdays</field>
+            <field name="model">account.voucher</field>
+            <field name="inherit_id" ref="account_voucher.view_voucher_filter_vendor_pay"/>
+            <field name="arch" type="xml">
+                <filter string="State" position="after">
+                    <separator orientation="vertical"/>
+                    <filter string="Date" domain="[]" context="{'group_by':'date'}" icon="terp-go-month"/>
+                    <filter string="Date (Week)" domain="[]" context="{'group_by':'date_week'}" icon="terp-go-month"/>
+                    <filter string="Date (Day)" domain="[]" context="{'group_by':'date_day'}" icon="terp-go-month"/>
+                </filter>
+            </field>
+        </record>
+
+        <record id="view_voucher_filter_vendor_groupdays" model="ir.ui.view">
+            <field name="name">account.voucher.select.groupdays</field>
+            <field name="model">account.voucher</field>
+            <field name="inherit_id" ref="account_voucher.view_voucher_filter_vendor"/>
+            <field name="arch" type="xml">
+                <filter string="State" position="after">
+                    <separator orientation="vertical"/>
+                    <filter string="Date" domain="[]" context="{'group_by':'date'}" icon="terp-go-month"/>
+                    <filter string="Date (Week)" domain="[]" context="{'group_by':'date_week'}" icon="terp-go-month"/>
+                    <filter string="Date (Day)" domain="[]" context="{'group_by':'date_day'}" icon="terp-go-month"/>
+                </filter>
+            </field>
+        </record>
+
+        <record id="view_voucher_filter_sale_groupdays" model="ir.ui.view">
+            <field name="name">account.voucher.select.groupdays</field>
+            <field name="model">account.voucher</field>
+            <field name="inherit_id" ref="account_voucher.view_voucher_filter_sale"/>
+            <field name="arch" type="xml">
+                <filter string="State" position="after">
+                    <separator orientation="vertical"/>
+                    <filter string="Date" domain="[]" context="{'group_by':'date'}" icon="terp-go-month"/>
+                    <filter string="Date (Week)" domain="[]" context="{'group_by':'date_week'}" icon="terp-go-month"/>
+                    <filter string="Date (Day)" domain="[]" context="{'group_by':'date_day'}" icon="terp-go-month"/>
+                </filter>
+            </field>
+        </record>
+
+    </data>
+</openerp>
