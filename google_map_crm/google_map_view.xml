@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+        <record model="ir.ui.view" id="crm_case_form_view_leads_inheritg">
+            <field name="name">crm.lead.form1.inheritg</field>
+            <field name="model">crm.lead</field>
+            <field name="inherit_id" ref="crm.crm_case_form_view_leads"/>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <field name="street2" position="replace">
+                    <label string="Street2 : " align="1.0"/>
+                    <group colspan="1" col="2">
+                        <field name="street2" nolabel="1"/>
+                        <button name="open_map"
+                           string="Map" type="object" icon="gtk-zoom-in"/>
+                    </group>
+                </field>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="crm_case_form_view_oppor_inheritg">
+            <field name="name">crm.lead.form2.inheritg</field>
+            <field name="model">crm.lead</field>
+            <field name="inherit_id" ref="crm.crm_case_form_view_oppor"/>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <field name="street2" position="replace">
+                    <label string="Street2 : " align="1.0"/>
+                    <group colspan="1" col="2">
+                        <field name="street2" nolabel="1"/>
+                        <button name="open_map"
+                           string="Map" type="object" icon="gtk-zoom-in"/>
+                    </group>
+                </field>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="crm_case_form_view_meet_inheritg">
+            <field name="name">crm.meeting.inheritg</field>
+            <field name="model">crm.meeting</field>
+            <field name="inherit_id" ref="crm.crm_case_form_view_meet"/>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <xpath expr="//page[@string='Meeting']//field[@name='partner_address_id']" position="replace">
+                    <label string="Contact : " align="1.0"/>
+                    <group colspan="1" col="2">
+                        <field name="partner_address_id" nolabel="1" on_change="onchange_partner_address_id(partner_address_id, email_from)" />
+                        <button name="open_map" string="Map" type="object" icon="gtk-zoom-in"/>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
