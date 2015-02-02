@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+        <record model="ir.ui.view" id="crm_case_tree_view_meet_groupdays">
+            <field name="name">CRM - Meetings Tree</field>
+            <field name="model">crm.meeting</field>
+            <field name="inherit_id" ref="crm.crm_case_tree_view_meet"/>
+            <field name="arch" type="xml">
+                <field name="date" position="after">
+                    <field name="date_day" invisible="1" />
+                    <field name="date_week" invisible="1" />
+                </field>
+            </field>
+        </record>
+
+        <record id="view_crm_case_meetings_filter_groupdays" model="ir.ui.view">
+            <field name="name">CRM - Meetings Search</field>
+            <field name="model">crm.meeting</field>
+            <field name="inherit_id" ref="crm.view_crm_case_meetings_filter"/>
+            <field name="arch" type="xml">
+                <search position="inside">
+                    <newline/>
+                    <group expand="0" string="Group By...">
+                        <filter string="Date" domain="[]" context="{'group_by':'date'}" icon="terp-go-month" help="Group by Month (Note: Excludes repeating events)"/>
+                        <filter string="Date (Week)" domain="[]" context="{'group_by':'date_week'}" icon="terp-go-month" help="Group by Week (Note: Excludes repeating events)"/>
+                        <filter string="Date (Day)" domain="[]" context="{'group_by':'date_day'}" icon="terp-go-month" help="Group by Day (Note: Excludes repeating events)"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="crm_case_inbound_phone_tree_view_groupdays">
+            <field name="name">CRM - Logged Phone Calls Tree</field>
+            <field name="model">crm.phonecall</field>
+            <field name="inherit_id" ref="crm.crm_case_inbound_phone_tree_view"/>
+            <field name="arch" type="xml">
+                <field name="date" position="after">
+                    <field name="date_day" invisible="1" />
+                    <field name="date_week" invisible="1" />
+                </field>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="crm_case_phone_tree_view_groupdays">
+            <field name="name">CRM - Phone Calls Tree</field>
+            <field name="model">crm.phonecall</field>
+            <field name="inherit_id" ref="crm.crm_case_phone_tree_view"/>
+            <field name="arch" type="xml">
+                <field name="date" position="after">
+                    <field name="date_day" invisible="1" />
+                    <field name="date_week" invisible="1" />
+                </field>
+            </field>
+        </record>
+
+        <record id="view_crm_case_phonecalls_filter_groupdays" model="ir.ui.view">
+            <field name="name">CRM - Phone Calls Search</field>
+            <field name="model">crm.phonecall</field>
+            <field name="inherit_id" ref="crm.view_crm_case_phonecalls_filter"/>
+            <field name="arch" type="xml">
+                <filter string="Date" position="after">
+                    <filter string="Date (Week)" domain="[]" context="{'group_by':'date_week'}" icon="terp-go-month"/>
+                    <filter string="Date (Day)" domain="[]" context="{'group_by':'date_day'}" icon="terp-go-month"/>
+                </filter>
+            </field>
+        </record>
+
+        <record id="view_crm_case_scheduled_phonecalls_filter_groupdays" model="ir.ui.view">
+            <field name="name">CRM - Scheduled Calls Search</field>
+            <field name="model">crm.phonecall</field>
+            <field name="inherit_id" ref="crm.view_crm_case_scheduled_phonecalls_filter"/>
+            <field name="arch" type="xml">
+                <filter string="Date" position="after">
+                    <filter string="Date (Week)" domain="[]" context="{'group_by':'date_week'}" icon="terp-go-month"/>
+                    <filter string="Date (Day)" domain="[]" context="{'group_by':'date_day'}" icon="terp-go-month"/>
+                </filter>
+            </field>
+        </record>
+
+    </data>
+</openerp>
