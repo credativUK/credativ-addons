@@ -84,9 +84,9 @@ class crm_phonecall(osv.osv):
 
     _columns = {
         'date_day': fields.function(_get_group_dates, string='Date (Day)', type='char', size=10,
-                                    store={'crm.meeting': (lambda self, cr, uid, ids, c=None: ids, [], 20)}),
+                                    store={'crm.phonecall': (lambda self, cr, uid, ids, c=None: ids, [], 20)}),
         'date_week': fields.function(_get_group_dates, string='Date (Week)', type='char', size=20,
-                                    store={'crm.meeting': (lambda self, cr, uid, ids, c=None: ids, [], 20)}),
+                                    store={'crm.phonecall': (lambda self, cr, uid, ids, c=None: ids, [], 20)}),
         }
 
 crm_phonecall()
