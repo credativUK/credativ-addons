@@ -39,6 +39,9 @@ class crm_meeting(osv.osv):
     def _get_group_dates(self, cr, uid, ids, field_name, arg, context=None):
         res = {}
         for line in self.browse(cr, uid, ids, context=context):
+            if not line.date:
+                res[line.id] = False
+                continue
             date = datetime.datetime.strptime(line.date, '%Y-%m-%d %H:%M:%S')
             if field_name == 'date_day':
                 val = date.strftime('%Y-%m-%d')
@@ -65,6 +68,9 @@ class crm_phonecall(osv.osv):
     def _get_group_dates(self, cr, uid, ids, field_name, arg, context=None):
         res = {}
         for line in self.browse(cr, uid, ids, context=context):
+            if not line.date:
+                res[line.id] = False
+                continue
             date = datetime.datetime.strptime(line.date, '%Y-%m-%d %H:%M:%S')
             if field_name == 'date_day':
                 val = date.strftime('%Y-%m-%d')
