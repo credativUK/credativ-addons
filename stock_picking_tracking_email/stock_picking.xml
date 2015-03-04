@@ -1,0 +1,43 @@
+<?xml version="1.0" ?>
+<openerp>
+    <data noupdate="1">
+        <!-- Delivery with Tracking Email Template -->
+        <record id="stock_picking_delivery_template" model="email.template">
+            <field name="name">Delivery with tracking email</field>
+            <field name="model_id" ref="stock.model_stock_picking"/>
+            <field name="subject">Your delivery, ${object.name or ""}, has been dispatched</field>
+            <field name="email_from">${object.company_id.email or ""}</field>
+            <field name="email_to">${object.partner_id.email}</field>
+            <field name="body_html">
+Hello ${object.partner_id.name}
+
+Your delivery, ${object.name or ""}, has been dispatched, with tracking reference: ${object.carrier_tracking_ref or ""}
+
+                </field>
+        </record>
+
+        <!-- Add a server action to trigger email -->
+        <record id="action_stock_picking_delivery_email" model="ir.actions.server">
+            <field name="name">Email delivery order with tracking reference</field>
+            <field name="model_id" ref="stock.model_stock_picking"/>
+            <field name="sequence">5</field>
+            <field name="condition">False</field>
+            <field name="type">ir.actions.server</field>
+            <field name="state">code</field>
+            <field name="code">
+stock_picking_id = context['active_id']
+stock_picking = self.pool.get('stock.picking').browse(cr, uid, stock_picking_id, context=context)
+customer_opt_out = stock_picking and stock_picking.partner_id and stock_picking.partner_id.opt_out
+if stock_picking.type=='out' and not customer_opt_out:
+    data_pool = self.pool.get('ir.model.data')
+    ids = data_pool.search(cr, uid, [('model', '=', 'email.template'), ('name', '=', 'stock_picking_delivery_template')])
+    pool.get('email.template').send_mail(cr, uid, data_pool.browse(cr, uid, ids)[0].res_id, stock_picking_id, context=context)
+            </field>
+        </record>
+        
+        <!-- Trigger server action when delivery order dispatched -->
+        <record id="stock.act_done" model="workflow.activity">
+            <field name="action_id" ref="action_stock_picking_delivery_email"/>
+        </record>
+    </data>
+</openerp>
