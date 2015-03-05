@@ -227,7 +227,7 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
         fields = [
                      'inv.number',
                      'inv.date_invoice',
-                     'SUM(aml.credit - aml.debit)',
+                     'aml.tax_amount',
                      'act.code',
                      'act.name',
                      'inv.reference',
@@ -256,7 +256,7 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
                  + 'OR inv.id IS NULL) '
 
         sql += 'AND aml.tax_code_id = %s ' % tax_id
-        sql += 'GROUP BY aml.move_id,inv.number,aml.date,inv.date_invoice,act.code,act.name,inv.reference,part.name '
+        sql += 'GROUP BY aml.move_id,inv.number,aml.date,inv.date_invoice,act.code,act.name,inv.reference,part.name,aml.tax_amount '
         sql += 'ORDER BY aml.date'
 
         cr.execute(sql)
