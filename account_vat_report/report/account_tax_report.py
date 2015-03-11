@@ -134,30 +134,62 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
         res = []
         obj_account = self.pool.get('account.account')
         periods_ids = tuple(period_list)
-        if based_on == 'payments':
-            self.cr.execute('SELECT SUM(line.tax_amount) AS tax_amount, \
-                        SUM(line.debit) AS debit, \
-                        SUM(line.credit) AS credit, \
-                        COUNT(*) AS count, \
-                        account.id AS account_id, \
-                        account.name AS name,  \
-                        account.code AS code \
-                    FROM account_move_line AS line, \
-                        account_account AS account, \
-                        account_move AS move \
-                        LEFT JOIN account_invoice invoice ON \
-                            (invoice.move_id = move.id) \
-                    WHERE line.state<>%s \
-                        AND line.tax_code_id = %s  \
-                        AND line.account_id = account.id \
-                        AND account.company_id = %s \
-                        AND move.id = line.move_id \
-                        AND line.period_id IN %s \
-                        AND ((invoice.state = %s) \
-                            OR (invoice.id IS NULL))  \
-                    GROUP BY account.id,account.name,account.code', ('draft', tax_code_id,
-                        company_id, periods_ids, 'paid',))
 
+        if based_on == 'payments':
+            self.cr.execute('SELECT inv_move_line.tax_amount AS tax_amount, \
+                    inv_move_line.debit AS debit, \
+                    inv_move_line.credit AS credit, \
+                    COUNT(*) AS count, \
+                    inv_move_line.date AS date, \
+                    inv_move_line.name AS line_name, \
+                    inv_move_line.ref AS line_ref, \
+                    move.name AS move_name, \
+                    move.id AS move_id, \
+                    account.id AS account_id, \
+                    account.name AS name,  \
+                    account.code AS code, \
+                    partner.name AS partner_name \
+                FROM \
+                    account_period AS period, \
+                    account_invoice AS invoice, \
+                    account_account AS account, \
+                    res_partner AS partner, \
+                    account_move AS move, \
+                    account_move_line AS line \
+                        JOIN account_move_line AS inv_rec_line \
+                            ON line.reconcile_id = inv_rec_line.reconcile_id \
+                                AND line.id != inv_rec_line.id \
+                        JOIN account_move_line AS inv_move_line \
+                            ON inv_rec_line.move_id = inv_move_line.move_id \
+                                AND line.id != inv_move_line.id \
+                        LEFT JOIN account_invoice AS noinv \
+                            ON line.move_id = noinv.move_id \
+                WHERE line.state <> %s \
+                    AND inv_move_line.tax_code_id = %s \
+                    AND inv_move_line.account_id = account.id \
+                    AND account.company_id = %s \
+                    AND invoice.move_id = inv_move_line.move_id \
+                    AND inv_rec_line.account_id = invoice.account_id \
+                    AND move.id = inv_move_line.move_id \
+                    AND inv_move_line.partner_id = partner.id \
+                    AND line.period_id = period.id \
+                    AND line.period_id IN %s \
+                GROUP BY \
+                    inv_move_line.tax_amount, \
+                    inv_move_line.debit, \
+                    inv_move_line.credit, \
+                    inv_move_line.date, \
+                    inv_move_line.name, \
+                    inv_move_line.ref, \
+                    inv_move_line.reconcile_id,\
+                    move.name,\
+                    move.id,\
+                    account.id,\
+                    account.name,\
+                    account.code,\
+                    partner.name\
+                ORDER BY account.id,account.code,inv_move_line.date, move.id',
+                ('draft', tax_code_id, company_id, periods_ids, ))
         else:
             self.cr.execute('SELECT SUM(line.tax_amount) AS tax_amount, \
                         SUM(line.debit) AS debit, \
@@ -215,7 +247,60 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
 
     def _get_currency(self, form, context=None):
         return self.pool.get('res.company').browse(self.cr, self.uid, form['company_id'], context=context).currency_id.name
-   
+
+    def _get_payment_line_query(self):
+        ''' Get query string based on tax_id '''
+
+        sql = 'SELECT invoice.number, \
+                        invoice.date_invoice, \
+                        (inv_move_line.credit - inv_move_line.debit), \
+                        account.code AS code, \
+                        account.name AS name, \
+                        inv_move_line.ref AS line_ref, \
+                        partner.name AS partner_name \
+                    FROM \
+                        account_period AS period, \
+                        account_invoice AS invoice, \
+                        account_account AS account, \
+                        res_partner AS partner, \
+                        account_move AS move, \
+                        account_move_line AS line \
+                            JOIN account_move_line AS inv_rec_line \
+                                ON line.reconcile_id = inv_rec_line.reconcile_id \
+                                 AND line.id != inv_rec_line.id \
+                            JOIN account_move_line AS inv_move_line \
+                                ON inv_rec_line.move_id = inv_move_line.move_id \
+                                 AND line.id != inv_move_line.id \
+                            LEFT JOIN account_invoice AS noinv \
+                                ON line.move_id = noinv.move_id \
+                    WHERE line.state <> %s \
+                        AND inv_move_line.tax_code_id = %s \
+                        AND inv_move_line.account_id = account.id \
+                        AND account.company_id = %s \
+                        AND invoice.move_id = inv_move_line.move_id \
+                        AND inv_rec_line.account_id = invoice.account_id \
+                        AND move.id = inv_move_line.move_id \
+                        AND inv_move_line.partner_id = partner.id \
+                        AND line.period_id = period.id \
+                        AND line.period_id IN %s \
+                    GROUP BY \
+                        inv_move_line.tax_amount, \
+                        inv_move_line.debit, \
+                        inv_move_line.credit, \
+                        invoice.number, \
+                        invoice.date_invoice, \
+                        account.code, \
+                        account.name, \
+                        inv_move_line.ref, \
+                        partner.name, \
+                        inv_move_line.name, \
+                        move.name, \
+                        move.id, \
+                        account.id, \
+                        inv_move_line.date \
+                    ORDER BY account.id,account.code,inv_move_line.date, move.id'
+
+        return sql
 
     def _get_account_move_lines(self, tax_id, based_on, company_id=False, context=None):
         cr  = self.cr
@@ -236,32 +321,37 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
 
         period_lst = str(self.period_ids).replace('[','(').replace(']',')')
 
-        sql = 'SELECT ' + ','.join(fields) + ' ' \
-            + 'FROM account_move_line aml ' \
-            + 'INNER JOIN account_invoice inv ' \
-            + 'ON aml.move_id = inv.move_id ' \
-            + 'INNER JOIN account_account act ' \
-            + 'ON aml.account_id = act.id ' \
-            + 'LEFT JOIN res_partner part ' \
-            + 'ON inv.partner_id = part.id ' \
-            + 'WHERE (aml.credit > 0 OR aml.debit > 0) ' \
-            + 'AND aml.state != \'draft\' ' \
-            + 'AND aml.period_id IN %s ' % period_lst
+        if based_on == 'invoices':
+            sql = 'SELECT ' + ','.join(fields) + ' ' \
+                + 'FROM account_move_line aml ' \
+                + 'INNER JOIN account_invoice inv ' \
+                + 'ON aml.move_id = inv.move_id ' \
+                + 'INNER JOIN account_account act ' \
+                + 'ON aml.account_id = act.id ' \
+                + 'LEFT JOIN res_partner part ' \
+                + 'ON inv.partner_id = part.id ' \
+                + 'WHERE (aml.credit > 0 OR aml.debit > 0) ' \
+                + 'AND aml.state != \'draft\' ' \
+                + 'AND aml.period_id IN %s ' % period_lst
 
-        if company_id:
-            sql += 'AND act.company_id = %d ' % company_id
+            if company_id:
+                sql += 'AND act.company_id = %d ' % company_id
 
-        if based_on == 'payments':
-            sql += 'AND (inv.state = \'paid\' ' \
-                 + 'OR inv.id IS NULL) '
+            #if based_on == 'payments':
+                #sql += 'AND (inv.state = \'paid\' ' \
+                    #+ 'OR inv.id IS NULL) '
 
-        sql += 'AND aml.tax_code_id = %s ' % tax_id
-        sql += 'GROUP BY aml.move_id,inv.number,aml.date,inv.date_invoice,act.code,act.name,inv.reference,part.name,aml.tax_amount '
-        sql += 'ORDER BY aml.date'
+            sql += 'AND aml.tax_code_id = %s ' % tax_id
+            sql += 'GROUP BY aml.move_id,inv.number,aml.date,inv.date_invoice,act.code,act.name,inv.reference,part.name,aml.tax_amount '
+            sql += 'ORDER BY aml.date'
+            cr.execute(sql)
 
-        cr.execute(sql)
+        else:
+            sql = self._get_payment_line_query()
+            cr.execute(sql,('draft', tax_id,
+                    company_id, tuple(self.period_ids), ))
+
         result = cr.fetchall()
-
         tax_code_total = 0.0
 
         ret = []
@@ -278,7 +368,7 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
                     'amount'    : '%0.2f' % res[2],
                     'act_code'  : res[3],
                     'account'   : res[4],
-                    'reference' : res[5],
+                    'reference' : res[5] and res[5][:10].capitalize(), #Fix distorted text
                     'partner'   : partner[:23],
             }
             ret.append(res_dict)
