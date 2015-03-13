@@ -28,13 +28,13 @@ class crm_claim(osv.Model):
 
     _inherit = 'crm.claim'
 
-    def get_partner_childs(self, cr, uid, partner_id, context=None):
-        '''This function finds root partner and then returns child IDS
+    def get_root_partner(self, cr, uid, partner_id, context=None):
+        '''This function finds the root partner of a given partner ID.
            :param partner_id: Partner ID
         '''
 
         def root_partner(partner):
-            ''' Recursive function to get root partner'''
+            ''' Recursive function to find the root of a partner-tree.'''
 
             if partner.parent_id:
                 return root_partner(partner.parent_id)
@@ -61,7 +61,7 @@ class crm_claim(osv.Model):
                                                          email=email)
 
         if partner_id:
-            root_partner_id = self.get_partner_childs(cr, uid, partner_id,
+            root_partner_id = self.get_root_partner(cr, uid, partner_id,
                                                          context=context)
             partner_claim_ids = self.search(cr, uid,
                                             [('partner_id',
