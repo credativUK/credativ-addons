@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2014 credativ Ltd (<http://credativ.co.uk>).
+#    Copyright (C) 2015 credativ Ltd (<http://credativ.co.uk>).
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
