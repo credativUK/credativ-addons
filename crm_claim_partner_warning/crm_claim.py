@@ -37,7 +37,7 @@ class crm_claim(osv.Model):
             ''' Recursive function to get root partner'''
 
             if partner.parent_id:
-                root_partner(partner.parent_id)
+                return root_partner(partner.parent_id)
             return partner
 
         if context is None:
@@ -46,7 +46,7 @@ class crm_claim(osv.Model):
         partner = self.pool.get('res.partner').browse(cr, uid, partner_id,
                                                       context=context)
 
-        return root_partner(partner).child_ids or [partner.id]
+        return root_partner(partner).id
 
     def onchange_partner_id(self, cr, uid, ids, partner_id, email=False):
         """This function returns value of partner address based on partner
@@ -61,12 +61,12 @@ class crm_claim(osv.Model):
                                                          email=email)
 
         if partner_id:
-            search_partner_ids = self.get_partner_childs(cr, uid, partner_id,
+            root_partner_id = self.get_partner_childs(cr, uid, partner_id,
                                                          context=context)
             partner_claim_ids = self.search(cr, uid,
                                             [('partner_id',
-                                              'in',
-                                              search_partner_ids),
+                                              'child_of',
+                                              [root_partner_id]),
                                              ('state', 'in', ['open',
                                                               'draft']),
                                              ('id', 'not in', ids)])
