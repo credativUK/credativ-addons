@@ -28,6 +28,26 @@ class crm_claim(osv.Model):
 
     _inherit = 'crm.claim'
 
+    def get_partner_childs(self, cr, uid, partner_id, context=None):
+        '''This function finds root partner and then returns child IDS
+           :param partner_id: Partner ID
+        '''
+
+        def root_partner(partner):
+            ''' Recursive function to get root partner'''
+
+            if partner.parent_id:
+                root_partner(partner.parent_id)
+            return partner
+
+        if context is None:
+            context = {}
+
+        partner = self.pool.get('res.partner').browse(cr, uid, partner_id,
+                                                      context=context)
+
+        return root_partner(partner).child_ids or [partner.id]
+
     def onchange_partner_id(self, cr, uid, ids, partner_id, email=False):
         """This function returns value of partner address based on partner
            :param part: Partner's id
@@ -35,23 +55,30 @@ class crm_claim(osv.Model):
         """
 
         warning = {}
+        context = {}
         res = super(crm_claim, self).onchange_partner_id(cr, uid, ids,
                                                          partner_id,
                                                          email=email)
 
-        partner_claim_ids = self.search(cr, uid,
-                                        [('partner_id', '=', partner_id),
-                                         ('state', 'in', ['open', 'draft']),
-                                         ('id', 'not in', ids)])
-        if partner_claim_ids:
-            claims = self.read(cr, uid, partner_claim_ids, ['number'])
-            claims_str = '\n'.join('%s' % (claim['number'])
-                                   for claim in claims)
-            warning = {
-                'title': _('Warning!'),
-                'message': _('There are other open claims for this Partner %s'
-                             % (claims_str))
-            }
+        if partner_id:
+            search_partner_ids = self.get_partner_childs(cr, uid, partner_id,
+                                                         context=context)
+            partner_claim_ids = self.search(cr, uid,
+                                            [('partner_id',
+                                              'in',
+                                              search_partner_ids),
+                                             ('state', 'in', ['open',
+                                                              'draft']),
+                                             ('id', 'not in', ids)])
 
+            if partner_claim_ids:
+                claims = self.read(cr, uid, partner_claim_ids, ['number'])
+                claims_str = '\n\n'.join('%s' % (claim['number'])
+                                         for claim in claims)
+                warning = {
+                    'title': _('Warning!'),
+                    'message': _('There are open claims for this Partner\n\n%s'
+                                 % (claims_str))
+                }
         res['warning'] = warning
         return res
