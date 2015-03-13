@@ -77,7 +77,7 @@ class crm_claim(osv.Model):
                                          for claim in claims)
                 warning = {
                     'title': _('Warning!'),
-                    'message': _('There are open claims for this Partner\n\n%s'
+                    'message': _('There are draft / open claims for this partner:\n\n%s'
                                  % (claims_str))
                 }
         res['warning'] = warning
