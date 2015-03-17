@@ -32,16 +32,5 @@
         </field>
     </record>
 
-<!--    <record model="ir.ui.view" id="view_res_partner_filter_multitier">
-        <field name="name">res.partner.select.multitier</field>
-        <field name="model">res.partner</field>
-        <field name="inherit_id" ref="base.view_res_partner_filter"/>
-        <field name="arch" type="xml">
-            <field name="parent_id" position="attributes">-->
-                <!-- Remove domain to limit to selection of company partners -->
-<!--                <attribute name="domain">[]</attribute>
-            </field>
-        </field>
-    </record>-->
 </data>
 </openerp>
