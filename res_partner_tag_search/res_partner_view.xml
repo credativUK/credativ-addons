@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+<data>
+
+    <record model="ir.ui.view" id="view_res_partner_filter_multitier">
+        <field name="name">res.partner.select.multitier</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <field name="category_id" position="attributes">
+                <!-- Searching partner tag searches category names as well as parent category names -->
+                <attribute name="filter_domain">['|',('category_id','ilike', self),('category_id','child_of', self)]</attribute>
+            </field>
+        </field>
+    </record>
+
+</data>
+</openerp>
