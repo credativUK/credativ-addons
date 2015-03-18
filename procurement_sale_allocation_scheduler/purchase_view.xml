@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="purchase_order_form_alloc_sched" model="ir.ui.view">
+            <field name="name">purchase.order.form.alloc_sched</field>
+            <field name="model">purchase.order</field>
+            <field name="inherit_id" ref="procurement_sale_allocation.purchase_order_form_alloc"/>
+            <field name="arch" type="xml">
+                <field name="procurement_ids" position="before">
+                    <group>
+                        <field name="procurements_auto_allocate"/>
+                    </group>
+                </field>
+            </field>
+        </record>
+    </data>
+</openerp>
