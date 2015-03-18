@@ -23,7 +23,7 @@
     'version':'1.0',
     'category' : 'Sales Management',
     'description': """
-This module allows searching of partner tags by name as well as parent name.
+This module allows searching of partners by tag name and also the name of any parent tags.
 For example, searching "Asia" would return partners with "Asia" as a tag, as well as "Asia / China" as a tag.
     """,
     'author' : 'credativ',
