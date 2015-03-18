@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="purchase_order_form_alloc" model="ir.ui.view">
+            <field name="name">purchase.order.form.alloc</field>
+            <field name="model">purchase.order</field>
+            <field name="inherit_id" ref="purchase.purchase_order_form"/>
+            <field name="arch" type="xml">
+                <page string="Purchase Order" position="after">
+                    <page string="Procurements">
+                        <group string="Allocated Procurements">
+                            <field name="procurement_ids" nolabel="1" colspan="4"/>
+                        </group>
+                        <group string="Unallocated Order Lines">
+                        <field name="order_line_unalloc" nolabel="1"  colspan="4"/>
+                        </group>
+                    </page>
+                </page>
+            </field>
+        </record>
+    </data>
+</openerp>
