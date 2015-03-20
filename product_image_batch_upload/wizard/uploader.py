@@ -1,8 +1,28 @@
+# -*- encoding: utf-8 -*-
+##############################################################################
+#
+#    OpenERP, Open Source Management Solution
+#    Copyright (C) 2015 credativ Ltd (<http://credativ.co.uk>).
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+##############################################################################
+
 import os
-from osv import osv, fields
-from osv.osv import except_osv
+from openerp import tools
+from openerp.osv import fields, osv
+from openerp.tools.translate import _
 from openerp import sql_db
-from tools.translate import _
 
 try:
     import cStringIO as StringIO
@@ -40,7 +60,7 @@ class product_image_uploader(osv.TransientModel):
             else:
                 id_map[filename] = matches[:]
         if missing_prods:
-            raise except_osv(
+            raise osv.except_osv(
                                 _('Error: Unknown product'),
                                 _('Products could not be found for the following SKUs:\n' + \
                                     '\n'.join(missing_prods)
@@ -64,7 +84,7 @@ class product_image_uploader(osv.TransientModel):
                     if e.message == 'cannot identify image file':
                         corrupt.append(name)
         if corrupt:
-            raise except_osv(
+            raise osv.except_osv(
                                 _('Warning: Invalid image data.'),
                                 _('Unable to process the following files:\n' + '\n'.join(corrupt) + '\n\nAll other images were imported successfully.')
                             )
@@ -78,7 +98,7 @@ class product_image_uploader(osv.TransientModel):
         zf = ZipFile(zip_str, 'a')
 
         if not zf.namelist():
-            raise except_osv(
+            raise osv.except_osv(
                                 _('Error: File is either empty or not a zip file.'),
                                 _('Please upload a valid zip file.')
                             )
@@ -90,7 +110,7 @@ class product_image_uploader(osv.TransientModel):
 
         try:
             self._write_images(cr2, uid, id_map, zf, context=context)
-        except except_osv as e:
+        except osv.except_osv as e:
             raise e
         finally:
             cr2.commit()
