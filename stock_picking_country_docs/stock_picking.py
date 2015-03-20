@@ -19,20 +19,19 @@
 #
 ##############################################################################
 
-from openerp import models
+from openerp import models, api, _
 
 class stock_picking(models.Model):
     _inherit = 'stock.picking'
 
-    def do_copy_country_attachments(self, cr, uid, ids, context=None):
+    @api.one
+    def do_copy_country_attachments(self):
         '''This function copies attachments from the destination country to the picking'''
-        context = dict(context or {})
-        attachment_pool = self.pool.get('ir.attachment')
-        for picking in self.browse(cr, uid, ids, context=context):
-            country_id = picking.partner_id.country_id.id
-            country_attachments = attachment_pool.search(cr ,uid, [('res_model','=','res.country'),('res_id','=',country_id)], context=context)
-            for attachment in attachment_pool.browse(cr, uid, country_attachments, context=context):
-                attachment.copy(default={'name':attachment.name, 'res_model':'stock.picking', 'res_id':picking.id})
+        attachmentObj = self.env['ir.attachment']
+        country_id = self.partner_id.country_id.id
+        country_attachments = attachmentObj.search([('res_model','=','res.country'),('res_id','=',country_id)])
+        for attachment in country_attachments:
+            attachment.copy(default={'name':attachment.name, 'res_model':'stock.picking', 'res_id':self.id})
         return True
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
