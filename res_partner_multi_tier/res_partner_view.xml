@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+<data>
+
+    <record model="ir.ui.view" id="view_partner_simple_form_multitier">
+        <field name="name">res.partner.simplified.form.multitier</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_simple_form"/>
+        <field name="arch" type="xml">
+            <field name="parent_id" position="attributes">
+                <!-- Remove invisibile attrs and domain to limit to selection of company partners -->
+                <attribute name="attrs">{}</attribute>
+                <attribute name="domain">[]</attribute>
+            </field>
+        </field>
+    </record>
+
+    <record model="ir.ui.view" id="view_partner_form_multitier">
+        <field name="name">res.partner.form.multitier</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <field name="parent_id" position="attributes">
+                <!-- Remove invisibile attrs and domain to limit to selection of company partners -->
+                <attribute name="attrs">{}</attribute>
+                <attribute name="domain">[]</attribute>
+            </field>
+            <page string="Contacts" position="attributes">
+                <!-- Remove invisibile attrs -->
+                <attribute name="attrs">{}</attribute>
+            </page>
+        </field>
+    </record>
+
+</data>
+</openerp>
