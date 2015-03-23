@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2014 credativ Ltd (<http://credativ.co.uk>).
+#    Copyright (C) 2015 credativ Ltd (<http://credativ.co.uk>).
 #    All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -19,30 +19,18 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-{
-    'name' : 'Partner Incoterms',
-    'version' : '1.0.0.0',
-    'author' : 'credativ Ltd',
-    'website' : 'http://credativ.co.uk',
-    'depends' : [
-        'base', 
-        'purchase', 
-        'sale_stock',
-    ],
-    'category' : 'Generic Modules/Purchase',
-    'description': '''
-Adds a purchase and sale Incoterm to the partner object which
-will be copied onto Purchase / Sales Order incoterms as default.
-''',
-    'init_xml' : [
-    ],
-    'demo_xml' : [
-    ],
-    'update_xml' : [
-        'partner_view.xml',
-        'purchase_view.xml',
-    ],
-    'active': False,
-    'installable': True
-}
+
+from openerp import fields, models, api
+
+class sale_order(models.Model):
+    _inherit = 'sale.order'
+    
+    def onchange_partner_id(self, cr, uid, ids, partner_id, context=None):
+        res = super(sale_order, self).onchange_partner_id(cr, uid, ids, partner_id, context=context)
+        if partner_id:
+            partner = self.pool.get('res.partner').browse(cr, uid, partner_id, context=context)
+            if partner.default_sale_incoterm_id:
+                res['value']['incoterm'] = partner.default_sale_incoterm_id.id
+        return res
+
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

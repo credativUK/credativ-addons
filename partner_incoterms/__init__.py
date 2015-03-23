@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2014 credativ Ltd (<http://credativ.co.uk>).
+#    Copyright (C) 2015 credativ Ltd (<http://credativ.co.uk>).
 #    All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -20,13 +20,8 @@
 #
 ##############################################################################
 
-from osv import osv, fields
+import partner
+import purchase
+import sale
 
-class res_partner(osv.osv):
-    _inherit = 'res.partner'
-    _columns = {
-        'default_incoterm_id': fields.many2one('stock.incoterms', 'Default Purchase Incoterm', help='Default Incoterm used in a Purchase Order when this partner is selected as the supplier.'),
-        'default_sale_incoterm_id': fields.many2one('stock.incoterms', 'Default Sale Incoterm', help='Default Incoterm used in a Sale Order when this partner is selected as the customer.'),
-        }
-
-res_partner()
+# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
