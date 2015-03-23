@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <template id="report_invoice_document_incoterm"  inherit_id="account.report_invoice_document">
+            <xpath expr="//div[@t-if='o.reference']" position="after">
+                <div class="col-xs-2" t-if="o.incoterm">
+                    <strong>Incoterm:</strong>
+                    <p t-field="o.incoterm.code"/>
+                </div>
+            </xpath>
+        </template>
+
+    </data>
+</openerp>
