@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2014 credativ Ltd (<http://credativ.co.uk>).
+#    Copyright (C) 2015 credativ Ltd (<http://credativ.co.uk>).
 #    All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -20,18 +20,12 @@
 #
 ##############################################################################
 
-from osv import osv, fields
+from openerp import fields, models
 
-class sale_order(osv.osv):
-    _inherit = 'sale.order'
+class res_partner(models.Model):
+    _inherit = 'res.partner'
     
-    def onchange_partner_id(self, cr, uid, ids, partner_id, context=None):
-        res = super(sale_order, self).onchange_partner_id(cr, uid, ids, partner_id, context=context)
-        if partner_id:
-            partner = self.pool.get('res.partner').browse(cr, uid, partner_id, context=context)
-            if partner.default_sale_incoterm_id:
-                res['value']['incoterm'] = partner.default_sale_incoterm_id.id
-        return res
+    default_incoterm_id = fields.Many2one('stock.incoterms', 'Default Purchase Incoterm', help='Default Incoterm used in a Purchase Order when this partner is selected as the supplier.')
+    default_sale_incoterm_id = fields.Many2one('stock.incoterms', 'Default Sale Incoterm', help='Default Incoterm used in a Sale Order when this partner is selected as the customer.')
 
-
-sale_order()
+# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
