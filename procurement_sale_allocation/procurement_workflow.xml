@@ -70,17 +70,17 @@
         <record id="trans_mto_to_mto_1a" model="workflow.transition">
             <field name="act_from" ref="procurement.act_confirm_mto"/>
             <field name="act_to" ref="act_mto_to_mto"/>
-            <field name="signal">signal_mts_mto</field>
+            <field name="signal">signal_mto_mto</field>
         </record>
         <record id="trans_mto_to_mto_1b" model="workflow.transition">
             <field name="act_from" ref="purchase.act_buy"/>
             <field name="act_to" ref="act_mto_to_mto"/>
-            <field name="signal">signal_mts_mto</field>
+            <field name="signal">signal_mto_mto</field>
         </record>
         <record id="trans_mto_to_mto_1c" model="workflow.transition">
             <field name="act_from" ref="procurement.act_make_done"/>
             <field name="act_to" ref="act_mto_to_mto"/>
-            <field name="signal">signal_mts_mto</field>
+            <field name="signal">signal_mto_mto</field>
         </record>
         <record id="trans_mto_to_mto_2" model="workflow.transition">
             <field name="act_from" ref="act_mto_to_mto"/>

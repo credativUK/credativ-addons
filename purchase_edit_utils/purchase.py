@@ -123,6 +123,7 @@ class PurchaseOrderLine(osv.Model):
                         move_id = move_obj.create(cr, uid, purchase_obj._prepare_order_line_move(cr, uid, line.order_id, line, line.order_id.picking_ids[0].id, context=context))
                         move_obj.write(cr, uid, [move_id,], {'state': 'assigned'}, context=context)
                     else:
+                        self.write(cr, uid, [line.id], {'state': 'cancel'}, context=context)
                         self.unlink(cr, uid, [line.id], context=context)
                 if move_ids:
                     move_obj.action_cancel(cr, uid, move_ids, context=context)

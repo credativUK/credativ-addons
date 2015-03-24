@@ -116,6 +116,7 @@ class ProcurementOrder(osv.Model):
                                                              ('price_unit', '=', po_line.price_unit),
                                                              ('product_id', '=', po_line.product_id.id),
                                                              ('account_analytic_id', '=', po_line.account_analytic_id.id),
+                                                             ('order_id', '=', po_line.order_id.id),
                                                              ], context=context)
                 if len(pol_ids) > 1:
                     purchase_line_obj.do_merge(cr, uid, pol_ids, context=context)
