@@ -68,3 +68,85 @@ class mrp_production(models.Model):
             }
             move_id = stock_move.create(cr, uid, data, context=context)
             stock_move.action_confirm(cr, uid, [move_id], context=context)
+
+    def action_produce(self, cr, uid, production_id, production_qty, production_mode, wiz=False, context=None):
+        """ To produce final product based on production mode (consume/consume&produce).
+        If Production mode is consume, all stock move lines of raw materials will be done/consumed.
+        If Production mode is consume & produce, all stock move lines of raw materials will be done/consumed
+        and stock move lines of final product will be also done/produced.
+        @param production_id: the ID of mrp.production object
+        @param production_qty: specify qty to produce in the uom of the production order
+        @param production_mode: specify production mode (consume/consume&produce).
+        @param wiz: the mrp produce product wizard, which will tell the amount of consumed products needed
+        @return: True
+        """
+        stock_mov_obj = self.pool.get('stock.move')
+        uom_obj = self.pool.get("product.uom")
+        production = self.browse(cr, uid, production_id, context=context)
+        production_qty_uom = uom_obj._compute_qty(cr, uid, production.product_uom.id, production_qty, production.product_id.uom_id.id)
+
+        main_production_move = False
+        if production_mode == 'consume_produce':
+            remaining_qty = {}
+            template_move = {}
+
+            # assess how much should be produced
+            for produce_product in production.move_created_ids:
+                subproduct_factor = self._get_subproduct_factor(cr, uid, production.id, produce_product.id, context=context)
+                lot_id = False
+                if wiz:
+                    lot_id = wiz.lot_id.id
+
+                remaining_qty.setdefault(produce_product.product_id.id, subproduct_factor * production_qty_uom)
+
+                consumed_qty = min(produce_product.product_qty, remaining_qty[produce_product.product_id.id])
+                if consumed_qty > 0:
+                    new_moves = stock_mov_obj.action_consume(cr, uid, [produce_product.id], consumed_qty,
+                                                            location_id=produce_product.location_id.id, restrict_lot_id=lot_id, context=context)
+                    stock_mov_obj.write(cr, uid, new_moves, {'production_id': production_id}, context=context)
+
+                remaining_qty[produce_product.product_id.id] -= produce_product.product_qty
+                template_move[produce_product.product_id.id] = produce_product.id
+
+                if produce_product.product_id.id == production.product_id.id:
+                    main_production_move = produce_product.id
+
+            for product_id in remaining_qty:
+                if remaining_qty[product_id] < 0: # In case you need to make more than planned
+                    #consumed more in wizard than previously planned
+                    extra_move_id = stock_mov_obj.copy(cr, uid, template_move[product_id], default={'product_uom_qty': -remaining_qty[product_id],
+                                                                                                    'production_id': production_id}, context=context)
+                    stock_mov_obj.action_confirm(cr, uid, [extra_move_id], context=context)
+                    stock_mov_obj.action_done(cr, uid, [extra_move_id], context=context)
+
+        if production_mode in ['consume', 'consume_produce']:
+            if wiz:
+                consume_lines = []
+                for cons in wiz.consume_lines:
+                    consume_lines.append({'product_id': cons.product_id.id, 'lot_id': cons.lot_id.id, 'product_qty': cons.product_qty})
+            else:
+                consume_lines = self._calculate_qty(cr, uid, production, production_qty_uom, context=context)
+            for consume in consume_lines:
+                remaining_qty = consume['product_qty']
+                for raw_material_line in production.move_lines:
+                    if raw_material_line.state in ('done', 'cancel'):
+                        continue
+                    if remaining_qty <= 0:
+                        break
+                    if consume['product_id'] != raw_material_line.product_id.id:
+                        continue
+                    consumed_qty = min(remaining_qty, raw_material_line.product_qty)
+                    stock_mov_obj.action_consume(cr, uid, [raw_material_line.id], consumed_qty, raw_material_line.location_id.id,
+                                                 restrict_lot_id=consume['lot_id'], consumed_for=main_production_move, context=context)
+                    remaining_qty -= consumed_qty
+                if remaining_qty:
+                    #consumed more in wizard than previously planned
+                    product = self.pool.get('product.product').browse(cr, uid, consume['product_id'], context=context)
+                    extra_move_id = self._make_consume_line_from_data(cr, uid, production, product, product.uom_id.id, remaining_qty, False, 0, context=context)
+                    stock_mov_obj.write(cr, uid, [extra_move_id], {'restrict_lot_id': consume['lot_id'],
+                                                                    'consumed_for': main_production_move}, context=context)
+                    stock_mov_obj.action_done(cr, uid, [extra_move_id], context=context)
+
+        self.message_post(cr, uid, production_id, body=_("%s produced") % self._description, context=context)
+        self.signal_workflow(cr, uid, [production_id], 'button_produce_done')
+        return True
