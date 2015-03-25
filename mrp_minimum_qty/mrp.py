@@ -150,3 +150,47 @@ class mrp_production(models.Model):
         self.message_post(cr, uid, production_id, body=_("%s produced") % self._description, context=context)
         self.signal_workflow(cr, uid, [production_id], 'button_produce_done')
         return True
+
+    def product_id_change(self, cr, uid, ids, product_id, product_qty=0, context=None):
+        res = super(mrp_production, self).product_id_change(cr, uid, ids, product_id=product_id, product_qty=product_qty, context=context)
+        if not res['value']['bom_id']:
+            return res
+
+        value = res['value']
+
+        uom_obj = self.pool.get('product.uom')
+
+        bom = self.pool.get('mrp.bom').browse(cr, uid, value['bom_id'])
+        product_qty = value.get('product_qty', product_qty)
+
+        requested_qty = uom_obj._compute_qty(cr, uid, value['product_uom'], product_qty, bom.product_uom.id)
+        if requested_qty < bom.minimum_qty:
+            res['warning'] = {'title': _('Warning'), 'message': _("The minimum manufacturing quantity is not met, rules for this BoM say the minimum is {} {}.").format(bom.minimum_qty, bom.product_uom.name)}
+
+        return res
+
+    def bom_id_change(self, cr, uid, ids, bom_id, product_uom=False, product_qty=0, context=None):
+        uom_obj = self.pool.get('product.uom')
+
+        res = super(mrp_production, self).bom_id_change(cr, uid, ids, bom_id=bom_id, context=context)
+        value = res['value']
+
+        bom = self.pool.get('mrp.bom').browse(cr, uid, value.get('bom_id', bom_id))
+        product_uom = value.get('product_uom', product_uom)
+        product_qty = value.get('product_qty', product_qty)
+
+        requested_qty = uom_obj._compute_qty(cr, uid, product_uom, product_qty, bom.product_uom.id)
+        if requested_qty < bom.minimum_qty:
+            res['warning'] = {'title': _('Warning'), 'message': _("The minimum manufacturing quantity is not met, rules for this BoM say the minimum is {} {}.").format(bom.minimum_qty, bom.product_uom.name)}
+
+        return res
+
+    # unused as most views already define their own onchange
+    @api.onchange("product_qty", "product_uom", "bom_id")
+    def _onchange_product_qty(self):
+        for production in self:
+            if not production.bom_id:
+                continue
+            requested_qty = production.env['product.uom']._compute_qty(production.product_uom.id, production.product_qty, production.bom_id.product_uom.id)
+            if requested_qty < production.bom_id.minimum_qty:
+                production.message = _("The minimum manufacturing quantity is not met, rules for this BoM say the minimum is {} {}.").format(production.bom_id.minimum_qty, production.bom_id.product_uom.name)

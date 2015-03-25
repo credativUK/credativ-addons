@@ -7,9 +7,20 @@
             <field name="model">mrp.bom</field>
             <field name="inherit_id" ref="mrp.mrp_bom_form_view"/>
             <field name="arch" type="xml">
-                <xpath expr="//field[@name='product_uom']" position="after">
+                <xpath expr="//label[@for='routing_id']" position="before">
                     <field name="minimum_qty"/>
                 </xpath>
+            </field>
+        </record>
+
+        <record id="mrp_production_form_view" model="ir.ui.view">
+            <field name="name">mrp.production.form</field>
+            <field name="model">mrp.production</field>
+            <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
+            <field name="arch" type="xml">
+                <field name="bom_id" position="attributes">
+                    <attribute name="on_change">bom_id_change(bom_id, product_uom, product_qty)</attribute>
+                </field>
             </field>
         </record>
     </data>
