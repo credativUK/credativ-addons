@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="view_warehouse_ssl" model="ir.ui.view">
+            <field name="name">stock.warehouse.ssl</field>
+            <field name="model">stock.warehouse</field>
+            <field name="inherit_id" ref="stock.view_warehouse"/>
+            <field name="arch" type="xml">
+                <field name="lot_output_id" position="after">
+                    <field name="lot_supplier_virtual_id"/>
+                </field>
+           </field>
+        </record>
+
+        <record id="view_inventory_form_ssl" model="ir.ui.view">
+            <field name="name">stock.inventory.form.ssl</field>
+            <field name="model">stock.inventory</field>
+            <field name="inherit_id" ref="stock.view_inventory_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//tree/field[@name='location_id']" position="attributes">
+                    <attribute name="domain">['|', ('usage','=','internal'), '&amp;', ('usage','=','supplier'), ('supplier_warehouse_ids','!=',False)]</attribute>
+                </xpath>
+           </field>
+        </record>
+
+        <record id="view_production_lot_form_ssl" model="ir.ui.view">
+            <field name="name">stock.production.lot.form.ssl</field>
+            <field name="model">stock.production.lot</field>
+            <field name="inherit_id" ref="stock.view_production_lot_form"/>
+            <field name="arch" type="xml">
+                <field name="stock_available" position="after">
+                    <field name="partner_id"/>
+                </field>
+            </field>
+        </record>
+
+    </data>
+</openerp>
