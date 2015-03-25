@@ -36,6 +36,7 @@ class procurement_order(orm.Model):
         bom_obj = self.pool.get('mrp.bom')
         uom_obj = self.pool.get('product.uom')
         proposed_mos = {}
+        confirmed_procurements = set()
         for procurement in self.browse(cr, uid, ids, context=context):
             bom_id = procurement.bom_id.id
             if not bom_id:
@@ -45,6 +46,9 @@ class procurement_order(orm.Model):
             if not bom_id:
                 self.message_post(cr, uid, [procurement.id], body=_("No BoM exists for this product!"), context=context)
                 continue
+
+            if procurement.state == 'confirm':
+                confirmed_procurements.add(procurement.id)
 
             group_key = (procurement.company_id.id, bom_id, procurement.location_id.id)
             proposed_mos.setdefault(group_key, []).append((procurement.id, self._prepare_mo_vals(cr, uid, procurement, context=context)))
@@ -68,7 +72,11 @@ class procurement_order(orm.Model):
                     origin.append(proposed_mo['origin'])
             origin = ",".join(origin) or False
 
+            requested_qty = uom_obj._compute_qty(cr, uid, product_uom, requested_qty, bom.product_uom.id)
             if bom.minimum_qty > requested_qty:
+                to_note = list(confirmed_procurements & set(procurements))
+                if to_note:
+                    self.message_post(cr, uid, to_note, body=_("Minimum manufacturing quantity of not met"), context=context)
                 continue
 
             date_planned = False
