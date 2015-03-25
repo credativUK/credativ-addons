@@ -35,6 +35,7 @@ class mrp_production(models.Model):
     def _make_production_produce_line(self, cr, uid, production, context=None):
         stock_move = self.pool.get('stock.move')
         proc_obj = self.pool.get('procurement.order')
+        uom_obj = self.pool.get("product.uom")
         source_location_id = production.product_id.property_stock_production.id
         destination_location_id = production.location_dest_id.id
         procs = proc_obj.search(cr, uid, [('production_id', '=', production.id)], context=context)
@@ -42,12 +43,14 @@ class mrp_production(models.Model):
             proc_obj.browse(cr, uid, procs, context=context) or [False]
         for procurement in procurements:
             date_planned = procurement and proc_obj._get_date_planned(cr, uid, procurement, context=context) or production.date_planned
+            # code elsewhere expects all moves for the same product to have the same uom, convert
+            product_qty = procurement and uom_obj._compute_qty(cr, uid, procurement.product_uom.id, procurement.product_qty, production.product_uom.id)
             data = {
                 'name': production.name,
                 'date': date_planned,
                 'product_id': production.product_id.id,
-                'product_uom': procurement and procurement.product_uom.id or production.product_uom.id,
-                'product_uom_qty': procurement and procurement.product_qty or production.product_qty,
+                'product_uom': production.product_uom.id,
+                'product_uom_qty': product_qty,
                 'product_uos_qty': (procurement and procurement.product_uos and procurement.product_uos_qty) \
                                     or (production.product_uos and production.product_uos_qty) \
                                     or False,
