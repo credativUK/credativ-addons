@@ -20,21 +20,17 @@
 #
 ##############################################################################
 
-from openerp.osv import orm, fields
+from openerp import api, models, fields, _
 
-class mrp_bom(orm.Model):
+class mrp_bom(models.Model):
     _inherit = 'mrp.bom'
 
-    _columns = {
-        'minimum_qty': fields.float('Minimum Qty', help="Minimum manufacturing quantity for this BoM"),
-    }
+    minimum_qty = fields.Float('Minimum Qty', help="Minimum manufacturing quantity for this BoM")
 
-class mrp_production(orm.Model):
+class mrp_production(models.Model):
     _inherit = 'mrp.production'
 
-    _columns = {
-        'procurement_ids': fields.one2many('procurement.order', 'production_id', 'Procurements'),
-    }
+    procurement_ids = fields.One2many('procurement.order', 'production_id', 'Procurements', copy=False, readonly=True)
 
     def _make_production_produce_line(self, cr, uid, production, context=None):
         stock_move = self.pool.get('stock.move')
