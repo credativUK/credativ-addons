@@ -98,6 +98,8 @@ class ProcurementOrder(osv.Model):
         purchase_line_obj = self.pool.get('purchase.order.line')
         for proc in self.browse(cr, uid, ids, context=context):
             # Find all PO lines with my stock move ID as the move_dest_id
+            if not proc.move_id:
+                continue
             pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('order_id.state', '!=', 'cancel')], context=context)
             assert len(pol_ids) in (0, 1), "Found multiple purchase order lines for this procurement"
             if pol_ids:
@@ -130,6 +132,10 @@ class ProcurementOrder(osv.Model):
         if to_unassign:
             self.pool.get('stock.move').cancel_assign(cr, uid, to_unassign, context=context)
         return True
+
+    def action_cancel(self, cr, uid, ids):
+        self._cancel_po_assign(cr, uid, ids)
+        return super(ProcurementOrder, self).action_cancel(cr, uid, ids)
 
     def action_mto_to_mts(self, cr, uid, ids, context=None):
         self.write(cr, uid, ids, {'state': 'exception', 'procure_method': 'make_to_stock', 'message': False}, context=context)
