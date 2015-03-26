@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution	
+#    OpenERP, Open Source Management Solution
 #    Copyright (C) 2015 credativ Ltd (<http://credativ.co.uk>).
 #    All Rights Reserved
 #
@@ -20,6 +20,28 @@
 #
 ##############################################################################
 
-import sale_order_edit_wizard
-
+{
+    'name': 'Base Order Edit',
+    'version': '1.0',
+    'category': 'Sales & Purchases',
+    'description':
+        """
+        Base Order Edit -
+        provides helper classes for Sale Order Edit and Purchase Order Edit modules
+        """,
+    'author': 'credativ Ltd',
+    'website' : 'http://credativ.co.uk',
+    'depends': [
+        'stock',
+        'mail',
+        ],
+    'init_xml': [
+        ],
+    'update_xml': [
+    ],
+    'demo_xml': [
+    ],
+    'installable': True,
+    'active': False,
+}
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

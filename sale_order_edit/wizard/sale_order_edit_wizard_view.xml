@@ -8,7 +8,7 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
         <!-- Sale order Edit Wizard -->
         <record id="view_wizard_sale_order_edit" model="ir.ui.view">
             <field name="name">Edit Order</field>
-            <field name="model">sale.order.wizard_order_edit</field>
+            <field name="model">sale.order.edit_wizard</field>
             <field name="type">form</field>
             <field name="arch" type="xml">
                 <form string="Edit Order Items">
@@ -24,7 +24,7 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
         <record id="action_wizard_sale_order_edit" model="ir.actions.act_window">
             <field name="name">Edit Order</field>
             <field name="type">ir.actions.act_window</field>
-            <field name="res_model">sale.order.wizard_order_edit</field>
+            <field name="res_model">sale.order.edit_wizard</field>
             <field name="view_type">form</field>
             <field name="view_mode">form</field>
             <field name="view_id" ref="view_wizard_sale_order_edit"/>

@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution	
+#    OpenERP, Open Source Management Solution   
 #    Copyright (C) 2015 credativ Ltd (<http://credativ.co.uk>).
 #    All Rights Reserved
 #
@@ -20,6 +20,6 @@
 #
 ##############################################################################
 
-import sale_order_edit_wizard
+import order_edit
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
