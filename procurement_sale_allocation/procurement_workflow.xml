@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <!-- MTO to MTS - remove link to PO -->
+        <record id="act_mto_to_mts" model="workflow.activity">
+            <field name="wkf_id" ref="procurement.wkf_procurement"/>
+            <field name="name">mto_to_mts</field>
+            <field name="kind">function</field>
+            <field name="action">action_mto_to_mts()</field>
+        </record>
+        <!-- MTS to MTO - add link to PO (after transition) -->
+        <record id="act_mts_to_mto" model="workflow.activity">
+            <field name="wkf_id" ref="procurement.wkf_procurement"/>
+            <field name="name">mts_to_mto</field>
+            <field name="kind">function</field>
+            <field name="action">action_mts_to_mto()</field>
+        </record>
+        <!-- MTO to MTO - remove link to PO, add new link to PO (after transition) -->
+        <record id="act_mto_to_mto" model="workflow.activity">
+            <field name="wkf_id" ref="procurement.wkf_procurement"/>
+            <field name="name">mto_to_mto</field>
+            <field name="kind">function</field>
+            <field name="action">action_mto_to_mto()</field>
+        </record>
+
+
+        <record id="trans_mto_to_mts_1a" model="workflow.transition">
+            <field name="act_from" ref="purchase.act_buy"/>
+            <field name="act_to" ref="act_mto_to_mts"/>
+            <field name="signal">signal_mto_mts</field>
+        </record>
+        <record id="trans_mto_to_mts_1b" model="workflow.transition">
+            <field name="act_from" ref="procurement.act_confirm_mto"/>
+            <field name="act_to" ref="act_mto_to_mts"/>
+            <field name="signal">signal_mto_mts</field>
+        </record>
+        <record id="trans_mto_to_mts_1c" model="workflow.transition">
+            <field name="act_from" ref="procurement.act_make_done"/>
+            <field name="act_to" ref="act_mto_to_mts"/>
+            <field name="signal">signal_mto_mts</field>
+        </record>
+        <record id="trans_mto_to_mts_2" model="workflow.transition">
+            <field name="act_from" ref="act_mto_to_mts"/>
+            <field name="act_to" ref="procurement.act_confirm_mts"/>
+            <field name="condition">True</field>
+        </record>
+
+        <record id="trans_mts_to_mto_1a" model="workflow.transition">
+            <field name="act_from" ref="procurement.act_confirm_mts"/>
+            <field name="act_to" ref="act_mts_to_mto"/>
+            <field name="signal">signal_mts_mto</field>
+        </record>
+        <record id="trans_mts_to_mto_1b" model="workflow.transition">
+            <field name="act_from" ref="procurement.act_make_to_stock"/>
+            <field name="act_to" ref="act_mts_to_mto"/>
+            <field name="signal">signal_mts_mto</field>
+        </record>
+        <record id="trans_mts_to_mto_1c" model="workflow.transition">
+            <field name="act_from" ref="procurement.act_make_done"/>
+            <field name="act_to" ref="act_mts_to_mto"/>
+            <field name="signal">signal_mts_mto</field>
+        </record>
+        <record id="trans_mts_to_mto_2" model="workflow.transition">
+            <field name="act_from" ref="act_mts_to_mto"/>
+            <field name="act_to" ref="purchase.act_buy"/>
+            <field name="condition">True</field>
+        </record>
+
+        <record id="trans_mto_to_mto_1a" model="workflow.transition">
+            <field name="act_from" ref="procurement.act_confirm_mto"/>
+            <field name="act_to" ref="act_mto_to_mto"/>
+            <field name="signal">signal_mto_mto</field>
+        </record>
+        <record id="trans_mto_to_mto_1b" model="workflow.transition">
+            <field name="act_from" ref="purchase.act_buy"/>
+            <field name="act_to" ref="act_mto_to_mto"/>
+            <field name="signal">signal_mto_mto</field>
+        </record>
+        <record id="trans_mto_to_mto_1c" model="workflow.transition">
+            <field name="act_from" ref="procurement.act_make_done"/>
+            <field name="act_to" ref="act_mto_to_mto"/>
+            <field name="signal">signal_mto_mto</field>
+        </record>
+        <record id="trans_mto_to_mto_2" model="workflow.transition">
+            <field name="act_from" ref="act_mto_to_mto"/>
+            <field name="act_to" ref="purchase.act_buy"/>
+            <field name="condition">True</field>
+        </record>
+
+    </data>
+</openerp>
