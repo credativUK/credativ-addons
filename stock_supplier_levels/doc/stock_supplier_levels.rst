@@ -48,15 +48,15 @@ The following actions are available to a user in normal use:
 Instructions
 ============
 
-To view the supplier's stock location and also this value combined with the current virtual stock level, navigate to the "Inventory" tab of the product form view and check the section "Stock and Excpected Variations"
+To view the supplier's stock location and also this value combined with the current virtual stock level, navigate to the "Inventory" tab of the product form view and check the section "Stock and Expected Variations"
 
 To set the supplier's stock at this location, create a new physical inventory and add lines for this product and location.
 
 If the stock level needs to be differentiated from another supplier's stock level for the same product a lot number (Serial Number) can be set in the inventory. The lot should have the partner set to the supplier which it represents. To keep the names unique the serial number can be entered to use a combination of product reference and supplier reference.
 
-To set the supplier's stock location to 0 for all products, create a new physical inventory and use the "Fill Inventory" wizard and the "Set to zero" option in the suplier's location.
+To set the supplier's stock location to 0 for all products, create a new physical inventory and use the "Fill Inventory" wizard and the "Set to zero" option in the supplier’s location.
 
-To raise a purchase order which automatically reduces the stock level in the suplier's location, set the "Reduce Supplier Stock" flag on the purchase order lines, or "Force Reduce Supplier Stock" on the purchase order to reduce the level for all purchase order lines.
+To raise a purchase order which automatically reduces the stock level in the supplier’s location, set the "Reduce Supplier Stock" flag on the purchase order lines, or "Force Reduce Supplier Stock" on the purchase order to reduce the level for all purchase order lines.
 
 
 3 Technical Guide
@@ -84,7 +84,7 @@ Testing
 
 1) Setting supplier stock level
 
-   a) Create a physical inventory at the suplier's stock location
+   a) Create a physical inventory at the supplier’s stock location
 
    b) Set stock to 10 for product A with no serial number
 
@@ -110,7 +110,7 @@ Testing
 
 5) Setting supplier stock level per supplier
 
-   a) Create a physical inventory at the suplier's stock location
+   a) Create a physical inventory at the supplier’s stock location
 
    b) Set stock to 10 for product B with a new serial number belonging to supplier A
 
@@ -126,9 +126,9 @@ Testing
 
 7) Set all supplier stock to 0
 
-   a) Create a physical inventory at the suplier's stock location
+   a) Create a physical inventory at the supplier’s stock location
 
-   b) Fill inventory at the suplier's stock location to 0
+   b) Fill inventory at the supplier’s stock location to 0
 
    c) Confirm and verify in the posted inventory:
 
@@ -146,7 +146,7 @@ Testing
 
 1) I have cancelled a purchase order which was set to reduce the supplier stock level. My stock level is now too low.
 
-   a) When a purchase order of this type is confirmed it will reduce the supplier stock level. The additionaly created incoming stock move will cause the total stock to appear the same for the combined value. When this purchase order is cancelled the incoming move is also cancelled and the supplier stock level is not automatically increased again, this should be done manually.
+   a) When a purchase order of this type is confirmed it will reduce the supplier stock level. The additionally created incoming stock move will cause the total stock to appear the same for the combined value. When this purchase order is cancelled the incoming move is also cancelled and the supplier stock level is not automatically increased again, this should be done manually.
 
 2) I have confirmed a purchase order which is set to reduce the supplier stock level, but the supplier stock level is 0.
 
