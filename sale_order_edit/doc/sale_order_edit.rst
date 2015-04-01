@@ -217,4 +217,4 @@ Any SO which is in the process of being edited should have their edited quotatio
 
 5) After editing an SO, one of the lines which was not edited for a Make To Order (MTO) product has cause it to create a duplicate RFQ
 
-   a) This is a known limitation of the module and this duplicate RFQ should be handled manually. This will not affect Make To Stock (MTS) products.
+   a) This is a known limitation of the module and this duplicate RFQ should be handled manually. This will not affect Make To Stock (MTS) products. This issue is fixed when using the procurement_sale_allocation module in conjunction with the brige module procurement_sale_allocation_edit.
