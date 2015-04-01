@@ -28,18 +28,25 @@ class ProcurementOrder(osv.Model):
 
     def write(self, cr, uid, ids, values, context=None):
         purchase_obj = self.pool.get('purchase.order')
+        purchase_line_obj = self.pool.get('purchase.order.line')
         wkf_service = netsvc.LocalService('workflow')
 
         procs = []
         if ids and 'purchase_id' in values:
-            procs = self.read(cr, uid, ids, ['purchase_id', 'name', 'procure_method'], context=context) # This must be a read since we need the 'before' data
+            procs = self.read(cr, uid, ids, ['purchase_id', 'name', 'procure_method', 'move_id', 'product_id'], context=context) # This must be a read since we need the 'before' data
         res = super(ProcurementOrder, self).write(cr, uid, ids, values, context=context)
         for proc in procs:
             if (proc['purchase_id'] and proc['purchase_id'][0] or False) != values['purchase_id']:
                 signal, message = None, None
                 purchase_orig = proc['purchase_id'] and purchase_obj.browse(cr, uid, [proc['purchase_id'][0]], context=context)[0] or None
                 purchase_new = values['purchase_id'] and purchase_obj.browse(cr, uid, [values['purchase_id']], context=context)[0] or None
-                if not purchase_orig and purchase_new:
+                pol_ids = []
+                if proc['move_id']:
+                    pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', proc['move_id'][0]), ('state', '!=', 'cancel'), ('product_id', '=', proc['product_id'][0])], context=context)
+                if not purchase_orig and pol_ids:
+                    # This is an MTO order being created, take no action
+                    signal = None
+                elif not purchase_orig and purchase_new:
                     signal = 'signal_mts_mto'
                     message = _("Procurement allocated to PO (%s)") % (purchase_new.name,)
                 elif (purchase_orig and not purchase_new) or (proc['procure_method']=='make_to_order' and not purchase_new):
@@ -157,19 +164,22 @@ class ProcurementOrder(osv.Model):
         return True
 
     def action_po_assign(self, cr, uid, ids, context=None):
+        purchase_line_obj = self.pool.get('purchase.order.line')
         other_ids = []
         res = []
         if ids:
             for proc in self.browse(cr, uid, ids, context=context):
-                if proc.purchase_id:
+                pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('state', '!=', 'cancel'), ('product_id', '=', proc.product_id.id)], context=context)
+                if not pol_ids and proc.purchase_id:
                     res.append(proc.purchase_id.id)
                     self._confirm_po_assign(cr, uid, [proc.id,], context=context)
                 else:
+                    # If pol_ids has a value it is likely to be a new MTO order creating an RFQ
                     other_ids.append(proc.id)
         if other_ids:
             purchase_ids = super(ProcurementOrder, self).action_po_assign(cr, uid, other_ids, context=context)
             if purchase_ids:
-                res.extend(purchase_ids)
+                res.append(purchase_ids)
         return len(res) and res[0] or 0
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
