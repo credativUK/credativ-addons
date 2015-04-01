@@ -70,6 +70,14 @@ class SaleOrder(osv.osv, OrderEdit):
             refund_id = invoice_obj.refund(cr, uid, [inv.id], description=False, journal_id=None, context=context)[0]
             invoice_obj.button_compute(cr, uid, [refund_id], context=context)
             wf_service.trg_validate(uid, 'account.invoice', refund_id, 'invoice_open', cr)
+
+            refund = invoice_obj.browse(cr, uid, [refund_id], context=context)[0]
+            move_line_ids = []
+            move_line_ids.extend([move_line.id for move_line in inv.move_id.line_id if move_line.account_id.id == inv.account_id.id])
+            move_line_ids.extend([move_line.id for move_line in refund.move_id.line_id if move_line.account_id.id == refund.account_id.id])
+            if len(move_line_ids) > 0:
+                self.pool.get('account.move.line').reconcile(cr, uid, move_line_ids)
+
             res.append(refund_id)
 
     def _cancel_mo(self, cr, uid, order, context=None):
@@ -139,9 +147,11 @@ class SaleOrder(osv.osv, OrderEdit):
         if old_invoices:
             # 4. Create a new invoice and find difference between this and existing payment(s)
             payment_credit = reduce(lambda x,y: x+(y.credit-y.debit), all_payments, 0.0)
-            invoice_id = self.action_invoice_create(cr, uid, [order.id], context=context)
-            invoice = self.pool.get('account.invoice').browse(cr, uid, [invoice_id], context=context)[0]
-            wkf_service.trg_validate(uid, 'account.invoice', invoice_id, 'invoice_open', cr)
+            wkf_service.trg_validate(uid, 'sale.order', order.id, 'manual_invoice', cr)
+            order.refresh()
+            assert(len(order.invoice_ids) == 1)
+            invoice = order.invoice_ids[0]
+            wkf_service.trg_validate(uid, 'account.invoice', invoice.id, 'invoice_open', cr)
             if all_payment_ids:
                 all_payment_ids.extend([pmnt.id for pmnt in invoice.move_id.line_id if pmnt.account_id.id == p_acc_id])
 
@@ -150,13 +160,21 @@ class SaleOrder(osv.osv, OrderEdit):
 
             # 6. Reconcile all payments with current invoice
             if all_payment_ids:
-                acc_move_line_obj.reconcile(cr, uid, all_payment_ids, context=context)
+                acc_move_line_obj.reconcile_partial(cr, uid, all_payment_ids, context=context)
 
-            # 7. Cancel old invoices - Deprecated - Not sure why this is here, you cannot cancel an invoice!
+        # 7. Cancel draft invoices
+        draft_invoice_ids = [i.id for i in original.invoice_ids if i.type == 'out_invoice' and i.state == 'draft']
+        for draft_invoice_id in draft_invoice_ids:
+            wkf_service.trg_validate(uid, 'account.invoice', draft_invoice_id, 'invoice_cancel', cr)
 
         # 8 Cancel MO,create new MO and run procurement scheduler
         if self.pool.get('mrp.production'):
             self._cancel_mo(cr, uid, original, context=context)
+
+        # 9 Cancel the old order
+        wkf_service.trg_validate(uid, 'sale.order', original.id, 'cancel', cr)
+        wkf_service.trg_validate(uid, 'sale.order', original.id, 'invoice_cancel', cr)
+        wkf_service.trg_validate(uid, 'sale.order', original.id, 'ship_cancel', cr)
 
         return True
 
@@ -166,11 +184,12 @@ class SaleOrder(osv.osv, OrderEdit):
         # identified in the pre-action hook
         move_pool = self.pool.get('stock.move')
         pick_pool = self.pool.get('stock.picking')
+        line_pool = self.pool.get('sale.order.line')
         wf_service = netsvc.LocalService("workflow")
 
         if line_moves is not None:
             for line_id, old_moves in line_moves.iteritems():
-                line = self.pool.get('sale.order.line').browse(cr, uid, line_id)
+                line = line_pool.browse(cr, uid, line_id)
                 created_moves = [x for x in line.move_ids]
                 for old_move in old_moves:
                     try:
@@ -190,6 +209,9 @@ class SaleOrder(osv.osv, OrderEdit):
                         wf_service.trg_validate(uid, 'stock.picking', picking.id, 'button_cancel', cr)
                         wf_service.trg_validate(uid, 'stock.picking', picking.id, 'button_cancel', cr)
                         pick_pool.action_cancel(cr, uid, [picking.id])
+                line = line_pool.browse(cr, uid, line_id)
+                if line.move_ids and all([move.state in ('done', 'cancel') for move in line.move_ids]):
+                    line_pool.write(cr, uid, [line.id], {'state': 'done'}, context=context)
                 assert(len(created_moves) == 0)
 
         if remain_moves is not None:

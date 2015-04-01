@@ -35,7 +35,6 @@
         'sale',
         'purchase',
         'mail',
-        'account_cancel',
         ],
     'init_xml': [
         ],
