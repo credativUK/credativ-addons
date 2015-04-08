@@ -185,6 +185,7 @@ class SaleOrder(osv.osv, OrderEdit):
         move_pool = self.pool.get('stock.move')
         pick_pool = self.pool.get('stock.picking')
         line_pool = self.pool.get('sale.order.line')
+        proc_pool = self.pool.get('procurement.order')
         wf_service = netsvc.LocalService("workflow")
 
         if line_moves is not None:
@@ -200,7 +201,8 @@ class SaleOrder(osv.osv, OrderEdit):
                     picking = created_move.picking_id
                     move_pool.write(cr, uid, [old_move.id], {'sale_line_id': line_id})
                     pick_pool.write(cr, uid, old_move.picking_id.id, {'sale_id':line.order_id.id})
-                    line_pool.write(cr, uid, [line.id,], {'procurement_id': old_move.sale_line_id.procurement_id.id}, context=context)
+                    proc_ids = proc_pool.search(cr, uid, [('move_id', '=', old_move.id), ('state', 'not in', ('cancel',))], context=context)
+                    line_pool.write(cr, uid, [line.id,], {'procurement_id': proc_ids and proc_ids[0] or False}, context=context)
                     # Cancel and remove new replaced stock_move and stock_picking
                     move_pool.write(cr, uid, created_move.id, {'sale_line_id': False, 'picking_id': False})
                     created_move.action_cancel()
