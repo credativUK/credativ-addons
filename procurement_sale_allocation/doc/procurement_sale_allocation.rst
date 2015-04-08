@@ -75,7 +75,7 @@ Install the module procurement_sale_allocation
 Removing
 ========
 
-Uninnstall the module procurement_sale_allocation
+Uninstall the module procurement_sale_allocation
 
 The data and workflows are always kept consistent with the core procurement module so no further changes are required to remove
 

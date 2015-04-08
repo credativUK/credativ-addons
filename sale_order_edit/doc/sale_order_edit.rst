@@ -13,7 +13,7 @@ This will allow any unshipped products to be decrease or removed, and other prod
 Sale Order
 ==========
 
-SOs create pickings, stock moves and procurements when they are confirmed. The procurements can trigger various opperations such as purchasing and manufacturing. As well as this, the state of the stock moves and pickings need to be taken into consideration so done and available stock moves are not removed.
+SOs create pickings, stock moves and procurements when they are confirmed. The procurements can trigger various operations such as purchasing and manufacturing. As well as this, the state of the stock moves and pickings need to be taken into consideration so done and available stock moves are not removed.
 
 Any done stock moves must be in the edited order since they represent stock which is already shipped. Available stock moves must also be included since they could be pending imminent shipping, for these to be removed they should be reverted to the confirmed state by having their availability cancelled by the warehouse team.
 
@@ -57,31 +57,31 @@ A new quotation SO will be created based on the SO being edited where the order 
 
 When editing is completed the quotation can be confirmed which will make the edited SO the active SO with the following workflow:
 
-1) Is the origional SO still in progress and can be edited? If not show error
+1) Is the original SO still in progress and can be edited? If not show error
 
 2) Are all SO lines present for available and done stock moves? If not show error
 
 3) Create all new stock moves, pickings and procurements for the edited order
 
-4) Move all available and done stock moves, pickings and procurements from the origional SO to the edited SO
+4) Move all available and done stock moves, pickings and procurements from the original SO to the edited SO
 
 5) Remove any duplicated stock moves, pickings and procurements which are replaced by the moved objects in the previous step
 
-6) Cancel all remaining stock moves, picking and procurements from the origional SO
+6) Cancel all remaining stock moves, picking and procurements from the original SO
 
-7) If the origional SO invoiced
+7) If the original SO invoiced
 
-   a) Unreconcile all payments for the origional SO invoice
+   a) Unreconcile all payments for the original SO invoice
 
-   b) Create a credit note for the origional SO invoice
+   b) Create a credit note for the original SO invoice
 
-   c) Reconcile the origional SO invoice and credit note
+   c) Reconcile the original SO invoice and credit note
 
    d) Create a new invoice for the edited SO
 
    e) Reconcile all payments to the new invoice, which may result in an outstanding balance or an overpaid amount depending on the nature of the edit.
 
-8) Cancel the origional SO
+8) Cancel the original SO
 
 
 3 Technical Guide
@@ -101,11 +101,11 @@ The module order_edit is a deprecated version of this module and should not be i
 Removing
 ========
 
-Uninnstall the module sale_order_edit
+Uninstall the module sale_order_edit
 
 The module base_order_edit can also be removed as long as no other modules depend on it
 
-Any SO which is in the process of being edited should have their edited quotation SO cancelled. Confirming this would result in a duplicated SO, the origional SO would no longer be cancelled
+Any SO which is in the process of being edited should have their edited quotation SO cancelled. Confirming this would result in a duplicated SO, the original SO would no longer be cancelled
 
 
 4 Testing
@@ -121,7 +121,7 @@ Any SO which is in the process of being edited should have their edited quotatio
 
    d) Verify outgoing stock level for product A is 10
 
-   e) Verify all stock moves for the origional SO are cancelled, and the SO is cancelled
+   e) Verify all stock moves for the original SO are cancelled, and the SO is cancelled
 
    f) Verify the edited SO has a stock move for 10 of product A, and the SO is confirmed
 
@@ -135,7 +135,7 @@ Any SO which is in the process of being edited should have their edited quotatio
 
    d) Verify outgoing stock level for product B is 5
 
-   e) Verify all stock moves for the origional SO are cancelled, and the SO is cancelled
+   e) Verify all stock moves for the original SO are cancelled, and the SO is cancelled
 
    f) Verify the edited SO has a stock move for 5 of product B, and the SO is confirmed
 
@@ -149,7 +149,7 @@ Any SO which is in the process of being edited should have their edited quotatio
 
    d) Verify outgoing stock level for product C is 10
 
-   e) Verify all stock moves for the origional SO are cancelled, and the SO is cancelled
+   e) Verify all stock moves for the original SO are cancelled, and the SO is cancelled
 
    f) Verify the edited SO has 2 stock moves:
 
@@ -169,7 +169,7 @@ Any SO which is in the process of being edited should have their edited quotatio
 
    e) Verify the edited SO is still in the quotation (draft) state
 
-   f) Verify the origional SO has not been changed
+   f) Verify the original SO has not been changed
 
 5) Edit decreasing a confirmed order with part done stock
 
@@ -187,7 +187,7 @@ Any SO which is in the process of being edited should have their edited quotatio
 
    g) Change the quantity of product E to 6 and confirm
 
-   h) Verify all stock moves for the origional SO are cancelled, and the SO is cancelled
+   h) Verify all stock moves for the original SO are cancelled, and the SO is cancelled
 
    i) Verify the edited SO has 2 stock moves:
 
@@ -201,11 +201,11 @@ Any SO which is in the process of being edited should have their edited quotatio
 
 1) Unable to confirm an edited SO "should be in progress"
 
-   a) Please check that the origional SO is still in progress and has not recently become done or cancelled. If another user has edited the order at the same time this may have caused it to become cancelled.
+   a) Please check that the original SO is still in progress and has not recently become done or cancelled. If another user has edited the order at the same time this may have caused it to become cancelled.
 
 2) I have made a mistake while editing an SO, but not yet confirmed it
 
-   a) To quickly restore the edited SO to the origional SO, delete the edit quotation SO and re-edit the origional SO.
+   a) To quickly restore the edited SO to the original SO, delete the edit quotation SO and re-edit the original SO.
 
 3) I have made a mistake while editing an SO, and have confirmed it
 
@@ -217,4 +217,4 @@ Any SO which is in the process of being edited should have their edited quotatio
 
 5) After editing an SO, one of the lines which was not edited for a Make To Order (MTO) product has cause it to create a duplicate RFQ
 
-   a) This is a known limitation of the module and this duplicate RFQ should be handled manually. This will not affect Make To Stock (MTS) products. This issue is fixed when using the procurement_sale_allocation module in conjunction with the brige module procurement_sale_allocation_edit.
+   a) This is a known limitation of the module and this duplicate RFQ should be handled manually. This will not affect Make To Stock (MTS) products. This issue is fixed when using the procurement_sale_allocation module in conjunction with the bridge module procurement_sale_allocation_edit.
