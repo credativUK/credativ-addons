@@ -98,6 +98,7 @@ class ProcurementOrder(osv.Model):
             pol_assign = purchase_line_obj.browse(cr, uid, pol_assign_id, context=context)
             purchase_line_obj.write(cr, uid, [pol_assign.id,], {'move_dest_id': proc.move_id.id}, context=context)
             move_obj.write(cr, uid, [x.id for x in pol_assign.move_ids], {'move_dest_id': proc.move_id.id}, context=context)
+        self.write(cr, uid, ids, {'state': 'running'}, context=context)
         return True
 
     def _cancel_po_assign(self, cr, uid, ids, context=None):

@@ -200,6 +200,7 @@ class SaleOrder(osv.osv, OrderEdit):
                     picking = created_move.picking_id
                     move_pool.write(cr, uid, [old_move.id], {'sale_line_id': line_id})
                     pick_pool.write(cr, uid, old_move.picking_id.id, {'sale_id':line.order_id.id})
+                    line_pool.write(cr, uid, [line.id,], {'procurement_id': old_move.sale_line_id.procurement_id.id}, context=context)
                     # Cancel and remove new replaced stock_move and stock_picking
                     move_pool.write(cr, uid, created_move.id, {'sale_line_id': False, 'picking_id': False})
                     created_move.action_cancel()
