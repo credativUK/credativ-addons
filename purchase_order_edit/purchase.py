@@ -85,11 +85,13 @@ class PurchaseOrder(osv.osv, OrderEdit):
         # identified in the pre-action hook
         move_pool = self.pool.get('stock.move')
         pick_pool = self.pool.get('stock.picking')
+        line_pool = self.pool.get('purchase.order.line')
         wf_service = netsvc.LocalService("workflow")
 
         if line_moves is not None:
             for line_id, old_moves in line_moves.iteritems():
-                line = self.pool.get('purchase.order.line').browse(cr, uid, line_id)
+                line = line_pool.browse(cr, uid, line_id)
+                line_pool.write(cr, uid, [line_id], {'state': 'confirmed'}, context=context)
                 created_moves = [x for x in line.move_ids]
                 for old_move in old_moves:
                     try:
@@ -115,7 +117,8 @@ class PurchaseOrder(osv.osv, OrderEdit):
             picking = None
             old_picking_copy = None
             for line_id, old_moves in remain_moves.iteritems():
-                line = self.pool.get('purchase.order.line').browse(cr, uid, line_id)
+                line = line_pool.browse(cr, uid, line_id)
+                line_pool.write(cr, uid, [line_id], {'state': 'confirmed'}, context=context)
                 created_moves = [x for x in line.move_ids]
                 if not picking and not old_picking_copy:
                     picking = old_moves and old_moves[0].picking_id or None
