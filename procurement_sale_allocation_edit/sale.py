@@ -47,13 +47,17 @@ class SaleOrder(osv.Model):
                 if proc_ids:
                     for proc in procurement_obj.browse(cr, uid, proc_ids, context=context):
                         for po_id in procurement_pos.get(proc.product_id.id, []):
+                            # We use a savepoint here since we want to attempt to allocate the procurement to the previous PO
+                            # it is allowed to fail but we don't want to be in an inconsistant state
+                            cr.execute('SAVEPOINT procurement')
                             try:
+                                procurement_obj.write(cr, uid, [proc.id], {'purchase_id': po_id, 'procure_method': 'make_to_order'}, context=context)
                                 wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
-                                procurement_obj.write(cr, uid, [proc.id], {'purchase_id': po_id}, context=context)
                             except osv.except_osv:
-                                procurement_obj.write(cr, uid, [proc.id], {'purchase_id': False}, context=context)
-                                continue
-                            break
+                                cr.execute('ROLLBACK TO SAVEPOINT procurement')
+                                break
+                            else:
+                                cr.execute('RELEASE SAVEPOINT procurement')
 
         return super(SaleOrder, self)._fixup_created_picking(cr, uid, line_moves, remain_moves, context=context)
 

@@ -27,7 +27,6 @@
         'procurement_sale_allocation',
         'sale',
         'purchase',
-        'base_order_edit',
         'sale_order_edit',
         #'purchase_order_edit',
     ],
@@ -40,7 +39,8 @@ the order edit modules.
     'demo_xml' : [],
     'update_xml' : [],
     'active': False,
-    'installable': True
+    'installable': True,
+    'auto_install': True,
 }
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

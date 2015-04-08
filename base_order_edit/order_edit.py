@@ -47,7 +47,11 @@ class OrderEdit(object):
             for move in picking.move_lines:
                 moves.append(move)
                 if move.state in ['done','assigned']:
-                    done_totals[move.product_id] = done_totals.setdefault(move.product_id, 0) + move.product_qty
+                    if self._name == 'sale.order':
+                        key = (move.product_id, move.sale_line_id.price_unit)
+                    else:
+                        key = (move.product_id, move.purchase_line_id.price_unit)
+                    done_totals[key] = done_totals.setdefault(key, 0) + move.product_qty
 
         # Get a list of lines for each product in the edit sale order
         edit_totals = {}
@@ -58,29 +62,30 @@ class OrderEdit(object):
                 qty = line.product_uom_qty
             else:
                 qty = line.product_qty
-            edit_totals[line.product_id] = edit_totals.setdefault(line.product_id, 0) + qty
+            edit_totals[(line.product_id, line.price_unit)] = edit_totals.setdefault((line.product_id, line.price_unit), 0) + qty
 
         # Check that the totals in the edit aren't less than the shipped qty
-        for product, done_total in done_totals.iteritems():
-            if edit_totals.get(product, 0) < done_total:
+        for (product, price_unit), done_total in done_totals.iteritems():
+            if edit_totals.get((product, price_unit), 0) < done_total:
                 raise osv.except_osv(_('Error !'),
                                      _('There must be at least %d of %s in'
-                                       ' the edited sale order, as they have'
+                                       ' the edited order with unit price %s , as they have'
                                        ' already been assigned or shipped.'
-                                            % (done_total, product.name)))
+                                            % (done_total, product.name, price_unit)))
 
         new_vals = {}
         for line in order.order_line:
             if line.product_id.id == False or line.product_id.type == 'service':
                 continue
-            new_vals[line.product_id.id] = {'price_unit': line.price_unit}
+            new_vals[(line.product_id.id, line.price_unit)] = {'price_unit': line.price_unit}
             if self._name == 'purchase.order':
-                new_vals[line.product_id.id].update({'date_planned': line.date_planned})
+                new_vals[(line.product_id.id, line.price_unit)].update({'date_planned': line.date_planned})
             if self._name == 'sale.order':
+                new_vals[(line.product_id.id, line.price_unit)].update({'type': line.type})
                 line.button_cancel(context=context)
             line.unlink(context=context)
 
-        def add_product_order_line(product_id, qty):
+        def add_product_order_line(product_id, price_unit, qty):
             line_obj = self.pool.get(order.order_line[0]._name)
             product = self.pool.get('product.product').browse(cr, uid, product_id, context=context)
 
@@ -94,7 +99,7 @@ class OrderEdit(object):
             if self._name == 'sale.order':
                 vals.update({'product_uom_qty': qty})
 
-            vals.update(new_vals[product.id])
+            vals.update(new_vals.get((product.id, price_unit), {}))
 
             line_id = line_obj.create(cr, uid, vals, context=context)
             if self._name == 'sale.order':
@@ -104,18 +109,22 @@ class OrderEdit(object):
         line_moves = defaultdict(list)
         other_moves = defaultdict(list)
         for m in moves:
+            if self._name == 'sale.order':
+                price_unit = m.sale_line_id.price_unit
+            else:
+                price_unit = m.purchase_line_id.price_unit
             if m.state in ['done', 'assigned']:
-                line_id = add_product_order_line(m.product_id.id, m.product_qty)
+                line_id = add_product_order_line(m.product_id.id, price_unit, m.product_qty)
                 line_moves[line_id].append(m)
             else:
-                other_moves[m.product_id.id].append(m)
+                other_moves[(m.product_id.id, price_unit)].append(m)
 
         remain_moves = {}
-        for product, edit_total in edit_totals.iteritems():
-            remainder = edit_total - done_totals.get(product, 0)
+        for (product, price_unit), edit_total in edit_totals.iteritems():
+            remainder = edit_total - done_totals.get((product, price_unit), 0)
             if remainder > 0:
-                line_id = add_product_order_line(product.id, remainder)
-                remain_moves[line_id] = other_moves.get(product.id)
+                line_id = add_product_order_line(product.id, price_unit, remainder)
+                remain_moves[line_id] = other_moves[(product.id, price_unit)]
 
         return line_moves, remain_moves
 
