@@ -42,11 +42,14 @@ class OrderEdit(object):
         """
         done_totals = {}
         moves = []
+        done_states = ['done']
+        if self._name == 'sale.order':
+            done_states.append('assigned')
 
         for picking in original.picking_ids:
             for move in picking.move_lines:
                 moves.append(move)
-                if move.state in ['done','assigned']:
+                if move.state in done_states:
                     if self._name == 'sale.order':
                         key = (move.product_id, move.sale_line_id.price_unit)
                     else:
@@ -80,6 +83,7 @@ class OrderEdit(object):
             new_vals[(line.product_id.id, line.price_unit)] = {'price_unit': line.price_unit}
             if self._name == 'purchase.order':
                 new_vals[(line.product_id.id, line.price_unit)].update({'date_planned': line.date_planned})
+                line.write({'state': 'cancel'}, context=context)
             if self._name == 'sale.order':
                 new_vals[(line.product_id.id, line.price_unit)].update({'type': line.type})
                 line.button_cancel(context=context)
@@ -98,6 +102,8 @@ class OrderEdit(object):
 
             if self._name == 'sale.order':
                 vals.update({'product_uom_qty': qty})
+            else:
+                vals.update({'product_qty': qty})
 
             vals.update(new_vals.get((product.id, price_unit), {}))
 
@@ -113,7 +119,7 @@ class OrderEdit(object):
                 price_unit = m.sale_line_id.price_unit
             else:
                 price_unit = m.purchase_line_id.price_unit
-            if m.state in ['done', 'assigned']:
+            if m.state in done_states:
                 line_id = add_product_order_line(m.product_id.id, price_unit, m.product_qty)
                 line_moves[line_id].append(m)
             else:
@@ -169,10 +175,6 @@ class OrderEdit(object):
             vals = {'name': new_name, 'order_edit_id': order.id}
 
             self.write(cr, uid, new_id, vals, context=context)
-
-            if self._name == 'purchase.order':
-                wf_service = netsvc.LocalService('workflow')
-                wf_service.trg_validate(uid, self._name, new_id, 'purchase_confirm', cr)
 
             self.message_post(cr, uid, [id_], body=_('Order has been copied to be edited in order %s') % (new_name,), context=context)
             return new_id

@@ -108,10 +108,11 @@ class PurchaseOrderLine(osv.Model):
                     o_line[field] = field_val
                 o_line['uom_factor'] = order_line.product_uom and order_line.product_uom.factor or 1.0
                 o_line['orig_line_ids'] = [order_line.id,]
+                o_line['state'] = order_line.state
 
         for order_line in order_infos.values():
             del order_line['uom_factor']
-            if len(order_line['orig_line_ids']) > 1:
+            if len(order_line['orig_line_ids']) > 1 and order_line['state'] != 'draft':
                 # Cancel old moves
                 move_ids = move_obj.search(cr, uid, [('purchase_line_id', 'in', order_line['orig_line_ids'])], context=context)
                 # Create new move and cancel old PO lines

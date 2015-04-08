@@ -42,7 +42,7 @@ class ProcurementOrder(osv.Model):
                 purchase_new = values['purchase_id'] and purchase_obj.browse(cr, uid, [values['purchase_id']], context=context)[0] or None
                 pol_ids = []
                 if proc['move_id']:
-                    pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', proc['move_id'][0]), ('state', '!=', 'cancel'), ('product_id', '=', proc['product_id'][0])], context=context)
+                    pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', proc['move_id'][0]), ('state', '!=', 'cancel'), ('order_id.state', '!=', 'cancel'), ('product_id', '=', proc['product_id'][0])], context=context)
                 if not purchase_orig and pol_ids:
                     # This is an MTO order being created, take no action
                     signal = None
@@ -170,7 +170,7 @@ class ProcurementOrder(osv.Model):
         res = []
         if ids:
             for proc in self.browse(cr, uid, ids, context=context):
-                pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('state', '!=', 'cancel'), ('product_id', '=', proc.product_id.id)], context=context)
+                pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('state', '!=', 'cancel'), ('order_id', '=', proc.purchase_id.id), ('product_id', '=', proc.product_id.id)], context=context)
                 if not pol_ids and proc.purchase_id:
                     res.append(proc.purchase_id.id)
                     self._confirm_po_assign(cr, uid, [proc.id,], context=context)
