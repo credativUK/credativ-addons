@@ -38,7 +38,7 @@ class PurchaseOrder(osv.Model):
         uom_obj = self.pool.get('product.uom')
         po = self.browse(cr, uid, ids[0], context=context)
         for proc in procurement_obj.browse(cr, uid, proc_ids, context=context):
-            pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', False), ('state', '!=', 'cancel'), ('order_id', '=', po.id), ('product_id', '=', proc.product_id.id)], context=context)
+            pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', 'in', (False, proc.move_id.id)), ('state', '!=', 'cancel'), ('order_id', '=', po.id), ('product_id', '=', proc.product_id.id)], context=context)
             pol_assign_id = False
             for line in purchase_line_obj.browse(cr, uid, pol_ids, context=context):
                 purchase_uom_qty = uom_obj._compute_qty(cr, uid, proc.product_uom.id, proc.product_qty, line.product_uom.id)
