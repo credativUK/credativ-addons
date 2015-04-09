@@ -72,7 +72,7 @@ class ProcurementOrder(osv.Model):
                             cr.execute('update wkf_workitem set state=%s where inst_id=%s', ('complete', inst_id))
                     wkf_service.trg_validate(uid, 'procurement.order', proc['id'], signal, cr)
                     # TODO: Add some sanity checking here to make sure we have gone to the expected workflow activity
-                    self.message_post(cr, uid, ids, body=message, context=context)
+                    self.message_post(cr, uid, [proc.id], body=message, context=context)
 
         return res
 
