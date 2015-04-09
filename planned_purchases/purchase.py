@@ -25,6 +25,7 @@ import time
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from osv import osv
+from openerp.tools import DEFAULT_SERVER_DATE_FORMAT, DEFAULT_SERVER_DATETIME_FORMAT, DATETIME_FORMATS_MAP
 
 class purchase_order(osv.osv):
     _inherit='purchase.order'
@@ -49,7 +50,6 @@ class purchase_order(osv.osv):
 
 purchase_order()
 
-
 class procurement_order(osv.osv):
     _inherit = 'procurement.order'
 
@@ -67,21 +67,21 @@ class procurement_order(osv.osv):
         pricelist_obj = self.pool.get('product.pricelist')
         prod_obj = self.pool.get('product.product')
         acc_pos_obj = self.pool.get('account.fiscal.position')
+        seq_obj = self.pool.get('ir.sequence')
         po_obj = self.pool.get('purchase.order')
-        po_line_obj = self.pool.get('purchase.order.line')
-        #Get All PO's which were genereated through scheduler
+
+        # Merge All PO's which were genereated through scheduler
         cr.execute("select id from purchase_order where state='draft' and id in (select purchase_id as id from procurement_order where state='running')")
         po_ids = map(lambda x: x[0], cr.fetchall())
-        self.pool.get('purchase.order').merge_po(cr,uid,po_ids,context=context)
+        po_obj.merge_po(cr,uid,po_ids,context=context)
+
         for procurement in self.browse(cr, uid, ids, context=context):
-            res_id = procurement.move_id and procurement.move_id.id or False
+            res_id = procurement.move_id.id
             partner = procurement.product_id.seller_id # Taken Main Supplier of Product of Procurement.
             seller_qty = procurement.product_id.seller_qty
-            seller_delay = int(procurement.product_id.seller_delay)
             partner_id = partner.id
             address_id = partner_obj.address_get(cr, uid, [partner_id], ['delivery'])['delivery']
             pricelist_id = partner.property_product_pricelist_purchase.id
-            fiscal_position = partner.property_account_position and partner.property_account_position.id or False
 
             uom_id = procurement.product_id.uom_po_id.id
 
@@ -91,68 +91,63 @@ class procurement_order(osv.osv):
 
             price = pricelist_obj.price_get(cr, uid, [pricelist_id], procurement.product_id.id, qty, partner_id, {'uom': uom_id})[pricelist_id]
 
-            newdate = datetime.strptime(procurement.date_planned, '%Y-%m-%d %H:%M:%S')
-            newdate = (newdate - relativedelta(days=company.po_lead)) - relativedelta(days=seller_delay)
-
-            res_onchange = po_line_obj.product_id_change(cr, uid, ids, pricelist_id, procurement.product_id.id, qty, uom_id,
-                partner_id, time.strftime('%Y-%m-%d'), fiscal_position_id=fiscal_position, date_planned=datetime.now() + relativedelta(days=seller_delay or 0.0),
-            name=procurement.name, price_unit=procurement.product_id.list_price)
+            schedule_date = self._get_purchase_schedule_date(cr, uid, procurement, company, context=context)
+            purchase_date = self._get_purchase_order_date(cr, uid, procurement, company, schedule_date, context=context)
 
             #Passing partner_id to context for purchase order line integrity of Line name
-            context.update({'lang': partner.lang, 'partner_id': partner_id})
+            new_context = context.copy()
+            new_context.update({'lang': partner.lang, 'partner_id': partner_id})
 
-            product = prod_obj.browse(cr, uid, procurement.product_id.id, context=context)
+            product = prod_obj.browse(cr, uid, procurement.product_id.id, context=new_context)
+            taxes_ids = procurement.product_id.supplier_taxes_id
+            taxes = acc_pos_obj.map_tax(cr, uid, partner.property_account_position, taxes_ids)
 
-            line = {
-                'name': product.partner_ref,
-                'product_qty': res_onchange['value']['product_qty'],
+            name = product.partner_ref
+            if product.description_purchase:
+                name += '\n'+ product.description_purchase
+            line_vals = {
+                'name': name,
+                'product_qty': qty,
                 'product_id': procurement.product_id.id,
-                'product_uom': res_onchange['value']['product_uom'],
-                'price_unit': res_onchange['value']['price_unit'],
-                'date_planned': newdate.strftime('%Y-%m-%d %H:%M:%S'),
+                'product_uom': uom_id,
+                'price_unit': price or 0.0,
+                'date_planned': schedule_date.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
                 'move_dest_id': res_id,
+                'taxes_id': [(6,0,taxes)],
             }
 
-            taxes_ids = procurement.product_id.product_tmpl_id.supplier_taxes_id
-            taxes = acc_pos_obj.map_tax(cr, uid, partner.property_account_position, taxes_ids)
-            line.update({
-                'taxes_id': [(6,0,taxes)]
-            })
-
             #Update an existing purchase order
-            user_class = self.pool.get('res.users')
-            user_company_id = user_class.browse(cr, uid, uid, context = context).company_id.id
-            po_exists = po_obj.search(cr, uid, [('company_id','=', user_company_id),
-            ('partner_id', '=', partner_id),
-            ('state', 'in', ['draft']),
-            ('id', 'in', po_ids)])
+            po_exists = po_obj.search(cr, uid, [('company_id','=', company.id),
+                                                ('partner_id', '=', partner_id),
+                                                ('state', 'in', ['draft']),
+                                                ('id', 'in', po_ids),
+                                                ('warehouse_id', '=', self._get_warehouse(procurement, company)),
+                                                ], context=context)
 
             if po_exists:
                 purchase_id = po_exists[0]
-
+                line_vals.update({'order_id': purchase_id})
+                purchase_line_id = po_line_obj.create(cr, uid, line_vals)
+                res[procurement.id] = purchase_id
+                self.message_post(cr, uid, [procurement.id], body=_("Merged into existing Purchase Order"), context=context)
             else:
-                purchase_id = po_obj.create(cr, uid, {
-                'state': 'draft',
-                'origin': procurement.origin,
-                'partner_id': partner_id,
-                'partner_address_id': address_id,
-                'pricelist_id': pricelist_id,
-                'location_id': procurement.location_id.id,
-                'company_id': procurement.company_id.id,
-                'fiscal_position': partner.property_account_position and partner.property_account_position.id or False
-                })
-
-            line_exists = po_line_obj.search(cr, uid, [('product_id','=',procurement.product_id.id),('order_id','=',purchase_id)])
-            if line_exists:
-                purchase_line_id = line_exists[0]
-                quantity = po_line_obj.browse(cr, uid, purchase_line_id).product_qty + res_onchange['value']['product_qty']
-                po_line_obj.write(cr, uid, [purchase_line_id], {'product_qty': quantity})
-            else:
-                line.update({'order_id': purchase_id})
-                purchase_line_id = po_line_obj.create(cr, uid, line)
-            res[procurement.id] = purchase_id
+                name = seq_obj.get(cr, uid, 'purchase.order') or _('PO: %s') % procurement.name
+                po_vals = {
+                    'name': name,
+                    'origin': procurement.origin,
+                    'partner_id': partner_id,
+                    'location_id': procurement.location_id.id,
+                    'warehouse_id': self._get_warehouse(procurement, company),
+                    'pricelist_id': pricelist_id,
+                    'date_order': purchase_date.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
+                    'company_id': procurement.company_id.id,
+                    'fiscal_position': partner.property_account_position and partner.property_account_position.id or False,
+                    'payment_term_id': partner.property_supplier_payment_term.id or False,
+                }
+                res[procurement.id] = self.create_procurement_purchase_order(cr, uid, procurement, po_vals, line_vals, context=new_context)
+                self.message_post(cr, uid, [procurement.id], body=_("Draft Purchase Order created"), context=context)
             self.write(cr, uid, [procurement.id], {'state': 'running', 'purchase_id': purchase_id})
-            return res
+        return res
 
 procurement_order()
 
