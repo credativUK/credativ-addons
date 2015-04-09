@@ -49,4 +49,9 @@ class PurchaseOrder(osv.Model):
                 return False
         return True
 
+    def do_merge(self, cr, uid, ids, context=None):
+        no_merge = self.allocate_check_restrict(cr, uid, ids, context=context)
+        to_merge = list(set(ids) - set(no_merge))
+        return super(PurchaseOrder, self).do_merge(cr, uid, to_merge, context=context)
+
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
