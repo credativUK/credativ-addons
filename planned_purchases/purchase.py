@@ -25,6 +25,7 @@ import time
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from osv import osv
+from openerp.tools.translate import _
 from openerp.tools import DEFAULT_SERVER_DATE_FORMAT, DEFAULT_SERVER_DATETIME_FORMAT, DATETIME_FORMATS_MAP
 
 class purchase_order(osv.osv):
@@ -69,6 +70,7 @@ class procurement_order(osv.osv):
         acc_pos_obj = self.pool.get('account.fiscal.position')
         seq_obj = self.pool.get('ir.sequence')
         po_obj = self.pool.get('purchase.order')
+        po_line_obj = self.pool.get('purchase.order.line')
 
         # Merge All PO's which were genereated through scheduler
         cr.execute("select id from purchase_order where state='draft' and id in (select purchase_id as id from procurement_order where state='running')")
@@ -144,7 +146,8 @@ class procurement_order(osv.osv):
                     'fiscal_position': partner.property_account_position and partner.property_account_position.id or False,
                     'payment_term_id': partner.property_supplier_payment_term.id or False,
                 }
-                res[procurement.id] = self.create_procurement_purchase_order(cr, uid, procurement, po_vals, line_vals, context=new_context)
+                purchase_id = self.create_procurement_purchase_order(cr, uid, procurement, po_vals, line_vals, context=new_context)
+                res[procurement.id] = purchase_id
                 self.message_post(cr, uid, [procurement.id], body=_("Draft Purchase Order created"), context=context)
             self.write(cr, uid, [procurement.id], {'state': 'running', 'purchase_id': purchase_id})
         return res

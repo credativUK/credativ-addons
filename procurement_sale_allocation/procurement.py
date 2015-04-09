@@ -57,7 +57,7 @@ class ProcurementOrder(osv.Model):
                     message = _("Procurement reallocated from PO (%s) to PO (%s)") % (purchase_orig.name, purchase_new.name)
                 if signal:
                     # Check either PO is able to allow allocaitons or deallocations
-                    purchase_restrict_ids = purchase_obj.allocate_check_restrict(cr, uid, filter(lambda x: x, [purchase_orig and purchase_orig.id, purchase_new and purchase_new.id]), context=context)
+                    purchase_restrict_ids = purchase_obj.allocate_check_restrict(cr, uid, filter(lambda x: x, [purchase_orig and purchase_orig.state != 'cancel' and purchase_orig.id, purchase_new and purchase_new.id]), context=context)
                     if purchase_restrict_ids:
                         purchase_restrict_names = [x['name'] for x in purchase_obj.read(cr, uid, purchase_restrict_ids, ['name',], context=context)]
                         raise osv.except_osv(_('Error!'),_('The following purchase orders do not allow stock to be allocated or deallocated: %s') % (purchase_restrict_names,))
