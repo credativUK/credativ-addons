@@ -1,0 +1,27 @@
+<openerp>
+    <data>
+
+        <!-- Add new partner's filter on form view -->
+        <record id="credit_control_run_form_inherit" model="ir.ui.view">
+            <field name="name">credit.control.run.form.inherit</field>
+            <field name="model">credit.control.run</field>
+            <field name="inherit_id" ref="account_credit_control.credit_control_run_form"/>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <field name="date" position="after">
+                    <field name="partner_filter_id"/>
+                </field>
+                <button name="generate_credit_lines" position="replace">
+                    <button name="generate_credit_lines"
+                        string="Compute Credit Control Lines"
+                        colspan="1"
+                        type="object" icon="gtk-execute"
+                        attrs="{'invisible': [('state', '!=', 'draft')]}"
+                        context="{'partner_filter_id':partner_filter_id}"/>
+                </button>
+            </field>
+        </record>
+
+    </data>
+</openerp>
+
