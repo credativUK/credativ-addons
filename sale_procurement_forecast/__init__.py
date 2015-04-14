@@ -20,6 +20,6 @@
 #
 ##############################################################################
 
-import sale_procement_forecast
+import sale_procurement_forecast
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

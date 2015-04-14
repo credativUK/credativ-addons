@@ -35,8 +35,8 @@
         'sale_stock',
         ],
     'data': [
-        'sale_procement_forecast_view.xml',
-        'sale_procement_forecast_data.xml',
+        'sale_procurement_forecast_view.xml',
+        'sale_procurement_forecast_data.xml',
     ],
     'installable': True,
     'active': False,

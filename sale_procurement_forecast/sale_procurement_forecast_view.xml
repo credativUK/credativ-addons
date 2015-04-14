@@ -5,7 +5,7 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
 <openerp>
     <data>
 
-        <record id="sale_procement_forecast_tree_view" model="ir.ui.view">
+        <record id="sale_procurement_forecast_tree_view" model="ir.ui.view">
             <field name="name">Sale Procurement Forecast</field>
             <field name="model">sale.procurement.forecast</field>
             <field name="arch" type="xml">
@@ -19,7 +19,7 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
             </field>
         </record>
 
-        <record id="sale_procement_forecast_form_view" model="ir.ui.view">
+        <record id="sale_procurement_forecast_form_view" model="ir.ui.view">
             <field name="name">Sale Procurement Forecast</field>
             <field name="model">sale.procurement.forecast</field>
             <field name="arch" type="xml">
@@ -90,24 +90,24 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
             </field>
         </record>
 
-        <record id="action_sale_procement_forecast_tree_view" model="ir.actions.act_window">
+        <record id="action_sale_procurement_forecast_tree_view" model="ir.actions.act_window">
              <field name="name">Sale Procurement Forecast</field>
              <field name="res_model">sale.procurement.forecast</field>
              <field name="type">ir.actions.act_window</field>
              <field name="view_type">form</field>
              <field name="view_mode">tree,form</field>
-             <field name="view_id" ref="sale_procement_forecast_tree_view"/>
+             <field name="view_id" ref="sale_procurement_forecast_tree_view"/>
              <field name="context">{}</field>
        </record>
 
-        <menuitem id="menu_sale_procement_forecast" name="Forecasting"
+        <menuitem id="menu_sale_procurement_forecast" name="Forecasting"
             parent="base.menu_base_partner" sequence="10"/>
 
         <menuitem
             name="Sales Forecasts"
-            action="action_sale_procement_forecast_tree_view"
-            id="menu_sale_procement_forecast_form"
-            parent="menu_sale_procement_forecast"/>
+            action="action_sale_procurement_forecast_tree_view"
+            id="menu_sale_procurement_forecast_form"
+            parent="menu_sale_procurement_forecast"/>
 
     </data>
 </openerp>
