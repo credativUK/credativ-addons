@@ -132,7 +132,7 @@ class SaleProcurementForecast(osv.osv):
                                                                ], context=context)
                 sale_line_datas = sale_line_obj.read(cr, uid, sale_line_ids, ['product_uom', 'product_uom_qty'], context=context)
                 for sale_line_data in sale_line_datas:
-                    converted_qty = uom_obj._compute_qty(cr, uid, sale_line_data['product_uom_qty'], sale_line_data['product_uom'][0], uom_id)
+                    converted_qty = uom_obj._compute_qty(cr, uid, sale_line_data['product_uom'][0], sale_line_data['product_uom_qty'], uom_id)
                     qty_sold += converted_qty
                 qty_sold_avg = forecast.days and (qty_sold / forecast.days) or 0.0
                 date_end = (datetime.strptime(forecast.date_stop, DEFAULT_SERVER_DATE_FORMAT) + timedelta(days=forecast.days)).strftime(DEFAULT_SERVER_DATE_FORMAT)
