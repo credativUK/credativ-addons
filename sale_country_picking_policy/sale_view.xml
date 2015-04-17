@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+        <record id="view_order_form_pickpolicy" model="ir.ui.view">
+            <field name="name">sale.order.form.pickpolicy</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form" />
+            <field name="arch" type="xml">
+                <field name="partner_shipping_id" position="attributes">
+                    <attribute name="on_change">onchange_partner_shipping_id(partner_id, context)</attribute>
+                </field>
+            </field>
+        </record>
+    </data>
+</openerp>

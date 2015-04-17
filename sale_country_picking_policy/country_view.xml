@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+        <record id="view_country_form_pickpolicy" model="ir.ui.view">
+            <field name="name">res.country.form.pickpolicy</field>
+            <field name="model">res.country</field>
+            <field name="inherit_id" ref="base.view_country_form" />
+            <field name="arch" type="xml">
+                <field name="code" position="after">
+                    <field name="property_picking_policy_dummy"/>
+                </field>
+            </field>
+        </record>
+    </data>
+</openerp>
