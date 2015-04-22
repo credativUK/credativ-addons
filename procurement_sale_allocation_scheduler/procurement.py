@@ -36,11 +36,43 @@ class ProcurementOrder(osv.Model):
         procurement_obj = self.pool.get('procurement.order')
         purchase_obj = self.pool.get('purchase.order')
         purchase_line_obj = self.pool.get('purchase.order.line')
-        res = super(ProcurementOrder, self)._procure_confirm(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
         wf_service = netsvc.LocalService("workflow")
+        company = self.pool.get('res.users').browse(cr, uid, uid, context=context).company_id
+        maxdate = (datetime.today() + relativedelta(days=company.schedule_range)).strftime(tools.DEFAULT_SERVER_DATE_FORMAT)
+
+
+        # Allocate MTO to MTS if stock available
         try:
-            company = self.pool.get('res.users').browse(cr, uid, uid, context=context).company_id
-            maxdate = (datetime.today() + relativedelta(days=company.schedule_range)).strftime(tools.DEFAULT_SERVER_DATE_FORMAT)
+            offset = 0
+            if use_new_cursor:
+                cr = pooler.get_db(use_new_cursor).cursor()
+            while True:
+                report_ids = []
+                ids = procurement_obj.search(cr, uid, [('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order')], offset=offset)
+                for proc in procurement_obj.browse(cr, uid, ids):
+                    if maxdate >= proc.date_planned:
+                        cr.execute('SAVEPOINT mto_to_stock')
+                        procurement_obj.write(cr, uid, [proc.id], {'purchase_id': False, 'procure_method': 'make_to_stock'}, context=context)
+                        wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
+                        proc.refresh()
+                        # Moved to exception since no MTS stock is available, rollback and try the next one
+                        if proc.state == 'exception':
+                            cr.execute('ROLLBACK TO SAVEPOINT mto_to_stock')
+                        cr.execute('RELEASE SAVEPOINT mto_to_stock')
+                if use_new_cursor:
+                    cr.commit()
+                offset += len(ids)
+                if not ids: break
+        finally:
+            if use_new_cursor:
+                try:
+                    cr.close()
+                except Exception:
+                    pass
+        # Standard Allocate
+        res = super(ProcurementOrder, self)._procure_confirm(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
+        # Allocate MTS to MTO if no stock
+        try:
             offset = 0
             if use_new_cursor:
                 cr = pooler.get_db(use_new_cursor).cursor()
