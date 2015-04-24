@@ -28,6 +28,8 @@
     'description':
         """
         Sale Order Edit
+        
+        This is a deprecated version of the modules sale_order_edit and purchase_order_edit and should not be installed on new implementations.
         """,
     'author': 'credativ Ltd',
     'website' : 'http://credativ.co.uk',
