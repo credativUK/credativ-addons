@@ -12,7 +12,7 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
             <field name="arch" type="xml">
                <field name="date_order" position="after">
                    <field name="delivery_date_per_line" invisible="1"/>
-                   <field name="requested_delivery_date" attrs="{'invisible':[('delivery_date_per_line','=',True)]}"/>
+                   <field name="requested_delivery_date" attrs="{'invisible':[('delivery_date_per_line','=',True)], 'readonly':[('state','not in',('draft', 'sent'))]}"/>
                </field>
             </field>
         </record>
@@ -25,7 +25,7 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
                 <data>
                    <xpath expr="//page[@string='Order Lines']/field[@name='order_line']/tree[@string='Sales Order Lines']/field[@name='name']" position="after">
                        <field name="default_delivery_date"   groups="so_line_delivery_date.group_delivery_date_per_line"/>
-                       <field name="requested_delivery_date" groups="so_line_delivery_date.group_delivery_date_per_line"/>
+                       <field name="requested_delivery_date" groups="so_line_delivery_date.group_delivery_date_per_line" attrs="{'readonly':[('state','not in',('draft', 'sent'))]}"/>
                        <field name="days_until_delivery" invisible="1"/>
                    </xpath>
                    <xpath expr="//page[@string='Order Lines']/field[@name='order_line']/tree[@string='Sales Order Lines']" position="attributes">
@@ -44,7 +44,7 @@ vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
                        </div>
                        <label for="requested_delivery_date"/>
                        <div>
-                           <field name="requested_delivery_date" on_change="onchange_requested_delivery_date(requested_delivery_date, default_delivery_date)" class="oe_inline"/>
+                           <field name="requested_delivery_date" on_change="onchange_requested_delivery_date(requested_delivery_date, default_delivery_date)" class="oe_inline" attrs="{'readonly':[('state','not in',('draft', 'sent'))]}"/>
                        </div>
                        <label for="days_until_delivery"/>
                        <div>
