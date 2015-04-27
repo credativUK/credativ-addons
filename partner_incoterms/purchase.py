@@ -28,7 +28,6 @@ class purchase_order(models.Model):
     incoterm_id = fields.Many2one('stock.incoterms', 'Incoterm', states={'confirmed':[('readonly',True)], 'approved':[('readonly',True)],'done':[('readonly',True)]})
     
     def onchange_partner_id(self, cr, uid, ids, partner_id, context=None):
-        import ipdb;ipdb.set_trace()
         res = super(purchase_order, self).onchange_partner_id(cr, uid, ids, partner_id, context=context)
         if partner_id:
             partner = self.pool.get('res.partner').browse(cr, uid, partner_id)
