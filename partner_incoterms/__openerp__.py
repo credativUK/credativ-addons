@@ -40,7 +40,6 @@ will be copied onto Purchase / Sales Order incoterms as default.
     ],
     'update_xml' : [
         'partner_view.xml',
-        'purchase_view.xml',
     ],
     'active': False,
     'installable': True
