@@ -76,6 +76,13 @@ class ProductProduct(osv.Model):
         'standard_price_multi': fields.one2many('product.price.multi', 'product_id', string='Multi Company Standard Prices')
     }
 
+    def write(self, cr, uid, ids, vals, context=None):
+        context = context or {}
+        ctx = context.copy()
+        company_id = self.pool.get('res.users').browse(cr, uid, uid).company_id.id
+        ctx['company_id'] = company_id
+        return super(ProductProduct, self).write(cr, uid, ids, vals, context=ctx)
+
     def create(self, cr, uid, vals, context=None):
         # Get the company from the user for create to avoid exception when writing to standard_price
         context = context or {}
