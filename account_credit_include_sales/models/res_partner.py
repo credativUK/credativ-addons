@@ -49,7 +49,8 @@ class ResPartner(models.Model):
         for partner in self:
             orders = sale_obj.search([
                                       ('partner_id', 'child_of', partner.id),
-                                      ('state', 'not in', ['draft', 'sent', 'cancel', 'done']),
+                                      ('state', 'not in', ['draft', 'sent', 'cancel']),
+                                      ('invoiced', '=', False),
                                      ])
             uninvoiced_total = sum(amount_not_invoiced(order) for order in orders)
 
