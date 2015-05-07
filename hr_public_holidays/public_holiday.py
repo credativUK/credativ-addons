@@ -1,3 +1,25 @@
+# -*- encoding: utf-8 -*-
+##############################################################################
+#
+#    OpenERP, Open Source Management Solution
+#    Copyright (C) 2015 credativ Ltd (<http://credativ.co.uk>).
+#    All Rights Reserved
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as
+#    published by the Free Software Foundation, either version 3 of the
+#    License, or (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+##############################################################################
+
 import time
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
@@ -14,7 +36,7 @@ class res_weekdays(osv.osv):
         'name': fields.selection([('Monday','Monday'),('Tuesday','Tuesday'),('Wednesday','Wednesday'),('Thursday','Thursday'),('Friday','Friday'),('Saturday','Saturday'),('Sunday','Sunday')], 'Day'),
         'country_ids': fields.many2many('res.country', 'rel_weekdays_country', 'week_id', 'country_id', 'Countries'),
     }
-    
+
 res_weekdays()
 
 class res_country(osv.osv):
@@ -96,7 +118,7 @@ class hr_holiday_rule(osv.osv):
                         raise osv.except_osv(
                         _('Error !'),
                         _('Either select a week and day of week for a particular month or select day of month.'))
-                    
+
                     try:
                         date1 = time.strptime(effective_date, '%Y-%m-%d')
                     except ValueError:
@@ -132,7 +154,7 @@ class hr_holiday_rule(osv.osv):
                     year += 1
                 # END WHILE
         return True
-    
+
     def create(self, cr, uid, vals, context=None):
         cron_obj = self.pool.get('ir.cron')
         res = super(hr_holiday_rule, self).create(cr, uid, vals, context=context)
@@ -141,13 +163,13 @@ class hr_holiday_rule(osv.osv):
             next = (datetime.now() + relativedelta(minutes=1)).strftime('%Y-%m-%d %H:%M:%S')
             cron_obj.write(cr, uid, cron_id, {'nextcall':next}, context=context)
         return res
-            
+
 hr_holiday_rule()
 
 class hr_holidays(osv.osv):
     _inherit = 'hr.holidays'
     _order = 'actual_date asc'
-    
+
     _columns = {
         'actual_date': fields.date('Actual Date', help="Actual Date on which the holiday falls"),
         'previous_holiday': fields.date('Previous Holiday'),
@@ -159,12 +181,12 @@ class hr_holidays(osv.osv):
         'nextWorkingDay': fields.date('Next Working Date'),
         'desc': fields.text('Description'),
     }
-    
+
     _defaults = {
         'is_recurring': False,
         'no_of_days': lambda *a : 0
     }
-    
+
     _sql_constraints = [
         ('actual_date_uniq', 'unique(actual_date, country_id)', 'Actual Date must be unique per Country!'),
     ]
@@ -186,7 +208,7 @@ class hr_holidays(osv.osv):
                 'next_holiday': self._get_next_date(cr, uid, actual_date, country),
                 }
         return result
-    
+
     def get_actual_holiday(self, cr, uid, actual_date, country=False, rule=False, context=None):
         if context == None:
             context={}
@@ -211,7 +233,7 @@ class hr_holidays(osv.osv):
                     dd = datetime.strftime(actual_date, '%Y-%m-%d %H:%M:%S')
                     actual_date = self.get_actual_holiday(cr, uid, dd, country=country, rule=rule, context=context)
         return actual_date
-    
+
     def _get_prev_date(self, cr, uid, actual_date, country, context=None):
         prev_date = self.search(cr, uid, [('actual_date','<',actual_date),('country_id','=',country),('state','=','validate')], order="actual_date DESC")
         return prev_date and self.read(cr, uid, prev_date[0])['actual_date'] or False
@@ -219,26 +241,26 @@ class hr_holidays(osv.osv):
     def _get_next_date(self, cr, uid, actual_date, country, context=None):
         next_date = self.search(cr, uid, [('actual_date','>',actual_date),('country_id','=',country),('state','=','validate')], order="actual_date ASC")
         return next_date and self.read(cr, uid, next_date[0])['actual_date'] or False
-    
+
     def update_prev_nxt_holiday(self, cr, uid, holidays, context=None):
         for t in self.browse(cr, uid, holidays, context=context):
             prev_holiday = self._get_prev_date(cr, uid, t.actual_date, t.country_id and t.country_id.id or False)
             next_holiday = self._get_next_date(cr, uid, t.actual_date, t.country_id and t.country_id.id or False)
             osv.osv.write(self, cr, uid, [t.id], {'previous_holiday':prev_holiday, 'next_holiday':next_holiday})
         return True
-            
+
     def create(self, cr, uid, vals, context=None):
         res = super(hr_holidays, self).create(cr, uid, vals, context=context)
         holidays = self.search(cr, uid, [('is_recurring','=',True)], context=context)
         self.update_prev_nxt_holiday(cr, uid, holidays, context=context)
         return res
-    
+
     def write(self, cr, uid, ids, vals, context=None):
         res = super(hr_holidays, self).write(cr, uid, ids, vals, context=context)
         holidays = self.search(cr, uid, [('is_recurring','=',True)], context=context)
         self.update_prev_nxt_holiday(cr, uid, holidays, context=context)
         return res
-    
+
     def unlink(self, cr, uid, ids, context=None):
         if context is None:
             context = {}
@@ -246,7 +268,7 @@ class hr_holidays(osv.osv):
         holidays = self.search(cr, uid, [('id','not in',ids),('is_recurring','=',True)], context=context)
         self.update_prev_nxt_holiday(cr, uid, holidays, context=context)
         return res
-    
+
     def _get_next_working_day(self, cr, uid, nxt_wrking_date, country, context=None):
         holiday_obj = self.pool.get('hr.holidays')
         nxt_wrking_date = datetime.strftime(nxt_wrking_date, '%Y-%m-%d')
@@ -256,11 +278,11 @@ class hr_holidays(osv.osv):
             country_id = self.pool.get('res.country').browse(cr, uid, country)
             for country_weekend in country_id.weekend_ids:
                 weekends.append(country_weekend.code)
-        
+
         if holiday or (datetime.strptime(nxt_wrking_date, '%Y-%m-%d').isoweekday() in weekends):
             date1 = datetime.strptime(nxt_wrking_date, '%Y-%m-%d') + relativedelta(days=1)
             nxt_wrking_date = self._get_next_working_day(cr, uid, date1, country, context=context)
-          
+
         return nxt_wrking_date
 
     def isWorkingDay(self, cr, uid, holiday_date, country=False, context=None):
@@ -287,7 +309,7 @@ class hr_holidays(osv.osv):
                 nextWorkingDays.append(nxt_day)
             i += 1
         return nextWorkingDays
-    
+
     def getWorkingDaysBetween(self, cr, uid, begin_date, end_date, country=False, context=None):
         '''Get the number of working days betwen begin_date and end_date inclusive'''
         begin_dt = datetime.strptime(begin_date[:10], '%Y-%m-%d')
@@ -298,13 +320,13 @@ class hr_holidays(osv.osv):
                 working_days += 1
             begin_dt += timedelta(days=1)
         return working_days
-    
+
     def check_func(self, cr, uid, ids, context=None):
         browse_recid = self.browse(cr, uid, ids[0])
         country = browse_recid.country_id and browse_recid.country_id.id or False
         result = self.getWorkingDays(cr, uid, browse_recid.actual_date, country, browse_recid.no_of_days, context=context)
         return self.write(cr, uid, ids, {'nextWorkingDay': result['nextWorkingDay'], 'desc': result['desc']})
-    
+
 hr_holidays()
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

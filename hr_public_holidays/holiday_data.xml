@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
     <data noupdate="1">
-    
+
         <!-- Employee Category -->
         <record id="category_default" model="hr.employee.category">
             <field name="name">Default Holidays</field>
@@ -13,39 +13,39 @@
             <field name="name">Monday</field>
             <field name="code">1</field>
         </record>
-        
+
         <record id="tuesday" model="res.weekdays">
             <field name="name">Tuesday</field>
             <field name="code">2</field>
         </record>
-        
+
         <record id="wednesday" model="res.weekdays">
             <field name="name">Wednesday</field>
             <field name="code">3</field>
         </record>
-        
+
         <record id="thursday" model="res.weekdays">
             <field name="name">Thursday</field>
             <field name="code">4</field>
         </record>
-        
+
         <record id="friday" model="res.weekdays">
             <field name="name">Friday</field>
             <field name="code">5</field>
         </record>
-        
+
         <record id="saturday" model="res.weekdays">
             <field name="name">Saturday</field>
             <field name="code">6</field>
             <field name="country_ids" eval="[(6, 0, [ref('base.uk')])]"/>
         </record>
-        
+
         <record id="sunday" model="res.weekdays">
             <field name="name">Sunday</field>
             <field name="code">7</field>
             <field name="country_ids" eval="[(6, 0, [ref('base.uk')])]"/>
         </record>
-        
+
         <!-- Rule -->
         <record id="uk_newyear_day" model="hr.holiday.rule">
             <field name="name">New Year's Day</field>
@@ -55,7 +55,7 @@
             <field name="category_id" ref="category_default"/>
             <field name="holiday_status_id" ref="hr_holidays.holiday_status_cl"/>
         </record>
-        
+
         <record id="uk_may_day" model="hr.holiday.rule">
             <field name="name">Early May Bank Holiday</field>
             <field name="week">0</field>
@@ -65,7 +65,7 @@
             <field name="category_id" ref="category_default"/>
             <field name="holiday_status_id" ref="hr_holidays.holiday_status_cl"/>
         </record>
-        
+
         <record id="uk_spring_day" model="hr.holiday.rule">
             <field name="name">Spring Bank Holiday</field>
             <field name="week">-1</field>
@@ -75,7 +75,7 @@
             <field name="category_id" ref="category_default"/>
             <field name="holiday_status_id" ref="hr_holidays.holiday_status_cl"/>
         </record>
-        
+
         <record id="uk_summer_day" model="hr.holiday.rule">
             <field name="name">Summer Bank Holiday</field>
             <field name="week">-1</field>
@@ -85,7 +85,7 @@
             <field name="category_id" ref="category_default"/>
             <field name="holiday_status_id" ref="hr_holidays.holiday_status_cl"/>
         </record>
-        
+
         <record id="uk_christmas_day" model="hr.holiday.rule">
             <field name="name">Christmas Day</field>
             <field name="day1">25</field>
@@ -94,7 +94,7 @@
             <field name="category_id" ref="category_default"/>
             <field name="holiday_status_id" ref="hr_holidays.holiday_status_cl"/>
         </record>
-        
+
         <record id="uk_boxing_day" model="hr.holiday.rule">
             <field name="name">Boxing Day</field>
             <field name="day1">26</field>
@@ -103,7 +103,7 @@
             <field name="category_id" ref="category_default"/>
             <field name="holiday_status_id" ref="hr_holidays.holiday_status_cl"/>
         </record>
-        
+
         <!-- Scheduler -->
         <record forcecreate="True" id="ir_cron_holiday_action" model="ir.cron">
             <field name="name">Run recurring holidays scheduler</field>
@@ -117,6 +117,6 @@
             <field name="function">_fetch_holidays</field>
             <field name="args">([], 1)</field>
         </record>
-        
+
     </data>
 </openerp>
