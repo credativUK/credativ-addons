@@ -36,6 +36,7 @@ class SaleOrder(osv.osv, OrderEdit):
         if not default:
             default = {}
         default['order_edit_id'] = False
+        default['workflow_process_id'] = False
         return super(SaleOrder, self).copy_data(cr, uid, id_, default, context=context)
 
     def action_ship_create(self, cr, uid, ids, context=None):
