@@ -24,7 +24,12 @@
     'version': '1.0',
     'category': 'Others',
     'description': """
+Allows automatic calculation of public holidays based on rules.
+This covers most holidays with the notable exception of Easter and
+any one-off holidays which can be entered manually.
 
+Not to be confused with and not related in any way with another module of the
+same name which provides a far more simplistic management of public holidays.
     """,
     'author': 'credativ',
     'website': 'http://www.credativ.co.uk',

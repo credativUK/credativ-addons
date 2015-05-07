@@ -177,14 +177,11 @@ class hr_holidays(osv.osv):
         'rule_id': fields.many2one('hr.holiday.rule', 'Holiday Rule', help="To know it was auto-generated or manually entered holiday"),
         'country_id': fields.many2one('res.country', 'Country'),
         'is_recurring': fields.boolean('Recurring Holiday'),
-        'no_of_days': fields.integer('No. of Working Days'),
-        'nextWorkingDay': fields.date('Next Working Date'),
         'desc': fields.text('Description'),
     }
 
     _defaults = {
         'is_recurring': False,
-        'no_of_days': lambda *a : 0
     }
 
     _sql_constraints = [
@@ -320,12 +317,6 @@ class hr_holidays(osv.osv):
                 working_days += 1
             begin_dt += timedelta(days=1)
         return working_days
-
-    def check_func(self, cr, uid, ids, context=None):
-        browse_recid = self.browse(cr, uid, ids[0])
-        country = browse_recid.country_id and browse_recid.country_id.id or False
-        result = self.getWorkingDays(cr, uid, browse_recid.actual_date, country, browse_recid.no_of_days, context=context)
-        return self.write(cr, uid, ids, {'nextWorkingDay': result['nextWorkingDay'], 'desc': result['desc']})
 
 hr_holidays()
 
