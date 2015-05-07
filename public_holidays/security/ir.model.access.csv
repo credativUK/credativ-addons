@@ -1,0 +1,5 @@
+"id","name","model_id:id","group_id:id","perm_read","perm_write","perm_create","perm_unlink"
+"access_weekends_read","res.weekdays","model_res_weekdays","base.group_user",1,0,0,0
+"access_weekends_all","res.weekdays","model_res_weekdays","base.group_partner_manager",1,1,1,1
+"access_holiday_rules_read","hr.holiday.rule","model_hr_holiday_rule","base.group_user",1,0,0,0
+"access_holiday_rules_all","hr.holiday.rule","model_hr_holiday_rule","base.group_partner_manager",1,1,1,1
