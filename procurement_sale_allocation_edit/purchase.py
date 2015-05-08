@@ -35,7 +35,7 @@ class PurchaseOrder(osv.Model):
         proc_to_po = {}
         for purchase in self.browse(cr, uid, ids, context=context):
             # Get list of all procurements which are linked to this PO
-            proc_ids = procurement_obj.search(cr, uid, [('purchase_id', '=', purchase.order_edit_id.id), ('state', 'not in', ('done', 'cancel'))], context=context)
+            proc_ids = procurement_obj.search(cr, uid, [('purchase_id', '=', purchase.order_edit_id.id), ('purchase_id', '!=', False), ('state', 'not in', ('done', 'cancel'))], context=context)
             proc_to_po[purchase] = proc_ids
 
             # Remove PO line for all procurements so they all revert back to MTS, or confirmed MTO
