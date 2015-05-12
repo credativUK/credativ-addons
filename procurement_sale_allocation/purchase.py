@@ -54,4 +54,24 @@ class PurchaseOrder(osv.Model):
         to_merge = list(set(ids) - set(no_merge))
         return super(PurchaseOrder, self).do_merge(cr, uid, to_merge, context=context)
 
+
+    def action_cancel(self, cr, uid, ids, context=None):
+        procurement_obj = self.pool.get('procurement.order')
+        procurement_ids = procurement_obj.search(cr, uid, [('purchase_id', 'in', ids), ('state', '!=', 'cancel')], context=context)
+        if procurement_ids:
+            procurement_obj.write(cr, uid, procurement_ids, {'purchase_id': False}, context=context)
+            procurement_obj.write(cr, uid, procurement_ids, {'procure_method': 'make_to_order'}, context=context)
+        return super(PurchaseOrder, self).action_cancel(cr, uid, ids, context=context)
+
+    def purchase_cancel(self, cr, uid, ids, context=None):
+        wf_service = netsvc.LocalService("workflow")
+        procurement_obj = self.pool.get('procurement.order')
+        procurement_ids = procurement_obj.search(cr, uid, [('purchase_id', 'in', ids), ('state', '!=', 'cancel')], context=context)
+        if procurement_ids:
+            procurement_obj.write(cr, uid, procurement_ids, {'purchase_id': False}, context=context)
+            procurement_obj.write(cr, uid, procurement_ids, {'procure_method': 'make_to_order'}, context=context)
+        for (id, name) in self.name_get(cr, uid, ids):
+            wf_service.trg_validate(uid, 'purchase.order', id, 'purchase_cancel', cr)
+        return True
+
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

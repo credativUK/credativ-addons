@@ -17,6 +17,9 @@
                         </group>
                     </page>
                 </page>
+                <button name="purchase_cancel" position="attributes">
+                    <attribute name="type">object</attribute>
+                </button>
             </field>
         </record>
     </data>
