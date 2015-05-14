@@ -34,13 +34,13 @@ class PartnerBank(models.Model):
 
     @api.constrains('acc_number')
     def _check_bank_account_format(self):
-        if (
+        if(
             self.state in self.CHECK_BANK_TYPE and self.country_id and
             self.country_id.bank_regex
         ):
 
-                if not re.match(self.country_id.bank_regex, self.acc_number):
-                    raise Warning(_('Invalid Bank account number'))
+            if not re.match(self.country_id.bank_regex, self.acc_number):
+                raise Warning(_('Invalid Bank account number'))
 
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
