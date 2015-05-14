@@ -27,15 +27,20 @@ class PurchaseOrder(osv.Model):
     _inherit = 'purchase.order'
 
     def allocate_check_restrict(self, cr, uid, ids, context=None):
+        if context == None:
+            context = {}
+        states = ['done']
+        if not context.get('psa_po_cancel'):
+            states.append('cancel')
         restricted_ids = []
         for purchase in self.browse(cr, uid, ids, context=context):
-            if purchase.state in ('cancel', 'done'):
+            if purchase.state in states:
                 restricted_ids.append(purchase.id)
             for line in purchase.order_line:
-                if line.state in ('cancel', 'done'):
+                if line.state in states:
                     restricted_ids.append(purchase.id)
                 for move in line.move_ids:
-                    if move.state in ('cancel', 'done'):
+                    if move.state in states:
                         restricted_ids.append(purchase.id)
         return list(set(restricted_ids))
 

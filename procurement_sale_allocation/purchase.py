@@ -56,12 +56,16 @@ class PurchaseOrder(osv.Model):
 
 
     def action_cancel(self, cr, uid, ids, context=None):
+        if context == None:
+            context = {}
+        ctx = context.copy()
+        ctx.update({'psa_po_cancel': True})
         procurement_obj = self.pool.get('procurement.order')
-        procurement_ids = procurement_obj.search(cr, uid, [('purchase_id', 'in', ids), ('state', '!=', 'cancel')], context=context)
+        procurement_ids = procurement_obj.search(cr, uid, [('purchase_id', 'in', ids), ('state', '!=', 'cancel')], context=ctx)
         if procurement_ids:
-            procurement_obj.write(cr, uid, procurement_ids, {'purchase_id': False}, context=context)
-            procurement_obj.write(cr, uid, procurement_ids, {'procure_method': 'make_to_order'}, context=context)
-        return super(PurchaseOrder, self).action_cancel(cr, uid, ids, context=context)
+            procurement_obj.write(cr, uid, procurement_ids, {'purchase_id': False}, context=ctx)
+            procurement_obj.write(cr, uid, procurement_ids, {'procure_method': 'make_to_order'}, context=ctx)
+        return super(PurchaseOrder, self).action_cancel(cr, uid, ids, context=ctx)
 
     def purchase_cancel(self, cr, uid, ids, context=None):
         wf_service = netsvc.LocalService("workflow")
