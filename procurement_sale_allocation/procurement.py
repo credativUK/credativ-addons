@@ -102,21 +102,25 @@ class ProcurementOrder(osv.Model):
         return True
 
     def _cancel_po_assign(self, cr, uid, ids, context=None):
+        if context == None:
+            context = {}
+        ctx = context.copy()
+        ctx.update({'from_picking': True}) # This is required to support the WMS integration - the move is not actually being cancelled, just re-arranged
         move_obj = self.pool.get('stock.move')
         purchase_line_obj = self.pool.get('purchase.order.line')
-        for proc in self.browse(cr, uid, ids, context=context):
+        for proc in self.browse(cr, uid, ids, context=ctx):
             # Find all PO lines with my stock move ID as the move_dest_id
             if not proc.move_id:
                 continue
-            pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('order_id.state', '!=', 'cancel')], context=context)
+            pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('order_id.state', '!=', 'cancel')], context=ctx)
             assert len(pol_ids) in (0, 1), "Found multiple purchase order lines for this procurement"
             if pol_ids:
                 # Remove the move_dest_id from this PO line and the PO lines moves
-                purchase_line_obj.write(cr, uid, [pol_ids[0]], {'move_dest_id': False}, context=context)
-                po_line = purchase_line_obj.browse(cr, uid, pol_ids[0], context=context)
-                move_ids = move_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('purchase_line_id', '=', po_line.id), ('state', '!=', 'cancel')], context=context)
-                move_obj.write(cr, uid, move_ids, {'move_dest_id': False}, context=context)
-                move_ids = move_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('purchase_line_id', '!=', False), ('state', '!=', 'cancel')], context=context)
+                purchase_line_obj.write(cr, uid, [pol_ids[0]], {'move_dest_id': False}, context=ctx)
+                po_line = purchase_line_obj.browse(cr, uid, pol_ids[0], context=ctx)
+                move_ids = move_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('purchase_line_id', '=', po_line.id), ('state', '!=', 'cancel')], context=ctx)
+                move_obj.write(cr, uid, move_ids, {'move_dest_id': False}, context=ctx)
+                move_ids = move_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('purchase_line_id', '!=', False), ('state', '!=', 'cancel')], context=ctx)
                 assert len(move_ids) == 0, "Found extra moves linked to this procurement related to other purchase orders"
                 # If there are multiple PO lines with the same product (and other merging criteria) - merge the POLs and moves togather
                 pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', False),
@@ -127,9 +131,9 @@ class ProcurementOrder(osv.Model):
                                                              ('product_id', '=', po_line.product_id.id),
                                                              ('account_analytic_id', '=', po_line.account_analytic_id.id),
                                                              ('order_id', '=', po_line.order_id.id),
-                                                             ], context=context)
+                                                             ], context=ctx)
                 if len(pol_ids) > 1:
-                    purchase_line_obj.do_merge(cr, uid, pol_ids, context=context)
+                    purchase_line_obj.do_merge(cr, uid, pol_ids, context=ctx)
         return True
 
     def _cancel_stock_assign(self, cr, uid, ids, context=None):
