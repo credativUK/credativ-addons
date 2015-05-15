@@ -20,31 +20,17 @@
 #
 ##############################################################################
 
-import re
-from openerp import fields, models, api, _
-from openerp.exceptions import Warning
+from openerp import fields, models
 
 
 class Country(models.Model):
 
     _inherit = 'res.country'
 
-    @api.constrains('bank_regex')
-    def _check_linked_accounts(self):
-        if(self.bank_regex):
-            bank_obj = self.env['res.partner.bank']
-            bank_accs = bank_obj.search([('country_id', '=', self.id),
-                                         ('state', '=', 'bank')])
-
-            for bank in bank_accs:
-                if not re.match(self.bank_regex, bank.acc_number):
-                    raise Warning(_('Invalid Bank account number associated \
-with this country'))
-
-    bank_regex = fields.Char('Bank account Regex',
-                             help="""Validate normal bank account type by \
-Python Regex expression.\n e.g for uk bank account 00-00-00 12345678 \
-use regex ^\d{2}-\d{2}-\d{2}\s\d{8}$""")
+    bank_regex = fields.Char('Bank account Regex', help="Validate normal bank "
+                             "account type by Python Regex expression.\n e.g "
+                             "for uk bank account 00-00-00 12345678 use regex "
+                             "^\d{2}-\d{2}-\d{2}\s\d{8}$")
 
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

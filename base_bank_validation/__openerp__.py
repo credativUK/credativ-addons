@@ -25,11 +25,14 @@
     'summary': """Vaidates Normal Bank account number based on country""",
 
     'description': """
-        It is crucial to perserve bank account number format for invoicing and other purposes.
-        This module add a feature to validate bank account number based on country using python regular expression.
+        It is crucial to perserve bank account number format for invoicing and
+        other purposes. This module add a feature to validate bank account
+        number based on country using python regular expression.
         Configuration:
-            - To set bank account number regex go to Sales -> Configuration -> Address Book -> Localisation -> Countries
-            - Open country and set regex in bank regex field e.g for uk bank account 00-00-00 12345678 use regex ^\d{2}-\d{2}-\d{2}\s\d{8}$
+            - To set bank account number regex go to Sales -> Configuration ->
+              Address Book -> Localisation -> Countries
+            - Open country and set regex in bank regex field e.g for uk bank
+              account 00-00-00 12345678 use regex ^\d{2}-\d{2}-\d{2}\s\d{8}$
     """,
 
     'author': "credativ ltd",
@@ -45,4 +48,3 @@
 }
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
-

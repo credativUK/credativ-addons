@@ -6,7 +6,7 @@
 #    All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
-    #    it under the terms of the GNU General Public License as published by
+#    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
@@ -32,13 +32,12 @@ class PartnerBank(models.Model):
 
     CHECK_BANK_TYPE = ['bank']
 
-    @api.constrains('acc_number')
+    @api.constrains('acc_number', 'country_id')
     def _check_bank_account_format(self):
         if(
             self.state in self.CHECK_BANK_TYPE and self.country_id and
             self.country_id.bank_regex
         ):
-
             if not re.match(self.country_id.bank_regex, self.acc_number):
                 raise Warning(_('Invalid Bank account number'))
 
