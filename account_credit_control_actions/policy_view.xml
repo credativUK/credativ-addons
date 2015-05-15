@@ -1,0 +1,54 @@
+<openerp>
+    <data>
+        <record id="credit_control_policy_form_actions" model="ir.ui.view">
+            <field name="name">credit.control.policy.form.actions</field>
+            <field name="model">credit.control.policy</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="account_credit_control.credit_control_policy_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//tree/field[@name='email_template_id']" position="after">
+                    <field name="server_action_id"/>
+                </xpath>
+                <xpath expr="/form//form//field[@name='email_template_id']" position="attributes">
+                    <attribute name="attrs">{'required': [('channel', '!=', 'action')]}</attribute>
+                </xpath>
+                <xpath expr="/form//form//field[@name='custom_text']" position="attributes">
+                    <attribute name="attrs">{'required': [('channel', '!=', 'action')]}</attribute>
+                </xpath>
+                <xpath expr="/form//form//field[@name='custom_text']" position="after">
+                    <field name="server_action_id" attrs="{'required': [('channel', '=', 'action')]}" domain="[('model_id.model', 'in', ('res.partner', 'credit.control.communication'))]"/> 
+                </xpath>
+            </field>
+        </record>
+
+        <record id="credit_mangement_policy_level_form_actions" model="ir.ui.view">
+            <field name="name">credit.mangement.policy.level.form.actions</field>
+            <field name="model">credit.control.policy.level</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="account_credit_control.credit_mangement_policy_level_form"/>
+            <field name="arch" type="xml">
+                <field name="email_template_id" position="attributes">
+                    <attribute name="attrs">{'required': [('channel', '!=', 'action')]}</attribute>
+                </field>
+                <field name="custom_text" position="attributes">
+                    <attribute name="attrs">{'required': [('channel', '!=', 'action')]}</attribute>
+                </field>
+                <field name="custom_text" position="after">
+                    <field name="server_action_id" attrs="{'required': [('channel', '=', 'action')]}"/> 
+                </field>
+            </field>
+        </record>
+
+        <record id="credit_control_policy_level_tree_actions" model="ir.ui.view">
+            <field name="name">credit.control.policy.level.tree.actions</field>
+            <field name="model">credit.control.policy.level</field>
+            <field name="type">tree</field>
+            <field name="inherit_id" ref="account_credit_control.credit_control_policy_level_tree"/>
+            <field name="arch" type="xml">
+                <field name="email_template_id" position="after">
+                    <field name="server_action_id"/>
+                </field>
+            </field>
+        </record>
+    </data>
+</openerp>
