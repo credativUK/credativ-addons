@@ -147,7 +147,7 @@ class ProcurementOrder(osv.Model):
         if other_ids:
             purchase_ids = super(ProcurementOrder, self).action_po_assign(cr, uid, other_ids, context=context)
             if purchase_ids:
-                res.extend(purchase_ids)
+                res.append(purchase_ids)
 
         return len(res) and res[0] or 0
 
