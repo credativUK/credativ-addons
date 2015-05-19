@@ -19,8 +19,23 @@
 #
 ##############################################################################
 
-import procurement
-import purchase
-import stock
+from osv import osv, fields
+import netsvc
+
+class StockMove(osv.Model):
+    _inherit = 'stock.move'
+
+    def action_cancel(self, cr, uid, ids, context=None):
+        res = super(StockMove, self).action_cancel(cr, uid, ids, context=context)
+        if ids:
+            # Find all procurements stuck in the purchase subflow and remove their purchase order link
+            procurement_obj = self.pool.get('procurement.order')
+            wkf_service = netsvc.LocalService('workflow')
+            proc_ids = procurement_obj.search(cr, uid, [('move_id', 'in', ids), ('state', 'in', ('running', 'confirmed')), ('purchase_id', '!=', False)], context=context)
+            if proc_ids:
+                procurement_obj.write(cr, uid, proc_ids, {'purchase_id': False}, context=context)
+                for proc_id in proc_ids:
+                    wkf_service.trg_validate(uid, 'procurement.order', proc_id, 'button_cancel', cr)
+        return res
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
