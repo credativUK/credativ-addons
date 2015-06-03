@@ -43,8 +43,14 @@ class mrp_production(models.Model):
             proc_obj.browse(cr, uid, procs, context=context) or [False]
         for procurement in procurements:
             date_planned = procurement and proc_obj._get_date_planned(cr, uid, procurement, context=context) or production.date_planned
-            # code elsewhere expects all moves for the same product to have the same uom, convert
-            product_qty = procurement and uom_obj._compute_qty(cr, uid, procurement.product_uom.id, procurement.product_qty, production.product_uom.id)
+            product_qty = production.product_qty
+            if procurement:
+                # code elsewhere expects all moves for the same product to have
+                # the same uom, convert
+                product_qty = uom_obj._compute_qty(cr, uid,
+                                                   procurement.product_uom.id,
+                                                   procurement.product_qty,
+                                                   production.product_uom.id)
             data = {
                 'name': production.name,
                 'date': date_planned,
