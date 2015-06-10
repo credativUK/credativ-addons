@@ -48,7 +48,7 @@ class ProcurementOrder(osv.Model):
                 cr = pooler.get_db(use_new_cursor).cursor()
             while True:
                 report_ids = []
-                ids = procurement_obj.search(cr, uid, [('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order')], offset=offset)
+                ids = procurement_obj.search(cr, uid, [('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order')], offset=offset, limit=200, order='priority, date_planned', context=context)
                 for proc in procurement_obj.browse(cr, uid, ids):
                     if maxdate >= proc.date_planned:
                         cr.execute('SAVEPOINT mto_to_stock')
@@ -78,7 +78,7 @@ class ProcurementOrder(osv.Model):
                 cr = pooler.get_db(use_new_cursor).cursor()
             while True:
                 report_ids = []
-                ids = procurement_obj.search(cr, uid, [('state', 'in', ('confirmed', 'exception')), ('procure_method', '=', 'make_to_stock')], offset=offset)
+                ids = procurement_obj.search(cr, uid, [('state', 'in', ('confirmed', 'exception')), ('procure_method', '=', 'make_to_stock')], offset=offset, limit=200, order='priority, date_planned', context=context)
                 for proc in procurement_obj.browse(cr, uid, ids):
                     if maxdate >= proc.date_planned:
                         # Find purchase lines for this product
