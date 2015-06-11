@@ -21,10 +21,10 @@
 ##############################################################################
 
 from openerp import SUPERUSER_ID
-from openerp.osv import orm
+from openerp import api, models
 from openerp.tools.translate import _
 
-class procurement_order(orm.Model):
+class procurement_order(models.Model):
     _inherit = 'procurement.order'
 
     def make_mo(self, cr, uid, ids, context=None):
@@ -47,7 +47,7 @@ class procurement_order(orm.Model):
                 self.message_post(cr, uid, [procurement.id], body=_("No BoM exists for this product!"), context=context)
                 continue
 
-            if procurement.state == 'confirm':
+            if procurement.state == 'confirmed':
                 confirmed_procurements.add(procurement.id)
 
             group_key = (procurement.company_id.id, bom_id, procurement.location_id.id)
@@ -101,9 +101,21 @@ class procurement_order(orm.Model):
             production_obj.signal_workflow(cr, uid, [produce_id], 'button_confirm')
         return res
 
-    def run(self, cr, uid, ids, autocommit=False, context=None):
-        res = super(procurement_order, self).run(cr, uid, ids, autocommit=autocommit, context=context)
-        to_check = self.search(cr, uid, [('state','=','exception'),('rule_id.action','=','manufacture')], context=context)
-        result = self.make_mo(cr, uid, to_check, context=context)
-        self.write(cr, uid, [i for i in result if result[i]], {'state': 'running'}, context=context)
+    @api.multi
+    def run(self, autocommit=False):
+        res = super(procurement_order, self).run(autocommit=autocommit)
+        potential_mos = self.filtered(lambda x: x.state == 'exception'
+                                                and x.rule_id
+                                                and x.rule_id.action == 'manufacture')
+        if not potential_mos:
+            return res
+        products = potential_mos.mapped('product_id')
+        to_check = self.search([
+                                ('state','=','exception'),
+                                ('rule_id.action','=','manufacture'),
+                                ('product_id', 'in', products._ids),
+                                ])
+        result = self.make_mo(to_check)
+        processed = self.browse([i for i in result if result[i]])
+        processed.write({'state': 'running'})
         return res
