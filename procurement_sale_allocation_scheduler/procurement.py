@@ -41,7 +41,7 @@ class ProcurementOrder(osv.Model):
         maxdate = (datetime.today() + relativedelta(days=company.schedule_range)).strftime(tools.DEFAULT_SERVER_DATE_FORMAT)
 
 
-        # Allocate MTO to MTS if stock available
+        # Allocate confirmed MTO to MTS if stock available
         try:
             offset = 0
             if use_new_cursor:
@@ -52,7 +52,7 @@ class ProcurementOrder(osv.Model):
                 for proc in procurement_obj.browse(cr, uid, ids):
                     if maxdate >= proc.date_planned:
                         cr.execute('SAVEPOINT mto_to_stock')
-                        procurement_obj.write(cr, uid, [proc.id], {'purchase_id': False, 'procure_method': 'make_to_stock'}, context=context)
+                        procurement_obj.write(cr, uid, [proc.id], {'procure_method': 'make_to_stock'}, context=context)
                         wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
                         proc.refresh()
                         # Moved to exception since no MTS stock is available, rollback and try the next one
@@ -102,6 +102,37 @@ class ProcurementOrder(osv.Model):
                                 wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
                                 procurement_obj.write(cr, uid, [proc.id], {'purchase_id': po_id}, context=context)
                                 break
+                if use_new_cursor:
+                    cr.commit()
+                offset += len(ids)
+                if not ids: break
+        finally:
+            if use_new_cursor:
+                try:
+                    cr.close()
+                except Exception:
+                    pass
+        # Allocate running MTO to MTS if stock available
+        try:
+            offset = 0
+            if use_new_cursor:
+                cr = pooler.get_db(use_new_cursor).cursor()
+            while True:
+                report_ids = []
+                ids = procurement_obj.search(cr, uid, [('state', '=', 'running'), ('purchase_id', '!=', False), ('procure_method', '=', 'make_to_order')], offset=offset, limit=200, order='priority, date_planned', context=context)
+                for proc in procurement_obj.browse(cr, uid, ids):
+                    if maxdate >= proc.date_planned:
+                        cr.execute('SAVEPOINT mto_to_stock')
+                        try:
+                            procurement_obj.write(cr, uid, [proc.id], {'purchase_id': False,}, context=context)
+                            wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
+                            proc.refresh()
+                            # Moved to exception since no MTS stock is available, rollback and try the next one
+                            if proc.state == 'exception':
+                                cr.execute('ROLLBACK TO SAVEPOINT mto_to_stock')
+                        except Exception, e: # A variety of errors may prevent this from re-assigning, picking exported to WMS, PO cut-off, etc
+                            cr.execute('ROLLBACK TO SAVEPOINT mto_to_stock')
+                        cr.execute('RELEASE SAVEPOINT mto_to_stock')
                 if use_new_cursor:
                     cr.commit()
                 offset += len(ids)
