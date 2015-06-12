@@ -24,6 +24,7 @@ from openerp.tools.translate import _
 import openerp.addons.decimal_precision as dp
 from openerp.tools.misc import DEFAULT_SERVER_DATETIME_FORMAT
 from datetime import datetime
+import pytz
 
 class StockOverviewReport(osv.osv_memory):
     _name = 'stock.overview.report'
@@ -70,6 +71,16 @@ class StockOverviewReport(osv.osv_memory):
         for wizard in self.browse(cr, uid, ids, context=context):
             if wizard.line_ids:
                 line_obj.unlink(cr, uid, [x.id for x in wizard.line_ids], context=context)
+
+            user = self.pool.get("res.users").read(cr, uid, uid, ['partner_id'], context=context)
+            user_timezone = self.pool.get("res.partner").read(cr, uid, user['partner_id'][0],['tz'], context=context)['tz']
+            if not user_timezone:
+                user_timezone = 'UTC'
+            if wizard.date:
+                date = datetime.strptime(wizard.date, DEFAULT_SERVER_DATETIME_FORMAT)
+                local_date = pytz.utc.localize(date, is_dst=None).astimezone(pytz.timezone(user_timezone))
+            else:
+                local_date = datetime.now(pytz.timezone(user_timezone))
             for company_id in company_obj.search(cr, uid, [], context=context):
                 for warehouse_id in warehouse_obj.search(cr, uid, [('company_id', '=', company_id),], context=context):
                     ctx = context.copy()
@@ -94,7 +105,7 @@ class StockOverviewReport(osv.osv_memory):
 
             res = {
                 'domain': "[('wizard_id','=',%d)]" % (wizard.id,),
-                'name': _('Stock Overview Report for %s') % ((wizard.date or datetime.now().strftime(DEFAULT_SERVER_DATETIME_FORMAT)),),
+                'name': _('Stock Overview Report for %s - %s') % (local_date.strftime(DEFAULT_SERVER_DATETIME_FORMAT), user_timezone),
                 'view_type': 'form',
                 'view_mode': 'tree',
                 'res_model': 'stock.overview.report.line',
