@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <menuitem
+            icon="STOCK_EXECUTE"
+            name="Stock Overview Report"
+            action="stock_overview_report.action_stock_overview_report_form_view"
+            id="menu_stock_overview_report_faction"
+            parent="base.menu_product"/>
+
+        <record id="stock_overview_report_line_tree_view" model="ir.ui.view">
+            <field name="name">Stock Overview Report Lines</field>
+            <field name="model">stock.overview.report.line</field>
+            <field name="inherit_id" ref="stock_overview_report.stock_overview_report_line_tree_view"/>
+            <field name="arch" type="xml">
+                <tree position="inside">
+                    <field name="supplier_virtual_available"/>
+                    <field name="supplier_virtual_available_combined"/>
+                </tree>
+            </field>
+        </record>
+
+    </data>
+</openerp>
