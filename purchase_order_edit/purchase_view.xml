@@ -6,6 +6,9 @@
             <field name="model">purchase.order</field>
             <field name="inherit_id" ref="purchase.purchase_order_form" />
             <field name="arch" type="xml">
+                <button name="purchase_cancel" position="after">
+                    <button name="action_run_order_edit" states="confirmed,approved" string="Edit Order" type="object" groups="base.group_user"/>
+                </button>
                 <field name="origin" position="after">
                     <field name="order_edit_id"/>
                 </field>

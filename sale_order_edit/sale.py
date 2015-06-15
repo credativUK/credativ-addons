@@ -32,6 +32,17 @@ class SaleOrder(osv.osv, OrderEdit):
         'order_edit_id': fields.many2one('sale.order', 'Edit of Order', readonly=True),
     }
 
+    def action_run_order_edit(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+        if not ids:
+            return {}
+        oe_obj = self.pool.get('sale.order.edit_wizard')
+
+        context.update({'active_id': ids[0], 'active_ids': [ids[0]]})
+        oe_id = oe_obj.create(cr, uid, {}, context=context)
+        return oe_obj.edit_order(cr, uid, [oe_id], context=context)
+
     def copy_data(self, cr, uid, id_, default=None, context=None):
         if not default:
             default = {}

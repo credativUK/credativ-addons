@@ -47,6 +47,7 @@ class PurchaseOrderEditWizard(osv.osv_memory):
                 'view_type': 'form',
                 'view_mode': 'form,tree',
                 'res_model': 'purchase.order',
+                'target': 'inline',
                 'view_id': False,
                 'res_id': new_id,
                 'type': 'ir.actions.act_window',

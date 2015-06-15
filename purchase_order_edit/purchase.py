@@ -32,6 +32,17 @@ class PurchaseOrder(osv.osv, OrderEdit):
         'order_edit_id': fields.many2one('purchase.order', 'Edit of Order', readonly=True),
     }
 
+    def action_run_order_edit(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+        if not ids:
+            return {}
+        oe_obj = self.pool.get('purchase.order.edit_wizard')
+
+        context.update({'active_id': ids[0], 'active_ids': [ids[0]]})
+        oe_id = oe_obj.create(cr, uid, {}, context=context)
+        return oe_obj.edit_order(cr, uid, [oe_id], context=context)
+
     def allocate_check_restrict(self, cr, uid, ids, context=None):
         restricted_ids = super(PurchaseOrder, self).allocate_check_restrict(cr, uid, ids, context=context)
         for purchase in self.browse(cr, uid, ids, context=context):

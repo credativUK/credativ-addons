@@ -6,6 +6,9 @@
             <field name="model">sale.order</field>
             <field name="inherit_id" ref="sale.view_order_form" />
             <field name="arch" type="xml">
+                <button name="invoice_cancel" position="after">
+                    <button name="action_run_order_edit" states="progress,manual" string="Edit Order" type="object" groups="base.group_user"/>
+                </button>
                 <field name="origin" position="after">
                     <field name="order_edit_id"/>
                 </field>
