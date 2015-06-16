@@ -48,7 +48,7 @@ class ProcurementOrder(osv.Model):
                 cr = pooler.get_db(use_new_cursor).cursor()
             while True:
                 report_ids = []
-                ids = procurement_obj.search(cr, uid, [('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order')], offset=offset, limit=200, order='priority, date_planned', context=context)
+                ids = procurement_obj.search(cr, uid, [('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order'), ('note', 'not like', '%_mto_to_mts_done_%')], offset=offset, limit=200, order='priority, date_planned', context=context)
                 for proc in procurement_obj.browse(cr, uid, ids):
                     if maxdate >= proc.date_planned:
                         cr.execute('SAVEPOINT mto_to_stock')
@@ -58,6 +58,7 @@ class ProcurementOrder(osv.Model):
                         # Moved to exception since no MTS stock is available, rollback and try the next one
                         if proc.state == 'exception':
                             cr.execute('ROLLBACK TO SAVEPOINT mto_to_stock')
+                            cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id = %s""", ('\n\n_mto_to_mts_done_',proc.id))
                         cr.execute('RELEASE SAVEPOINT mto_to_stock')
                 if use_new_cursor:
                     cr.commit()
