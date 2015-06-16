@@ -131,6 +131,9 @@ class procurement_order(osv.osv):
                 line_vals.update({'order_id': purchase_id})
                 purchase_line_id = po_line_obj.create(cr, uid, line_vals)
                 res[procurement.id] = purchase_id
+                purchase = po_obj.browse(cr, uid, purchase_id, context=context)
+                new_origin = (purchase.origin and (purchase.origin + ' ') or '') + (procurement.origin or '')
+                po_obj.write(cr, uid, purchase_id, {'origin': new_origin}, context=context)
                 self.message_post(cr, uid, [procurement.id], body=_("Merged into existing Purchase Order"), context=context)
             else:
                 name = seq_obj.get(cr, uid, 'purchase.order') or _('PO: %s') % procurement.name
