@@ -48,14 +48,28 @@ class account_vat_invoices(osv.osv_memory):
         'fiscalyear_id': fields.many2one('account.fiscalyear',
                                          'Fiscal Year',
                                          help='Keep empty for all open fiscal year'),
-        'period_from': fields.many2one('account.period', 'Start Period'),
-        'period_to': fields.many2one('account.period', 'End Period'),
-        'date_from': fields.date("Start Date"),
-        'date_to': fields.date("End Date"),
+        'period_from': fields.many2one('account.period', 'Start Period',
+                                       required='True'),
+        'period_to': fields.many2one('account.period', 'End Period',
+                                     required='True'),
         'target_move': fields.selection([('posted', 'All Posted Entries'),
                                          ('all', 'All Entries')],
                                         'Target Moves'),
     }
+
+    def _check_periods(self, cr, uid, ids, context=None):
+        period_pool = self.pool.get('account.period')
+        for tax_wizard in self.browse(cr, uid, ids, context=context):
+            period_pool.build_ctx_periods(cr, uid,
+                                          tax_wizard.period_from.id,
+                                          tax_wizard.period_to.id)
+        return True
+
+    _constraints = [
+        (_check_periods,
+         'Error! Start Period must be lower then End Period.',
+         ['period_from', 'period_to'])
+    ]
 
     def _get_tax(self, cr, uid, context=None):
         taxes = self.pool.get('account.tax.code').search(cr,
