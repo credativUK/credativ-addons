@@ -1,7 +1,9 @@
-# -*- coding: utf-8 -*-
+# -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    Copyright 2014 credativ Ltd
+#    OpenERP, Open Source Management Solution
+#    Copyright (C) 2015 credativ ltd (<http://www.credativ.co.uk>).
+#    All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -19,16 +21,29 @@
 ##############################################################################
 
 {'name': 'Account Tax report detailed',
- 'version': '1.0.0',
+ 'version': '1.1.0',
  'category': 'Account',
  'author': 'credativ Ltd',
  'website': 'http://www.credativ.co.uk',
  'license': 'AGPL-3',
  'description': """
-New Tax report with invoice line
-===============================
+SAP like Tax report
+===================
 
-This module provides invoices details on VAT report
+This module provides SAP like VAT report.
+The report can be generated based on
+    * Invoices
+    * Payments
+    * Posted entries
+
+Limitations:
+------------
+    * Report based on invoices and payment will ignore manual journal entries.
+    * Posted entries will ignore entries in draft state.
+
+TODO:
+-----
+    * PEP8 standard compatible
 
 """,
  'depends': [
