@@ -165,9 +165,9 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
             'payments': ['inv.number', 'inv.date_invoice',
                          'SUM(aml.credit - aml.debit)', 'act.code', 'act.name',
                          'inv.reference', 'part.name as partner'],
-            'invoice': ['inv.number', 'inv.date_invoice',
-                        'SUM(aml.credit - aml.debit)', 'act.code', 'act.name',
-                        'inv.reference', 'part.name as partner'],
+            'invoices': ['inv.number', 'inv.date_invoice',
+                         'SUM(aml.credit - aml.debit)', 'act.code', 'act.name',
+                         'inv.reference', 'part.name as partner'],
             'all': ['aml.name', 'aml.date',
                     'SUM(aml.credit - aml.debit)', 'act.code', 'act.name',
                     'aml.ref', 'part.name as partner']
@@ -228,12 +228,12 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
                 partner = str(res[6]).capitalize()
 
             res_dict = {
-                'invoice': res[0][:20],
+                'invoice': res[0],
                 'date': res[1],
                 'amount': '%0.2f' % res[2],
                 'act_code': res[3],
                 'account': res[4],
-                'reference': res[5] and res[5].capitalize(),
+                'reference': res[5] and res[5].capitalize() or '',
                 'partner': partner and partner[:24],
             }
             ret.append(res_dict)

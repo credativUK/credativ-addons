@@ -45,7 +45,7 @@
                   </td>
               </tr>
           </blockTable>
-          <blockTable colWidths="80.0,40.0,60.0,60.0,110.0,110,90" rowHeights="10.0">
+          <blockTable colWidths="100.0,20.0,80.0,40.0,110.0,110,90" rowHeights="10.0">
               <tr>
                   <td><para style="terp_tblheader_General_LEFT">NO</para></td>
                   <td><para style="terp_tblheader_General_LEFT">A/C</para></td>
@@ -58,13 +58,13 @@
           </blockTable>
           <section>
               <para>[[ repeatIn(get_account_move_lines(o['id'], data['form']['based_on'], data['form']['company_id']), 'aml') ]] </para>
-              <blockTable colWidths="80.0,40.0,60.0,60.0,110.0,110,90" rowHeights="10.0">
+              <blockTable colWidths="100.0,20.0,80.0,40.0,110.0,110,90" rowHeights="10.0">
                   <tr>
-                      <td><para style="text_Left">[[ aml['invoice'][:16] ]]</para></td>
+                      <td><para style="text_Left">[[ aml['invoice'][:22] ]]</para></td>
                       <td><para style="text_Left">[[ aml['act_code'] ]]</para></td>
-                      <td><para style="text_Left">[[ aml['reference'][:16] ]]</para></td>
+                      <td><para style="text_Left">[[ aml['reference'][:20] ]]</para></td>
                       <td><para style="text_Left">[[ aml['date'] ]]</para></td>
-                      <td><para style="text_Left">[[ aml['account'][:24] ]]</para></td>
+                      <td><para style="text_Left">[[ aml['account'][:26] ]]</para></td>
                       <td><para style="text_Left">[[ aml['partner'] ]]</para></td>
                       <td><para style="text_Left">[[ aml['amount'] ]]</para></td>
                   </tr>
