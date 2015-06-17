@@ -42,6 +42,8 @@ for further allocations if the purchase order is flagged to allow allocations.
     'update_xml' : [
         "procurement_workflow.xml",
         "purchase_view.xml",
+        "procurement_view.xml",
+        "sale_view.xml",
     ],
     'active': False,
     'installable': True
