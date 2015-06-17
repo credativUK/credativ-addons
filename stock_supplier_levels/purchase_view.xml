@@ -8,7 +8,7 @@
             <field name="inherit_id" ref="purchase.purchase_order_form"/>
             <field name="arch" type="xml">
                 <field name="company_id" position="after">
-                    <field name="force_reduce_supplier"/>
+                    <field name="force_reduce_supplier" on_change="onchange_reduce_supplier(force_reduce_supplier, order_line)"/>
                 </field>
                 <xpath expr="//tree[@string='Purchase Order Lines']/field[@name='price_subtotal']" position="after">
                     <field name="reduce_supplier"/>

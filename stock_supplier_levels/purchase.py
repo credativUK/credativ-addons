@@ -32,6 +32,26 @@ class PurchaseOrder(osv.osv):
         'force_reduce_supplier': False,
     }
 
+    def onchange_reduce_supplier(self, cr, uid, ids, force_reduce_supplier, order_line, context=None):
+        if context is None:
+            context = {}
+        pol_obj = self.pool.get('purchase.order.line')
+        line_values = []
+
+        for purchase_line in order_line:
+            if purchase_line[0] in (0, 1): # Add / Existing Update
+                purchase_line[2].update({'reduce_supplier': force_reduce_supplier})
+                line_values.append(purchase_line)
+            elif purchase_line[0] == 2: # Delete
+                line_values.append(purchase_line)
+            elif purchase_line[0] == 4: # Update
+                line_values.append((1, purchase_line[1], {'reduce_supplier': force_reduce_supplier}))
+            else:
+                raise NotImplementedError('Unable to handle lines with type %d' % (purchase_line[0],))
+
+        values = {'order_line': line_values}
+        return {'value': values }
+
 class PurchaseOrderLine(osv.osv):
     _inherit = "purchase.order.line"
 
