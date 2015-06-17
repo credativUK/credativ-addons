@@ -64,10 +64,10 @@ class ProductProduct(osv.osv):
             if location_ids:
                  c['location'] = location_ids
         elif c.get('warehouse', False):
-            lot_id = warehouse_obj.read(cr, uid, int(c['warehouse']), ['lot_supplier_virtual_id'])['lot_supplier_virtual_id'][0]
+            lot_id = warehouse_obj.read(cr, uid, int(c['warehouse']), ['lot_supplier_virtual_id'])['lot_supplier_virtual_id']
             if lot_id:
                 del c['warehouse']
-                c['location'] = lot_id
+                c['location'] = lot_id[0]
 
         stock = {}
         if c.get('location', False):
