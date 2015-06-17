@@ -38,4 +38,34 @@ class StockMove(osv.Model):
                     wkf_service.trg_validate(uid, 'procurement.order', proc_id, 'button_cancel', cr)
         return res
 
+class StockPicking(osv.Model):
+    _inherit = 'stock.picking'
+
+    def _get_procurement_ids(self, cr, uid, ids, field_name, arg, context=None):
+        proc_obj = self.pool.get('procurement.order')
+        result = {}
+        for id in ids:
+            proc_ids = proc_obj.search(cr, uid, [('move_id.picking_id', '=', id)])
+            result[id] = proc_ids
+        return result
+
+    _columns = {
+            'procurement_ids': fields.function(_get_procurement_ids, type='one2many', relation='procurement.order', string='Procurements', readonly=True, copy=False),
+        }
+
+class StockPickingOut(osv.Model):
+    _inherit = 'stock.picking.out'
+
+    def _get_procurement_ids(self, cr, uid, ids, field_name, arg, context=None):
+        proc_obj = self.pool.get('procurement.order')
+        result = {}
+        for id in ids:
+            proc_ids = proc_obj.search(cr, uid, [('move_id.picking_id', '=', id)])
+            result[id] = proc_ids
+        return result
+
+    _columns = {
+            'procurement_ids': fields.function(_get_procurement_ids, type='one2many', relation='procurement.order', string='Procurements', readonly=True, copy=False),
+        }
+
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

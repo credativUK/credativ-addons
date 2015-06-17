@@ -44,6 +44,7 @@ for further allocations if the purchase order is flagged to allow allocations.
         "purchase_view.xml",
         "procurement_view.xml",
         "sale_view.xml",
+        "stock_view.xml",
     ],
     'active': False,
     'installable': True
