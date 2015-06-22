@@ -46,7 +46,8 @@ class SaleOrder(osv.osv, OrderEdit):
     def copy_data(self, cr, uid, id_, default=None, context=None):
         if not default:
             default = {}
-        default['order_edit_id'] = False
+        if 'order_edit_id' not in default:
+            default['order_edit_id'] = False
         default['workflow_process_id'] = False
         return super(SaleOrder, self).copy_data(cr, uid, id_, default, context=context)
 

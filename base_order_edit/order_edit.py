@@ -164,7 +164,7 @@ class OrderEdit(object):
             }
 
         if order.state in order_states[self._name]:
-            new_id = self.copy(cr, uid, id_, context=context)
+            new_id = self.copy(cr, uid, id_, default={'order_edit_id': order.id}, context=context)
             original_order_name = re.sub('-edit[0-9]+$', '', order.name)
             similar_name_ids = self.search(cr, uid, [('name', 'like', original_order_name + '%')], context=context)
             similar_names = set(similar_order['name'] for similar_order in self.read(cr, uid, similar_name_ids, ['name'], context=context))

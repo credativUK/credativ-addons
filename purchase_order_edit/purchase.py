@@ -53,7 +53,8 @@ class PurchaseOrder(osv.osv, OrderEdit):
     def copy_data(self, cr, uid, id_, default=None, context=None):
         if not default:
             default = {}
-        default['order_edit_id'] = False
+        if 'order_edit_id' not in default:
+            default['order_edit_id'] = False
         default['procurement_ids'] = []
         default['order_line_unalloc'] = []
         return super(PurchaseOrder, self).copy_data(cr, uid, id_, default, context=context)
