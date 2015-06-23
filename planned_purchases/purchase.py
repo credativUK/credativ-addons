@@ -54,6 +54,18 @@ purchase_order()
 class procurement_order(osv.osv):
     _inherit = 'procurement.order'
 
+    def _planned_purchases_get_purchases(self, cr, uid, procurement, po_ids, context=None):
+        purchase_obj = self.pool.get('purchase.order')
+        company_id = self.pool.get('res.users').browse(cr, uid, uid, context=context).company_id
+        partner_id = procurement.product_id.seller_id.id
+        purchase_ids = purchase_obj.search(cr, uid, [('company_id','=', company_id.id),
+                                                ('partner_id', '=', partner_id),
+                                                ('state', 'in', ['draft']),
+                                                ('id', 'in', po_ids),
+                                                ('warehouse_id', '=', self._get_warehouse(procurement, company_id)),
+                                                ], context=context)
+        return purchase_ids
+
     def make_po(self, cr, uid, ids, context=None):
         """ Make purchase order from procurement
         @return: New created Purchase Orders procurement wise
@@ -119,12 +131,7 @@ class procurement_order(osv.osv):
             }
 
             #Update an existing purchase order
-            po_exists = po_obj.search(cr, uid, [('company_id','=', company.id),
-                                                ('partner_id', '=', partner_id),
-                                                ('state', 'in', ['draft']),
-                                                ('id', 'in', po_ids),
-                                                ('warehouse_id', '=', self._get_warehouse(procurement, company)),
-                                                ], context=context)
+            po_exists = self._planned_purchases_get_purchases(cr, uid, procurement, po_ids, context=context)
 
             if po_exists:
                 purchase_id = po_exists[0]
