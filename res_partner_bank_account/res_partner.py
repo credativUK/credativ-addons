@@ -26,14 +26,14 @@ class res_partner(orm.Model):
     _inherit = 'res.partner'
 
     _columns = {
-            'property_payment_account': fields.property(
-            'res.partner.bank',
+        'property_payment_account': fields.property(
+            obj_prop='res.partner.bank',
             type='many2one',
             relation='res.partner.bank',
             string="Payment Account",
             view_load=True,
-            domain="[('company_id','=',company_id)]" ,
-            help="Bank account the customer should pay into")
+            domain="[('company_id','=',company_id)]",
+            help="Bank account the customer should pay into"),
     }
 
     def onchange_company_id(self, cr, uid, ids, company_id):
