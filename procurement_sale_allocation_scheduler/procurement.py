@@ -175,6 +175,8 @@ class ProcurementOrder(osv.Model):
                         break
                 else:
                     other_ids.append(proc.id)
+            else:
+                other_ids.append(proc.id)
 
         if other_ids:
             purchase_ids = super(ProcurementOrder, self).action_po_assign(cr, uid, other_ids, context=context)

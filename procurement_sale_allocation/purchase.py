@@ -78,4 +78,18 @@ class PurchaseOrder(osv.Model):
             wf_service.trg_validate(uid, 'purchase.order', id, 'purchase_cancel', cr)
         return True
 
+class PurchaseOrderLine(osv.Model):
+    _inherit = 'purchase.order.line'
+
+    def unlink(self, cr, uid, ids, context=None):
+        procurement_obj = self.pool.get('procurement.order')
+        procurement_ids_to_remove = []
+        for line in self.browse(cr, uid, ids, context=context):
+            if line.move_dest_id:
+                procurement_ids_to_remove.extend(procurement.id for procurement in line.move_dest_id.procurements)
+        if procurement_ids_to_remove:
+            procurement_obj.write(cr, uid, procurement_ids_to_remove, {'purchase_id': False}, context=context)
+            procurement_obj.write(cr, uid, procurement_ids_to_remove, {'procure_method': 'make_to_order'}, context=context)
+        return super(PurchaseOrderLine, self).unlink(cr, uid, ids, context=context)
+
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
