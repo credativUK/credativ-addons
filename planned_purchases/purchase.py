@@ -87,7 +87,7 @@ class procurement_order(osv.osv):
         # Merge All PO's which were genereated through scheduler
         cr.execute("select id from purchase_order where state='draft' and id in (select purchase_id as id from procurement_order where state='running')")
         po_ids = map(lambda x: x[0], cr.fetchall())
-        po_obj.merge_po(cr,uid,po_ids,context=context)
+        #po_obj.merge_po(cr,uid,po_ids,context=context)
 
         for procurement in self.browse(cr, uid, ids, context=context):
             res_id = procurement.move_id.id
