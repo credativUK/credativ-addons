@@ -67,9 +67,16 @@ class PurchaseOrderLine(osv.osv):
     def action_confirm(self, cr, uid, ids, context=None):
         move_obj = self.pool.get('stock.move')
         res = super(PurchaseOrderLine, self).action_confirm(cr, uid, ids, context=context)
+        reduce_data = {} # (product_id, uom_id, warehouse_id, partner_id): [qty, date, comment]
         for pol in self.browse(cr, uid, ids, context=context):
             if pol.product_id and (pol.reduce_supplier or pol.order_id.force_reduce_supplier):
-                move_obj.reduce_supplier_stock(cr, uid, pol.product_id.id, pol.product_uom.id, pol.product_qty, pol.order_id.partner_id.id, pol.order_id.warehouse_id.id, pol.order_id.date_order, pol.order_id.name, context=context)
+                key = (pol.product_id.id, pol.product_uom.id, pol.order_id.warehouse_id.id, pol.order_id.partner_id.id)
+                reduce_data.setdefault(key, [0.0, False, False])
+                reduce_data[key][0] += pol.product_qty
+                reduce_data[key][1] = pol.order_id.date_order
+                reduce_data[key][2] = pol.order_id.name
+        if reduce_data:
+            move_obj.reduce_supplier_stock(cr, uid, reduce_data, context=context)
         return res
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

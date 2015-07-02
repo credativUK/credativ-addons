@@ -18,13 +18,15 @@
 #
 ##############################################################################
 
+import time
 from openerp.osv import osv, fields
 from openerp.tools.translate import _
+from openerp.tools import DEFAULT_SERVER_DATETIME_FORMAT
 
 class StockMove(osv.osv):
     _inherit = "stock.move"
 
-    def reduce_supplier_stock(self, cr, uid, product_id, uom_id, qty, partner_id, warehouse_id, date, comment, context=None):
+    def reduce_supplier_stock(self, cr, uid, reduce_data, context=None):
         if context is None:
             context = {}
 
@@ -32,44 +34,52 @@ class StockMove(osv.osv):
         location_obj = self.pool.get('stock.location')
         warehouse_obj = self.pool.get('stock.warehouse')
 
-        warehouse = warehouse_obj.browse(cr, uid, warehouse_id, context=context)
-        location_id = warehouse.lot_supplier_virtual_id.id
-        location_dest_id = self._default_location_source(cr, uid, {'picking_type': 'in'})
+        move_ids = []
 
-        if not location_id:
-            raise osv.except_osv(_('Warning!'), _('There is no supplier stock location configured on the warehouse to reduce supplier stock levels from.'))
+        for (product_id, uom_id, warehouse_id, partner_id), (qty, date, comment) in reduce_data.iteritems():
+            warehouse = warehouse_obj.browse(cr, uid, warehouse_id, context=context)
+            location_id = warehouse.lot_supplier_virtual_id.id
+            location_dest_id = self._default_location_source(cr, uid, {'picking_type': 'in'})
 
-        if not location_dest_id:
-            raise osv.except_osv(_('Warning!'), _('The default supplier location is not configured, please set one.'))
+            if not location_id:
+                raise osv.except_osv(_('Warning!'), _('There is no supplier stock location configured on the warehouse to reduce supplier stock levels from.'))
 
-        # For all lots for this supplier ID and this product, and for no lot, try to reduce by qty
-        lot_ids = lot_obj.search(cr, uid, [('product_id', '=', product_id), ('partner_id', '=', partner_id)], context=context)
-        for lot_id in lot_ids + [False,]:
-            if qty <= 0:
-                break
-            # Get supplier stock
-            product_context = context.copy()
-            product_context.update(uom=uom_id, prodlot_id=lot_id)
-            amount = location_obj._product_get(cr, uid, location_id, [product_id], product_context)[product_id]
-            # Reduce amount by qty as far as 0, do not go negative
-            if amount > 0:
-                reduce_qty = min(amount, qty)
-                qty -= reduce_qty
-                move_id = self.create(cr, uid, {
-                            'name': _('Supplier Reduce:') + (comment or ''),
-                            'product_id': product_id,
-                            'product_uom': uom_id,
-                            'prodlot_id': lot_id,
-                            'date': date,
-                            'product_qty': reduce_qty,
-                            'location_id': location_id,
-                            'location_dest_id': location_dest_id,
-                        }, context=context)
-                self.action_confirm(cr, uid, [move_id,], context=context)
-                self.action_done(cr, uid, [move_id,], context=context)
+            if not location_dest_id:
+                raise osv.except_osv(_('Warning!'), _('The default supplier location is not configured, please set one.'))
 
-        if qty > 0:
-            pass # Ignore any stock left over - we don't really care about it but we do not want to go below 0
+            # For all lots for this supplier ID and this product, and for no lot, try to reduce by qty
+            lot_ids = lot_obj.search(cr, uid, [('product_id', '=', product_id), ('partner_id', '=', partner_id)], context=context)
+            for lot_id in lot_ids + [False,]:
+                if qty <= 0:
+                    break
+                # Get supplier stock
+                product_context = context.copy()
+                product_context.update(uom=uom_id, prodlot_id=lot_id)
+                amount = location_obj._product_get(cr, uid, location_id, [product_id], product_context)[product_id]
+                # Reduce amount by qty as far as 0, do not go negative
+                if amount > 0:
+                    reduce_qty = min(amount, qty)
+                    qty -= reduce_qty
+                    move_id = self.create(cr, uid, {
+                                'name': _('Supplier Reduce:') + (comment or ''),
+                                'product_id': product_id,
+                                'product_uom': uom_id,
+                                'prodlot_id': lot_id,
+                                'date': date,
+                                'product_qty': reduce_qty,
+                                'location_id': location_id,
+                                'location_dest_id': location_dest_id,
+                            }, context=context)
+                    move_ids.append(move_id)
+            if qty > 0:
+                pass # Ignore any stock left over - we don't really care about it but we do not want to go below 0
+
+        if move_ids:
+            self.write(cr, uid, move_ids,
+                       {'state': 'done',
+                       'date': time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)},
+                       context=context)
+
         return True
 
 class StockWarehouse(osv.osv):
