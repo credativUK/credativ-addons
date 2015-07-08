@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+        <record id="view_form_dr" model="ir.ui.view">
+            <field name="name">sale.order.form.dr</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale_stock.view_order_form_inherit"/>
+            <field name="arch" type="xml">
+                <field name="shipped" position="after">
+                    <field name="picked_rate" widget="progressbar"/>
+                </field>
+            </field>
+        </record>
+
+        <record id="view_order_tree_dr" model="ir.ui.view">
+            <field name="name">sale.order.tree.dr</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_tree"/>
+            <field name="arch" type="xml">
+                <field name="state" position="after">
+                    <field name="picked_rate" widget="progressbar"/>
+                </field>
+            </field>
+        </record>
+
+    </data>
+</openerp>
