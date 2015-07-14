@@ -23,7 +23,7 @@
 {
     'name': 'Supply method on picking type',
     'version': '1.0',
-    'category': 'Stock',
+    'category': 'Warehouse Management',
     'author': 'credativ ltd',
     'website': 'http://www.credativ.co.uk',
     'depends': [
