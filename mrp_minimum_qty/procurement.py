@@ -115,7 +115,7 @@ class procurement_order(models.Model):
                                 ('rule_id.action','=','manufacture'),
                                 ('product_id', 'in', products._ids),
                                 ])
-        result = self.make_mo(to_check)
+        result = to_check.make_mo()
         processed = self.browse([i for i in result if result[i]])
         processed.write({'state': 'running'})
         return res
