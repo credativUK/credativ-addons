@@ -126,9 +126,17 @@ class procurement_order(osv.osv):
                 'product_uom': uom_id,
                 'price_unit': price or 0.0,
                 'date_planned': schedule_date.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
-                'move_dest_id': res_id,
-                'taxes_id': [(6,0,taxes)],
             }
+
+            # Onchange handler to apply further line values
+            product_change_vals = po_line_obj.onchange_product_id(cr, uid, [], pricelist_id=pricelist_id, product_id=line_vals['product_id'],
+                qty=line_vals['product_qty'], uom_id=line_vals['product_uom'], partner_id=partner_id, date_planned=line_vals['date_planned'],
+                name=line_vals['name'], price_unit=line_vals['price_unit'], context=context)
+            line_vals.update(product_change_vals.get('value', {}))
+            line_vals.update({
+                            'move_dest_id': res_id,
+                            'taxes_id': [(6,0,taxes)],
+                            })
 
             #Update an existing purchase order
             po_exists = self._planned_purchases_get_purchases(cr, uid, procurement, po_ids, context=context)
