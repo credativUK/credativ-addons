@@ -32,15 +32,11 @@ from openerp import tools
 class ProcurementOrder(osv.Model):
     _inherit = 'procurement.order'
 
-    def _procure_confirm(self, cr, uid, ids=None, use_new_cursor=False, context=None):
+    def _procure_confirm_mto_confirmed_to_mts(self, cr, uid, ids=None, use_new_cursor=False, context=None):
         procurement_obj = self.pool.get('procurement.order')
-        purchase_obj = self.pool.get('purchase.order')
-        product_obj = self.pool.get('product.product')
-        purchase_line_obj = self.pool.get('purchase.order.line')
         wf_service = netsvc.LocalService("workflow")
         company = self.pool.get('res.users').browse(cr, uid, uid, context=context).company_id
         maxdate = (datetime.today() + relativedelta(days=company.schedule_range)).strftime(tools.DEFAULT_SERVER_DATE_FORMAT)
-        current_datetime = (datetime.today() - relativedelta(seconds=2*60*60)).strftime(tools.DEFAULT_SERVER_DATETIME_FORMAT)
 
         # Allocate confirmed MTO to MTS if stock available
         try:
@@ -71,9 +67,15 @@ class ProcurementOrder(osv.Model):
                     cr.close()
                 except Exception:
                     pass
-        # Standard Allocate
-        res = super(ProcurementOrder, self)._procure_confirm(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
-        # Allocate MTS to MTO if no stock
+        return True
+
+    def _procure_confirm_mts_exception_to_mto(self, cr, uid, ids=None, use_new_cursor=False, context=None):
+        procurement_obj = self.pool.get('procurement.order')
+        purchase_obj = self.pool.get('purchase.order')
+        purchase_line_obj = self.pool.get('purchase.order.line')
+        wf_service = netsvc.LocalService("workflow")
+        company = self.pool.get('res.users').browse(cr, uid, uid, context=context).company_id
+        maxdate = (datetime.today() + relativedelta(days=company.schedule_range)).strftime(tools.DEFAULT_SERVER_DATE_FORMAT)
         try:
             offset = 0
             if use_new_cursor:
@@ -120,7 +122,15 @@ class ProcurementOrder(osv.Model):
                     cr.close()
                 except Exception:
                     pass
-        # Allocate running MTO to MTS if stock available
+        return True
+
+    def _procure_confirm_mto_running_to_mts(self, cr, uid, ids=None, use_new_cursor=False, context=None):
+        procurement_obj = self.pool.get('procurement.order')
+        product_obj = self.pool.get('product.product')
+        wf_service = netsvc.LocalService("workflow")
+        company = self.pool.get('res.users').browse(cr, uid, uid, context=context).company_id
+        maxdate = (datetime.today() + relativedelta(days=company.schedule_range)).strftime(tools.DEFAULT_SERVER_DATE_FORMAT)
+        current_datetime = (datetime.today() - relativedelta(seconds=2*60*60)).strftime(tools.DEFAULT_SERVER_DATETIME_FORMAT)
         try:
             if use_new_cursor:
                 cr = pooler.get_db(use_new_cursor).cursor()
@@ -176,6 +186,19 @@ class ProcurementOrder(osv.Model):
                     cr.close()
                 except Exception:
                     pass
+        return True
+
+
+    def _procure_confirm(self, cr, uid, ids=None, use_new_cursor=False, context=None):
+        # Allocate confirmed MTO to MTS if stock available
+        self._procure_confirm_mto_confirmed_to_mts(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
+        # Standard Allocate
+        res = super(ProcurementOrder, self)._procure_confirm(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
+        # Allocate MTS to MTO if no stock
+        self._procure_confirm_mts_exception_to_mto(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
+        # Allocate running MTO to MTS if stock available
+        self._procure_confirm_mto_running_to_mts(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
+
         return res
 
     def action_po_assign(self, cr, uid, ids, context=None):
