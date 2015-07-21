@@ -136,8 +136,10 @@ class procurement_order(osv.osv):
                 if value and type(value) in (tuple, list):
                     if type(value[0]) is dict:
                         line_vals[key] = [(0, 0, d) for d in value]
-                    elif type(value[0]) is int:
+                    elif type(value[0]) in (int, long):
                         line_vals[key] = [(6, 0, value)]
+                    else:
+                        line_vals[key] = value
                 else:
                     line_vals[key] = value
             line_vals['move_dest_id'] = res_id
