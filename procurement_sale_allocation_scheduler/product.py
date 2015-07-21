@@ -19,8 +19,13 @@
 #
 ##############################################################################
 
-import procurement
-import purchase
-import product
+from osv import osv, fields
+
+class ProductProduct(osv.Model):
+    _inherit = 'product.product'
+
+    _columns = {
+            'date_mto_mts_allocate': fields.datetime('Date MTO to MTS', help='The last date and time the scheduler attempted MTO to MTS re-allocation for this product'),
+        }
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

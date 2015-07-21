@@ -35,11 +35,12 @@ class ProcurementOrder(osv.Model):
     def _procure_confirm(self, cr, uid, ids=None, use_new_cursor=False, context=None):
         procurement_obj = self.pool.get('procurement.order')
         purchase_obj = self.pool.get('purchase.order')
+        product_obj = self.pool.get('product.product')
         purchase_line_obj = self.pool.get('purchase.order.line')
         wf_service = netsvc.LocalService("workflow")
         company = self.pool.get('res.users').browse(cr, uid, uid, context=context).company_id
         maxdate = (datetime.today() + relativedelta(days=company.schedule_range)).strftime(tools.DEFAULT_SERVER_DATE_FORMAT)
-
+        current_datetime = (datetime.today() - relativedelta(seconds=2*60*60)).strftime(tools.DEFAULT_SERVER_DATETIME_FORMAT)
 
         # Allocate confirmed MTO to MTS if stock available
         try:
@@ -121,14 +122,35 @@ class ProcurementOrder(osv.Model):
                     pass
         # Allocate running MTO to MTS if stock available
         try:
-            offset = 0
             if use_new_cursor:
                 cr = pooler.get_db(use_new_cursor).cursor()
-            while True:
-                report_ids = []
-                ids = procurement_obj.search(cr, uid, [('state', '=', 'running'), ('purchase_id', '!=', False), ('procure_method', '=', 'make_to_order')], offset=offset, limit=200, order='priority, date_planned', context=context)
-                for proc in procurement_obj.browse(cr, uid, ids):
-                    if maxdate >= proc.date_planned:
+            # Get list of products to be checked
+            cr.execute("""SELECT pp.id
+                            FROM procurement_order proc
+                        INNER JOIN product_product pp ON pp.id = proc.product_id
+                        WHERE proc.state = 'running'
+                            AND proc.purchase_id IS NOT NULL
+                            AND proc.procure_method = 'make_to_order'
+                            AND proc.date_planned <= %s
+                            AND proc.product_id IN
+                                (SELECT DISTINCT pp.id FROM product_product pp
+                                INNER JOIN stock_move sm
+                                ON sm.product_id = pp.id
+                                AND (pp.date_mto_mts_allocate IS NULL
+                                OR COALESCE(sm.write_date, sm.create_date) > pp.date_mto_mts_allocate))
+                        GROUP BY pp.id ORDER BY pp.date_mto_mts_allocate""", (maxdate,))
+            product_ids = [x[0] for x in cr.fetchall()]
+            for product_id in product_ids:
+                offset = 0
+                stock_prod_loc = {} # Dict of {location_id: qty} for last stock failure qty, anything >= should skip
+                while True:
+                    report_ids = []
+                    ids = procurement_obj.search(cr, uid, [('product_id', '=', product_id), ('state', '=', 'running'), ('purchase_id', '!=', False),
+                                                           ('procure_method', '=', 'make_to_order'), ('date_planned', '<=', maxdate)], offset=offset, limit=200, order='priority, date_planned', context=context)
+                    for proc in procurement_obj.browse(cr, uid, ids):
+                        max_qty = stock_prod_loc.get(proc.location_id.id)
+                        if max_qty is not None and proc.product_qty >= max_qty:
+                            continue
                         cr.execute('SAVEPOINT mto_to_stock')
                         try:
                             procurement_obj.write(cr, uid, [proc.id], {'purchase_id': False,}, context=context)
@@ -137,16 +159,20 @@ class ProcurementOrder(osv.Model):
                             # Moved to exception since no MTS stock is available, rollback and try the next one
                             if proc.state == 'exception':
                                 cr.execute('ROLLBACK TO SAVEPOINT mto_to_stock')
+                                stock_prod_loc[proc.location_id.id] = proc.product_qty
                         except Exception, e: # A variety of errors may prevent this from re-assigning, picking exported to WMS, PO cut-off, etc
                             cr.execute('ROLLBACK TO SAVEPOINT mto_to_stock')
                         cr.execute('RELEASE SAVEPOINT mto_to_stock')
-                if use_new_cursor:
-                    cr.commit()
-                offset += len(ids)
-                if not ids: break
+                    if use_new_cursor:
+                        cr.commit()
+                    offset += len(ids)
+                    if not ids:
+                        product_obj.write(cr, uid, [product_id], {'date_mto_mts_allocate': current_datetime}, context=context)
+                        break
         finally:
             if use_new_cursor:
                 try:
+                    cr.commit()
                     cr.close()
                 except Exception:
                     pass
