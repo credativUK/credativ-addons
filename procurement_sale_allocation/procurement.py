@@ -75,7 +75,7 @@ class ProcurementOrder(osv.Model):
                     message = _("Procurement allocated to PO (%s)") % (purchase_new.name,)
                 elif (purchase_orig and not purchase_new) or (proc['procure_method']=='make_to_order' and not purchase_new):
                     signal = 'signal_mto_mts'
-                    expected_acts = (('confirm_mto', 'buy', 'ready',), ('confirm_mts', 'cancel'))
+                    expected_acts = (('confirm_mto', 'buy', 'ready',), ('confirm_mts', 'cancel', 'ready'))
                     message = _("Procurement deallocated from PO (%s)") % (purchase_orig.name,)
                 elif purchase_orig and purchase_new or (proc['procure_method']=='make_to_order' and purchase_new):
                     signal = 'signal_mto_mto'
@@ -181,8 +181,8 @@ class ProcurementOrder(osv.Model):
 
     def action_mto_to_mts(self, cr, uid, ids, context=None):
         self.write(cr, uid, ids, {'state': 'exception', 'procure_method': 'make_to_stock', 'message': False}, context=context)
-        self._cancel_po_assign(cr, uid, ids, context=context)
         self._cancel_stock_assign(cr, uid, ids, context=context)
+        self._cancel_po_assign(cr, uid, ids, context=context)
         return True
 
     def action_mts_to_mto(self, cr, uid, ids, context=None):
@@ -193,8 +193,8 @@ class ProcurementOrder(osv.Model):
 
     def action_mto_to_mto(self, cr, uid, ids, context=None):
         self.write(cr, uid, ids, {'state': 'running', 'procure_method': 'make_to_order', 'message': False}, context=context)
-        self._cancel_po_assign(cr, uid, ids, context=context)
         self._cancel_stock_assign(cr, uid, ids, context=context)
+        self._cancel_po_assign(cr, uid, ids, context=context)
         # self._confirm_po_assign(cr, uid, ids, context=context) # Is done in action_po_assign
         return True
 
