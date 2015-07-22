@@ -52,8 +52,8 @@ class PurchaseOrder(osv.Model):
                 try:
                     if proc.state == 'exception':
                         wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
+                    procurement_obj.write(cr, uid, [proc.id], {'purchase_id': purchase.id, 'procure_method': 'make_to_order'}, context=context)
                     wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
-                    procurement_obj.write(cr, uid, [proc.id], {'purchase_id': purchase.id}, context=context)
                 except osv.except_osv:
                     failed = True
                     cr.execute('ROLLBACK TO SAVEPOINT procurement')
@@ -65,8 +65,9 @@ class PurchaseOrder(osv.Model):
                     proc.refresh()
                     if proc.state == 'exception':
                         wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
-                    proc.write({'procure_method': 'make_to_order'}, context=context)
-                    wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr) # TODO: Assert we are in the correct workflow step here
+                    proc.refresh()
+                    if proc.state == 'confirmed':
+                        proc.write({'procure_method': 'make_to_order'}, context=context)
 
         return res
 
