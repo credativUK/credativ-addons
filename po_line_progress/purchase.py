@@ -28,13 +28,14 @@ class PurchaseOrderLine(orm.Model):
         res = {}
         for line in self.browse(cr, uid, ids, context=context):
             product_uom = line.product_id.uom_id
-            transferred, total = 0, 0
+            transferred = 0
+            total = uom_obj._compute_qty(cr, uid, line.product_uom.id,
+                                           line.product_qty, product_uom.id)
             for move in line.move_ids:
                 if move.state in ('draft', 'cancel'):
                     continue
                 qty = uom_obj._compute_qty(cr, uid, move.product_uom.id,
                                            move.product_qty, product_uom.id)
-                total += qty
                 if move.state == 'done':
                     transferred += qty
             res[line.id] = {
