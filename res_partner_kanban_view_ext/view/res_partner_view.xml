@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+    <!-- New action for Receivables and Payables kanban view -->
+    <record id="action_move_lines_unreconcile_unposted_tree" model="ir.actions.act_window">
+        <field name="name">Journal Items</field>
+        <field name="res_model">account.move.line</field>
+        <field name="domain">[('reconcile_id','=',False)]</field>
+        <field name="context">{'search_default_partner_id': [active_id], 'default_partner_id': active_id}</field>
+        <field name="view_id" ref="account.view_move_line_tree"/>
+    </record>
+
+    <!-- Partner kanban view inherited payables field added -->
+        <record model="ir.ui.view" id="partner_receivable_payable_kanban">
+            <field name="name">res.partner.kanban.pays.recs.inherit</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.res_partner_kanban_view"/>
+            <field name="arch" type="xml">
+                <field name="mobile" position="after">
+                    <field name="debit"/>
+                    <field name="credit"/>
+                </field>
+                <xpath expr="//div[@class='oe_kanban_partner_links']" position="inside">
+                    <a name="%(action_move_lines_unreconcile_unposted_tree)d" type="action" t-if="record.debit.value != 0.0" style="color:#FF3399">
+                        <t t-esc="record.debit.value"/> Payables
+                        <br/>
+                    </a>
+                    <a name="%(action_move_lines_unreconcile_unposted_tree)d" type="action" t-if="record.credit.value != 0.0" style="color:#336600">
+                        <t t-esc="record.credit.value"/> Receivables
+                        <br/>
+                    </a>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
