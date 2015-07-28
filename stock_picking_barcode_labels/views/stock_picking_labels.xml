@@ -5,20 +5,20 @@
             <style type="text/css">
                 .page {
                     page-break-after: always;
-                    font-family: serif;
-                    font-size: 5pt;
+                    font-family: sans-serif;
+                    font-size: 10pt;
                 }
             </style>
             <t t-foreach="docs" t-as="o">
                 <div class="page">
-                    <div style="text-align: center; margin-bottom: 7pt;">
-                        <strong t-field="o.default_code"/>
+                    <div style="text-align: center; margin-bottom: 10pt;">
+                        <strong style="font-size: 15pt;" t-field="o.default_code"/>
                     </div>
                     <div t-field="o.name"/>
                     <div t-if="lot">
                         Serial no. <span t-field="lot.name"/>
                     </div>
-                    <img t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('Code128', o.default_code, 600, 150)" style="width:50mm;height:15mm;margin-top:7pt;"/>
+                    <img t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('Code128', o.default_code, 400, 200)" style="width:50mm;height:20mm;margin-top:10pt;margin-left:4mm"/>
                 </div>
             </t>
         </template>
@@ -31,10 +31,10 @@
             <field name="header_line"></field>
             <field name="header_spacing">0</field>
             <field name="dpi">90</field>
-            <field name="margin_top">5</field>
-            <field name="margin_right">0</field>
-            <field name="margin_bottom">5</field>
-            <field name="margin_left">0</field>
+            <field name="margin_top">1</field>
+            <field name="margin_right">1</field>
+            <field name="margin_bottom">1</field>
+            <field name="margin_left">1</field>
             <field name="orientation">Portrait</field>
         </record>
 
