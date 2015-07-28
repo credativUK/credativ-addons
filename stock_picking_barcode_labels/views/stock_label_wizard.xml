@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+         <act_window name="Pallet labels"
+            res_model="wizard.stock.picking.labels"
+            src_model="stock.picking"
+            view_mode="form"
+            target="new"
+            key2="client_action_multi"
+            multi="True"
+            id="act_stock_picking_label"/>
+
+        <record id="view_picking_form" model="ir.ui.view">
+            <field name="name">stock.picking.form</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.view_picking_form"/>
+            <field name="arch" type="xml">
+                <button name="do_print_picking" position="after">
+                    <button name="%(act_stock_picking_label)d" string="Print Product Labels" groups="stock.group_stock_user" type="action"/>
+                </button>
+            </field>
+        </record>
+
+        <record id="stock_label_wizard_form" model="ir.ui.view">
+            <field name="name">Labels to print</field>
+            <field name="model">wizard.stock.picking.labels</field>
+            <field name="arch" type="xml">
+                <form string="Select products and quantities to print">
+                    <field name="item_ids">
+                        <tree string="Labels to print" editable="bottom">
+                            <field name="product_id"/>
+                            <field name="quantity"/>
+                            <field name="lot_id" groups="stock.group_production_lot" domain="[('product_id','=?', product_id)]" context="{'product_id': product_id}"/>
+                        </tree>
+                    </field>
+                    <footer>
+                        <button name="print_labels" string="_Print" type="object" class="oe_highlight"/>
+                        or
+                        <button string="_Cancel" class="oe_link" special="cancel" />
+                    </footer>
+                </form>
+            </field>
+        </record>
+	</data>
+</openerp>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <template id="report_product_label">
+            <style type="text/css">
+                .page {
+                    page-break-after: always;
+                    font-family: serif;
+                    font-size: 5pt;
+                }
+            </style>
+            <t t-foreach="docs" t-as="o">
+                <div class="page">
+                    <div style="text-align: center; margin-bottom: 7pt;">
+                        <strong t-field="o.default_code"/>
+                    </div>
+                    <div t-field="o.name"/>
+                    <div t-if="lot">
+                        Serial no. <span t-field="lot.name"/>
+                    </div>
+                    <img t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('Code128', o.default_code, 600, 150)" style="width:50mm;height:15mm;margin-top:7pt;"/>
+                </div>
+            </t>
+        </template>
+
+        <record id="paperformat_product_label" model="report.paperformat">
+            <field name="name">Zebra Printer</field>
+            <field name="page_height">50</field>
+            <field name="page_width">57</field>
+            <field name="format">custom</field>
+            <field name="header_line"></field>
+            <field name="header_spacing">0</field>
+            <field name="dpi">90</field>
+            <field name="margin_top">5</field>
+            <field name="margin_right">0</field>
+            <field name="margin_bottom">5</field>
+            <field name="margin_left">0</field>
+            <field name="orientation">Portrait</field>
+        </record>
+
+        <report
+            string="Product label"
+            id="action_report_product_label"
+            model="product.product"
+            report_type="qweb-pdf"
+            name="stock_picking_barcode_labels.report_product_label"
+            file="stock_picking_barcode_labels.report_product_label"
+        />
+
+        <record id="action_report_product_label" model="ir.actions.report.xml">
+                <field name="paperformat_id" ref="stock_picking_barcode_labels.paperformat_product_label"/>
+        </record>
+
+        <template id="report_picking_product_labels">
+            <t t-call="report.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <t t-foreach="o.item_ids" t-as="item">
+                        <t t-foreach="xrange(item.quantity)" t-as="i">
+                            <t t-call="stock_picking_barcode_labels.report_product_label">
+                                <t t-set="docs" t-value="[item.product_id]"/>
+                                <t t-set="lot" t-value="item.lot_id"/>
+                            </t>
+                        </t>
+                    </t>
+                </t>
+            </t>
+        </template>
+
+        <report
+            string="Product labels"
+            id="action_report_picking_product_labels"
+            model="wizard.stock.picking.labels"
+            report_type="qweb-pdf"
+            name="stock_picking_barcode_labels.report_picking_product_labels"
+            file="stock_picking_barcode_labels.report_picking_product_labels"
+        />
+
+        <record id="action_report_picking_product_labels" model="ir.actions.report.xml">
+                <field name="paperformat_id" ref="stock_picking_barcode_labels.paperformat_product_label"/>
+        </record>
+	</data>
+</openerp>
