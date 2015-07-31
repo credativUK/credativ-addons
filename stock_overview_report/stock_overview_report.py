@@ -81,19 +81,24 @@ class StockOverviewReport(osv.osv_memory):
                 local_date = pytz.utc.localize(date, is_dst=None).astimezone(pytz.timezone(user_timezone))
             else:
                 local_date = datetime.now(pytz.timezone(user_timezone))
-            for company_id in company_obj.search(cr, uid, [], context=context):
-                for warehouse_id in warehouse_obj.search(cr, uid, [('company_id', '=', company_id),], context=context):
-                    ctx = context.copy()
-                    ctx.update({'shop': False, 'warehouse': warehouse_id, 'location': False,
-                                'to_date': wizard.date or False})
-                    product_ids = product_obj.search(cr, uid, [], context=context)
-                    for product in product_obj.read(cr, uid, product_ids, self._get_report_fields(), context=ctx):
-                        data = self._prepare_data_line(cr, uid, product, {
-                                'wizard_id': wizard.id,
-                                'company_id': company_id,
-                                'warehouse_id': warehouse_id,
-                            })
-                        line_obj.create(cr, uid, data, context=context)
+            sql_mode = self.pool.get('ir.config_parameter').get_param(cr, uid, 'stock.overview.report.sql_mode')
+            if sql_mode == 'True':
+                field_names, insert_query, insert_params, with_query, with_params, select_query, select_params, from_query = self._get_sql(cr, uid, ids, wizard, context=None)
+                cr.execute(with_query + insert_query + select_query + from_query, with_params + insert_params + select_params)
+            else:
+                for company_id in company_obj.search(cr, uid, [], context=context):
+                    for warehouse_id in warehouse_obj.search(cr, uid, [('company_id', '=', company_id),], context=context):
+                        ctx = context.copy()
+                        ctx.update({'shop': False, 'warehouse': warehouse_id, 'location': False,
+                                    'to_date': wizard.date or False})
+                        product_ids = product_obj.search(cr, uid, [], context=context)
+                        for product in product_obj.read(cr, uid, product_ids, self._get_report_fields(), context=ctx):
+                            data = self._prepare_data_line(cr, uid, product, {
+                                    'wizard_id': wizard.id,
+                                    'company_id': company_id,
+                                    'warehouse_id': warehouse_id,
+                                })
+                            line_obj.create(cr, uid, data, context=context)
 
             cr.execute('select id from ir_ui_view where model=%s and type=%s', ('stock.overview.report.line', 'tree'))
             view_ids = cr.fetchone()
@@ -117,6 +122,111 @@ class StockOverviewReport(osv.osv_memory):
                 'context': '{"search_default_has_stock": True, "product_display_format": "code", "search_default_group_company_id": True, "search_default_group_category_id": True, "search_default_group_warehouse_id": True}',
             }
         return res
+
+    def _get_sql(self, cr, uid, ids, wizard, context=None):
+        if context is None:
+            context = {}
+
+        field_names = ['wizard_id',
+                        'product_id',
+                        'categ_id',
+                        'company_id',
+                        'warehouse_id',
+                        'uom_id',
+                        'qty_available',
+                        'virtual_available',
+                        'incoming_qty',
+                        'outgoing_qty',]
+
+        insert_query = " INSERT INTO stock_overview_report_line (" + ",".join(field_names) + ")"
+        insert_params = []
+
+        with_where_query = ""
+        if wizard.date:
+            with_where_query = " AND sm.date < %s "
+        with_query = """ WITH RECURSIVE locations(parent_id, child_id) AS (
+                            SELECT sl.location_id, sl.id FROM stock_location sl
+                            UNION
+                            SELECT sl.id, sl.id FROM stock_location sl
+                            UNION
+                            SELECT l.parent_id, sl.id FROM stock_location sl
+                            INNER JOIN locations l ON sl.location_id = l.child_id
+                            AND l.parent_id IS NOT NULL
+                        ), stock_incoming_done AS (
+                            SELECT
+                                sm.product_id,
+                                SUM(sm.product_qty) product_qty,
+                                sw.id warehouse_id
+                            FROM stock_warehouse sw
+                            INNER JOIN stock_move sm
+                                ON sm.location_dest_id IN (SELECT child_id FROM locations WHERE parent_id = sw.lot_stock_id)
+                                AND sm.location_id NOT IN (SELECT child_id FROM locations WHERE parent_id = sw.lot_stock_id)
+                                AND sm.state IN ('done')
+                                """+with_where_query+"""
+                            GROUP BY sm.product_id, sw.id
+                        ), stock_outgoing_done AS (
+                            SELECT
+                                sm.product_id,
+                                SUM(sm.product_qty) product_qty,
+                                sw.id warehouse_id
+                            FROM stock_warehouse sw
+                            INNER JOIN stock_move sm
+                                ON sm.location_dest_id NOT IN (SELECT child_id FROM locations WHERE parent_id = sw.lot_stock_id)
+                                AND sm.location_id IN (SELECT child_id FROM locations WHERE parent_id = sw.lot_stock_id)
+                                AND sm.state IN ('done')
+                                """+with_where_query+"""
+                            GROUP BY sm.product_id, sw.id
+                        ), stock_incoming_pending AS (
+                            SELECT
+                                sm.product_id,
+                                SUM(sm.product_qty) product_qty,
+                                sw.id warehouse_id
+                            FROM stock_warehouse sw
+                            INNER JOIN stock_move sm
+                                ON sm.location_dest_id IN (SELECT child_id FROM locations WHERE parent_id = sw.lot_stock_id)
+                                AND sm.location_id NOT IN (SELECT child_id FROM locations WHERE parent_id = sw.lot_stock_id)
+                                AND sm.state IN ('confirmed', 'assigned', 'waiting')
+                                """+with_where_query+"""
+                            GROUP BY sm.product_id, sw.id
+                        ), stock_outgoing_pending AS (
+                            SELECT
+                                sm.product_id,
+                                SUM(sm.product_qty) product_qty,
+                                sw.id warehouse_id
+                            FROM stock_warehouse sw
+                            INNER JOIN stock_move sm
+                                ON sm.location_dest_id NOT IN (SELECT child_id FROM locations WHERE parent_id = sw.lot_stock_id)
+                                AND sm.location_id IN (SELECT child_id FROM locations WHERE parent_id = sw.lot_stock_id)
+                                AND sm.state IN ('confirmed', 'assigned', 'waiting')
+                                """+with_where_query+"""
+                            GROUP BY sm.product_id, sw.id
+                        )"""
+        with_params = []
+        if wizard.date:
+            with_params = [wizard.date, wizard.date, wizard.date, wizard.date]
+
+        select_query = """ SELECT %s, pp.id, pt.categ_id, rc.id, sw.id, pt.uom_id,
+                        COALESCE(in_done.product_qty, 0.0) - COALESCE(out_done.product_qty, 0.0) qty_available,
+                        COALESCE(in_done.product_qty, 0.0) - COALESCE(out_done.product_qty, 0.0)
+                            + COALESCE(in_pending.product_qty, 0.0) - COALESCE(out_pending.product_qty, 0.0) virtual_available,
+                        COALESCE(in_pending.product_qty, 0.0) incoming_qty,
+                        -COALESCE(out_pending.product_qty, 0.0) outgoing_qty
+        """
+        select_params = [wizard.id]
+
+        from_query = """ FROM res_company rc
+                        INNER JOIN stock_warehouse sw
+                            ON sw.company_id = rc.id
+                        CROSS JOIN product_product pp
+                        INNER JOIN product_template pt
+                            ON pp.product_tmpl_id = pt.id
+                        LEFT OUTER JOIN stock_incoming_done in_done ON in_done.product_id = pp.id AND in_done.warehouse_id = sw.id
+                        LEFT OUTER JOIN stock_outgoing_done out_done ON out_done.product_id = pp.id AND out_done.warehouse_id = sw.id
+                        LEFT OUTER JOIN stock_incoming_pending in_pending ON in_pending.product_id = pp.id AND in_pending.warehouse_id = sw.id
+                        LEFT OUTER JOIN stock_outgoing_pending out_pending ON out_pending.product_id = pp.id AND out_pending.warehouse_id = sw.id
+                        """
+
+        return field_names, insert_query, insert_params, with_query, with_params, select_query, select_params, from_query
 
 class StockOverviewReportLine(osv.osv_memory):
     _name = 'stock.overview.report.line'

@@ -47,6 +47,62 @@ class StockOverviewReport(osv.osv_memory):
         })
         return res
 
+    def _get_sql(self, cr, uid, ids, wizard, context=None):
+        if context is None:
+            context = {}
+
+        field_names, insert_query, insert_params, with_query, with_params, select_query, select_params, from_query = super(StockOverviewReport, self)._get_sql(cr, uid, ids, wizard, context=None)
+
+        field_names.extend(['supplier_virtual_available',
+                            'supplier_virtual_available_combined'])
+        insert_query = " INSERT INTO stock_overview_report_line (" + ",".join(field_names) + ")"
+        insert_params = []
+
+        with_where_query = ""
+        if wizard.date:
+            with_where_query = " AND sm.date < %s "
+        with_query += """, stock_incoming_supplier AS (
+                            SELECT
+                                sm.product_id,
+                                SUM(sm.product_qty) product_qty,
+                                sw.id warehouse_id
+                            FROM stock_warehouse sw
+                            INNER JOIN stock_move sm
+                                ON sm.location_dest_id IN (SELECT child_id FROM locations WHERE parent_id = sw.lot_supplier_virtual_id)
+                                AND sm.location_id NOT IN (SELECT child_id FROM locations WHERE parent_id = sw.lot_supplier_virtual_id)
+                                AND sm.state IN ('done', 'confirmed', 'assigned', 'waiting')
+                                """+with_where_query+"""
+                            GROUP BY sm.product_id, sw.id
+                        ), stock_outgoing_supplier AS (
+                            SELECT
+                                sm.product_id,
+                                SUM(sm.product_qty) product_qty,
+                                sw.id warehouse_id
+                            FROM stock_warehouse sw
+                            INNER JOIN stock_move sm
+                                ON sm.location_dest_id NOT IN (SELECT child_id FROM locations WHERE parent_id = sw.lot_supplier_virtual_id)
+                                AND sm.location_id IN (SELECT child_id FROM locations WHERE parent_id = sw.lot_supplier_virtual_id)
+                                AND sm.state IN ('done', 'confirmed', 'assigned', 'waiting')
+                                """+with_where_query+"""
+                            GROUP BY sm.product_id, sw.id
+                        )"""
+        if wizard.date:
+            with_params.extend([wizard.date, wizard.date])
+
+        select_query += """, COALESCE(in_supplier.product_qty, 0.0)
+                - COALESCE(out_supplier.product_qty, 0.0) supplier_virtual_available,
+            COALESCE(in_supplier.product_qty, 0.0)
+                - COALESCE(out_supplier.product_qty, 0.0)
+                + COALESCE(in_done.product_qty, 0.0)
+                - COALESCE(out_done.product_qty, 0.0)
+                + COALESCE(in_pending.product_qty, 0.0)
+                - COALESCE(out_pending.product_qty, 0.0) supplier_virtual_available_combined"""
+        select_params.extend([])
+
+        from_query += """ LEFT OUTER JOIN stock_incoming_supplier in_supplier ON in_supplier.product_id = pp.id AND in_supplier.warehouse_id = sw.id
+                        LEFT OUTER JOIN stock_outgoing_supplier out_supplier ON out_supplier.product_id = pp.id AND out_supplier.warehouse_id = sw.id """
+
+        return field_names, insert_query, insert_params, with_query, with_params, select_query, select_params, from_query
 
 class StockOverviewReportLine(osv.osv_memory):
     _inherit = 'stock.overview.report.line'
