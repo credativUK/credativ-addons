@@ -127,7 +127,9 @@ class StockOverviewReport(osv.osv_memory):
         if context is None:
             context = {}
 
-        field_names = ['wizard_id',
+        field_names = ['create_date',
+                        'create_uid',
+                        'wizard_id',
                         'product_id',
                         'categ_id',
                         'company_id',
@@ -205,14 +207,14 @@ class StockOverviewReport(osv.osv_memory):
         if wizard.date:
             with_params = [wizard.date, wizard.date, wizard.date, wizard.date]
 
-        select_query = """ SELECT %s, pp.id, pt.categ_id, rc.id, sw.id, pt.uom_id,
+        select_query = """ SELECT NOW(), %s, %s, pp.id, pt.categ_id, rc.id, sw.id, pt.uom_id,
                         COALESCE(in_done.product_qty, 0.0) - COALESCE(out_done.product_qty, 0.0) qty_available,
                         COALESCE(in_done.product_qty, 0.0) - COALESCE(out_done.product_qty, 0.0)
                             + COALESCE(in_pending.product_qty, 0.0) - COALESCE(out_pending.product_qty, 0.0) virtual_available,
                         COALESCE(in_pending.product_qty, 0.0) incoming_qty,
                         -COALESCE(out_pending.product_qty, 0.0) outgoing_qty
         """
-        select_params = [wizard.id]
+        select_params = [uid, wizard.id]
 
         from_query = """ FROM res_company rc
                         INNER JOIN stock_warehouse sw
