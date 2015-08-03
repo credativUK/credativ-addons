@@ -5,12 +5,10 @@
             <style type="text/css">
                 .page {
                     page-break-after: always;
-                    font-family: sans-serif;
-                    font-size: 10pt;
                 }
             </style>
             <t t-foreach="docs" t-as="o">
-                <div class="page">
+                <div class="page" style="text-align: center;">
                     <div style="text-align: center; margin-bottom: 10pt;">
                         <strong style="font-size: 15pt;" t-field="o.default_code"/>
                     </div>
@@ -18,7 +16,7 @@
                     <div t-if="lot">
                         Serial no. <span t-field="lot.name"/>
                     </div>
-                    <img t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('Code128', o.default_code, 400, 200)" style="width:50mm;height:20mm;margin-top:10pt;margin-left:4mm"/>
+                    <img t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('Code128', o.default_code, 400, 200)" style="width:50mm;height:20mm;margin-top:10pt;"/>
                 </div>
             </t>
         </template>
