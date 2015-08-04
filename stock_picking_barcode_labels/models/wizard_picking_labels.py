@@ -27,7 +27,6 @@ class StockPickingLabelsItems(models.TransientModel):
 
     wizard_id = fields.Many2one('wizard.stock.picking.labels', required=True)
     product_id = fields.Many2one('product.product', string="Product", required=True)
-    lot_id = fields.Many2one('stock.production.lot', string='Serial no.')
     quantity = fields.Integer("Label count")
 
 class StockPickingLabels(models.TransientModel):
@@ -50,13 +49,10 @@ class StockPickingLabels(models.TransientModel):
         picking = self.env['stock.picking'].browse(picking_id)
 
         items = []
-        if not picking.pack_operation_ids:
-            picking.do_prepare_partial()
-        for op in picking.pack_operation_ids:
+        for line in picking.move_lines:
             item = {
-                'product_id': op.product_id.id,
-                'lot_id': op.lot_id.id,
-                'quantity': op.product_qty,
+                'product_id': line.product_id.id,
+                'quantity': line.product_qty,
             }
             items.append(item)
 

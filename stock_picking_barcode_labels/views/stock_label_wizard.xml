@@ -30,7 +30,6 @@
                         <tree string="Labels to print" editable="bottom">
                             <field name="product_id"/>
                             <field name="quantity"/>
-                            <field name="lot_id" groups="stock.group_production_lot" domain="[('product_id','=?', product_id)]" context="{'product_id': product_id}"/>
                         </tree>
                     </field>
                     <footer>

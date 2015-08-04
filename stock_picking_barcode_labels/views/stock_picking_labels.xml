@@ -13,9 +13,6 @@
                         <strong style="font-size: 15pt;" t-field="o.default_code"/>
                     </div>
                     <div t-field="o.name"/>
-                    <div t-if="lot">
-                        Serial no. <span t-field="lot.name"/>
-                    </div>
                     <img t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('Code128', o.default_code, 400, 200)" style="width:50mm;height:20mm;margin-top:10pt;"/>
                 </div>
             </t>
@@ -56,7 +53,6 @@
                         <t t-foreach="xrange(item.quantity)" t-as="i">
                             <t t-call="stock_picking_barcode_labels.report_product_label">
                                 <t t-set="docs" t-value="[item.product_id]"/>
-                                <t t-set="lot" t-value="item.lot_id"/>
                             </t>
                         </t>
                     </t>
