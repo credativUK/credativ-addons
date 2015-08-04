@@ -75,7 +75,7 @@ class ProcurementOrder(osv.Model):
                     message = _("Procurement allocated to PO (%s)") % (purchase_new.name,)
                 elif (purchase_orig and not purchase_new) or (proc['procure_method']=='make_to_order' and not purchase_new):
                     signal = 'signal_mto_mts'
-                    expected_acts = (('confirm_mto', 'buy', 'ready',), ('confirm_mts', 'cancel', 'ready'))
+                    expected_acts = (('confirm_mto', 'buy', 'ready',), ('confirm_mts', 'cancel', 'ready', 'done'))
                     message = _("Procurement deallocated from PO (%s)") % (purchase_orig.name,)
                 elif purchase_orig and purchase_new or (proc['procure_method']=='make_to_order' and purchase_new):
                     signal = 'signal_mto_mto'
