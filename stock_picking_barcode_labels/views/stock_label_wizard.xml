@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
     <data>
-         <act_window name="Pallet labels"
+         <act_window name="Labels to print"
             res_model="wizard.stock.picking.labels"
             src_model="stock.picking"
             view_mode="form"
