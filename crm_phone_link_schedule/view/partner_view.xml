@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+        <record id="view_partners_form_crm_call_schedule" model="ir.ui.view">
+            <field name="name">view.res.partner.form.crm.schedule</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="crm.view_partners_form_crm_calls"/>
+            <field name="arch" type="xml">
+                <data>
+                    <xpath expr="//button[field[@string='Calls']]" position="replace">
+                        <button class="oe_inline oe_stat_button" type="action"
+                            name="%(crm_phone_link_schedule.crm_case_categ_phone_schedule)d" 
+                            icon="fa-phone"
+                            context="{'search_default_partner_id': active_id, 'default_duration': 1.0}">
+                            <field string="Calls" name="phonecall_count" widget="statinfo"/>
+                        </button>
+                    </xpath>
+                </data>
+            </field>
+        </record>
+    </data>
+</openerp>
