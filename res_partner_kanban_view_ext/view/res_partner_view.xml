@@ -3,10 +3,19 @@
     <data>
 
     <!-- New action for Receivables and Payables kanban view -->
-    <record id="action_move_lines_unreconcile_unposted_tree" model="ir.actions.act_window">
+    <record id="action_move_lines_unreconcile_unposted_payable_tree" model="ir.actions.act_window">
         <field name="name">Journal Items</field>
         <field name="res_model">account.move.line</field>
-        <field name="domain">[('reconcile_id','=',False)]</field>
+        <field name="domain">[('reconcile_id','=',False),('account_id.type','=','payable')]</field>
+        <field name="context">{'search_default_partner_id': [active_id], 'default_partner_id': active_id}</field>
+        <field name="view_id" ref="account.view_move_line_tree"/>
+    </record>
+
+    <!-- New action for Receivables and Payables kanban view -->
+    <record id="action_move_lines_unreconcile_unposted_receivable_tree" model="ir.actions.act_window">
+        <field name="name">Journal Items</field>
+        <field name="res_model">account.move.line</field>
+        <field name="domain">[('reconcile_id','=',False),('account_id.type','=','receivable')]</field>
         <field name="context">{'search_default_partner_id': [active_id], 'default_partner_id': active_id}</field>
         <field name="view_id" ref="account.view_move_line_tree"/>
     </record>
@@ -22,11 +31,11 @@
                     <field name="credit"/>
                 </field>
                 <xpath expr="//div[@class='oe_kanban_partner_links']" position="inside">
-                    <a name="%(action_move_lines_unreconcile_unposted_tree)d" type="action" t-if="record.debit.value != 0.0" style="color:#FF3399">
+                    <a name="%(action_move_lines_unreconcile_unposted_payable_tree)d" type="action" t-if="record.debit.value != 0.0" style="color:#FF3399">
                         <t t-esc="record.debit.value"/> Payables
                         <br/>
                     </a>
-                    <a name="%(action_move_lines_unreconcile_unposted_tree)d" type="action" t-if="record.credit.value != 0.0" style="color:#336600">
+                    <a name="%(action_move_lines_unreconcile_unposted_receivable_tree)d" type="action" t-if="record.credit.value != 0.0" style="color:#336600">
                         <t t-esc="record.credit.value"/> Receivables
                         <br/>
                     </a>
