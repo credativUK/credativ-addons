@@ -130,8 +130,9 @@ class procurement_order(osv.osv):
 
             # Onchange handler to apply further line values
             product_change_vals = po_line_obj.onchange_product_id(cr, uid, [], pricelist_id=pricelist_id, product_id=line_vals['product_id'],
-                qty=line_vals['product_qty'], uom_id=line_vals['product_uom'], partner_id=partner_id, date_planned=line_vals['date_planned'],
-                name=line_vals['name'], price_unit=line_vals['price_unit'], context=context)
+                qty=line_vals['product_qty'], uom_id=line_vals['product_uom'], partner_id=partner_id,
+                fiscal_position_id=partner.property_account_position and partner.property_account_position.id,
+                date_planned=line_vals['date_planned'], name=line_vals['name'], price_unit=line_vals['price_unit'], context=context)
             for key, value in product_change_vals.get('value', {}).iteritems():
                 if value and type(value) in (tuple, list):
                     if type(value[0]) is dict:
