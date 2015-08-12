@@ -99,7 +99,7 @@ class PurchaseOrderLine(osv.Model):
         for order_line in self.browse(cr, uid, ids, context=context):
             if order_line.state == 'done':
                 continue
-            line_key = make_key(order_line, ('date_planned', 'taxes_id', 'price_unit', 'product_id', 'move_dest_id', 'account_analytic_id'))
+            line_key = make_key(order_line, ('taxes_id', 'price_unit', 'product_id', 'move_dest_id', 'account_analytic_id'))
             o_line = order_infos.setdefault(line_key, {})
             if o_line:
                 # merge the line with an existing line
