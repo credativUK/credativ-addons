@@ -25,22 +25,18 @@ from osv import osv, fields
 class SaleOrder(osv.osv):
     _inherit = 'sale.order'
 
-    def onchange_partner_shipping_id(self, cr, uid, ids, part, context=None):
-        res = {'value': {}}
-        if part:
-            part = self.pool.get('res.partner').browse(cr, uid, part, context=context)
+    def onchange_address_id(self, cr, uid, ids, partner_invoice_id,
+                            partner_shipping_id, partner_id,
+                            shop_id=False, context=None, **kwargs):
+
+        res = super(SaleOrder, self).onchange_address_id(cr, uid, ids, partner_invoice_id,
+                                        partner_shipping_id, partner_id,
+                                        shop_id=shop_id, context=context, **kwargs)
+        if partner_shipping_id:
+            part = self.pool.get('res.partner').browse(cr, uid, partner_shipping_id, context=context)
             picking_policy = part.country_id and part.country_id.property_picking_policy
             if picking_policy:
-                res['value'] = {'picking_policy': picking_policy}
-        return res
-
-    def onchange_partner_id(self, cr, uid, ids, part, context=None):
-        res = super(SaleOrder, self).onchange_partner_id(cr, uid, ids, part, context=context)
-
-        part_ship = res['value'].get('partner_shipping_id')
-        if part_ship:
-            res['value'].update(self.onchange_partner_shipping_id(cr, uid, ids, part_ship, context=context)['value'])
-
+                res['value'].update({'picking_policy': picking_policy})
         return res
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

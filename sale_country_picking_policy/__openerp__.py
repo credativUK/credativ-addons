@@ -33,12 +33,12 @@ Allows the picking policy to be decided on the sale order by the destination cou
     'depends': [
         'sale',
         'sale_stock',
+        'account_fiscal_position_rule_sale',
         ],
     'init_xml': [
         ],
     'update_xml': [
         'country_view.xml',
-        'sale_view.xml',
     ],
     'demo_xml': [
     ],
