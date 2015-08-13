@@ -137,6 +137,7 @@ class ProcurementOrder(osv.Model):
         ctx = context.copy()
         ctx.update({'from_picking': True}) # This is required to support the WMS integration - the move is not actually being cancelled, just re-arranged
         move_obj = self.pool.get('stock.move')
+        purchase_obj = self.pool.get('purchase.order')
         purchase_line_obj = self.pool.get('purchase.order.line')
         for proc in self.browse(cr, uid, ids, context=ctx):
             # Find all PO lines with my stock move ID as the move_dest_id
@@ -148,6 +149,14 @@ class ProcurementOrder(osv.Model):
                 # Remove the move_dest_id from this PO line and the PO lines moves
                 purchase_line_obj.write(cr, uid, [pol_ids[0]], {'move_dest_id': False}, context=ctx)
                 po_line = purchase_line_obj.browse(cr, uid, pol_ids[0], context=ctx)
+                # If the PO is still in draft we can safely discard the PO line completly
+                if po_line.order_id.state == 'draft':
+                    if len(po_line.order_id.order_line) == 1:
+                        purchase_obj.unlink(cr, uid, [po_line.order_id.id], context=ctx)
+                    else:
+                        purchase_line_obj.unlink(cr, uid, [pol_ids[0]], context=ctx)
+                    continue
+                # Adjust the PO moves
                 move_ids = move_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('purchase_line_id', '=', po_line.id), ('state', '!=', 'cancel')], context=ctx)
                 move_obj.write(cr, uid, move_ids, {'move_dest_id': False}, context=ctx)
                 move_ids = move_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('purchase_line_id', '!=', False), ('state', '!=', 'cancel')], context=ctx)
