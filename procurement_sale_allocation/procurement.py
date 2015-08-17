@@ -149,8 +149,8 @@ class ProcurementOrder(osv.Model):
                 # Remove the move_dest_id from this PO line and the PO lines moves
                 purchase_line_obj.write(cr, uid, [pol_ids[0]], {'move_dest_id': False}, context=ctx)
                 po_line = purchase_line_obj.browse(cr, uid, pol_ids[0], context=ctx)
-                # If the PO is still in draft we can safely discard the PO line completly
-                if po_line.order_id.state == 'draft':
+                # If the PO is still in draft and we cancel the procurement we can safely discard the PO line completly
+                if po_line.order_id.state == 'draft' and not context.get('skip_pol_remove'):
                     if len(po_line.order_id.order_line) == 1:
                         purchase_obj.unlink(cr, uid, [po_line.order_id.id], context=ctx)
                     else:
@@ -189,9 +189,13 @@ class ProcurementOrder(osv.Model):
         return super(ProcurementOrder, self).action_cancel(cr, uid, ids)
 
     def action_mto_to_mts(self, cr, uid, ids, context=None):
-        self.write(cr, uid, ids, {'state': 'exception', 'procure_method': 'make_to_stock', 'message': False}, context=context)
-        self._cancel_stock_assign(cr, uid, ids, context=context)
-        self._cancel_po_assign(cr, uid, ids, context=context)
+        if context is None:
+            context = {}
+        ctx = context.copy()
+        ctx.update({'skip_pol_remove': True})
+        self.write(cr, uid, ids, {'state': 'exception', 'procure_method': 'make_to_stock', 'message': False}, context=ctx)
+        self._cancel_stock_assign(cr, uid, ids, context=ctx)
+        self._cancel_po_assign(cr, uid, ids, context=ctx)
         return True
 
     def action_mts_to_mto(self, cr, uid, ids, context=None):
