@@ -39,4 +39,12 @@ class SaleOrder(osv.osv):
                 res['value'].update({'picking_policy': picking_policy})
         return res
 
+    def onchange_workflow_process_id(self, cr, uid, ids, workflow_process_id,
+                                     context=None, **kwargs):
+        res = super(SaleOrder, self).onchange_workflow_process_id(cr, uid, ids,
+                                        workflow_process_id, context=context, **kwargs)
+        if res.get('value', {}).get('picking_policy'):
+            del res['value']['picking_policy']
+        return res
+
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

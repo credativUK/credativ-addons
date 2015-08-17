@@ -27,6 +27,8 @@
     'description':
         """
 Allows the picking policy to be decided on the sale order by the destination country
+This will completly bypass the automatic workflow picking policy selection as it
+interferes with this functionality.
         """,
     'author': 'credativ Ltd',
     'website' : 'http://credativ.co.uk',
@@ -34,6 +36,7 @@ Allows the picking policy to be decided on the sale order by the destination cou
         'sale',
         'sale_stock',
         'account_fiscal_position_rule_sale',
+        'sale_automatic_workflow',
         ],
     'init_xml': [
         ],
