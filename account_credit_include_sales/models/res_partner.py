@@ -39,21 +39,7 @@ class ResPartner(models.Model):
             invoices = order.invoice_ids
             invoices &= invoices.search([('state', 'not in', ['draft', 'cancel'])])
 
-            #Quick fix
-            # Code "invoiced = sum(invoices.mapped('amount_total'))" is
-            # prefetching all invoices amount_total with force compute method
-            # Takes 10-16 secs to execute for single partner
-            #TODO Find the code bug in the code and remove below code block
-            invoice_ids = [invoice.id for invoice in invoices]
-            invoiced = 0.0
-            if invoice_ids:
-                self.env.cr.execute(
-                    "SELECT COALESCE(SUM(amount_total), 0.0) as sum "
-                    "FROM account_invoice "
-                    "WHERE id IN %s",
-                    (tuple(invoice_ids),))
-                invoiced = sum(i.values()[0] for i in self.env.cr.dictfetchall())
-            #End
+            invoiced = sum(invoices.mapped('amount_total'))
 
             return order_currency.compute(order.amount_total - invoiced, company_currency)
 
