@@ -70,18 +70,21 @@ class stock_picking_out(osv.osv):
         return True
     
     def _get_stock_move_changes(self, cr, uid, ids, context=None):
-        return []
+        picking_ids = set()
+        for move in self.pool.get('stock.move').browse(cr, uid, ids, context=context):
+            picking_ids.add(move.picking_id.id)
+        return list(picking_ids)
 
     _columns = {
         'min_date': fields.function(get_min_max_date,fnct_inv=_set_minimum_date,multi='min_max_date',store={
                 'stock.move': (
                     _get_stock_move_changes,
-                    ['date_expected'], 10,
+                    ['date_expected', 'picking_id'], 10,
                     )
                 },type='datetime', string='Scheduled Time', select=True,help="Scheduled time for the shipment to be processed"),
         'max_date': fields.function(get_min_max_date,fnct_inv=_set_maximum_date, multi='min_max_date',store={'stock.move': (
                     _get_stock_move_changes,
-                    ['date_expected'], 10,
+                    ['date_expected', 'picking_id'], 10,
                     )},type='datetime', string='Max. Expected Date', select=True    ),
 
         
