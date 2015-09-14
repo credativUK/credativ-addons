@@ -28,7 +28,8 @@
   'website': 'http://www.credativ.co.uk',
   'depends': ['account', 'report_xls'],
   'data' : [
-      'wizard/account_report_aged_partner_balance_view.xml'
+      'wizard/account_report_aged_partner_balance_view.xml',
+      'report/account_report.xml',
   ],
   'installable': True,
 }

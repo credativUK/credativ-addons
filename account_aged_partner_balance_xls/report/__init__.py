@@ -19,3 +19,5 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
+
+from . import account_report_aged_partner_balance_xls
