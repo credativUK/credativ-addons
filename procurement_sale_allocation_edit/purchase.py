@@ -26,6 +26,14 @@ import netsvc
 class PurchaseOrder(osv.Model):
     _inherit = 'purchase.order'
 
+    _columns = {
+        'skip_pol_remove': fields.boolean('Skip Line Removal', help='Set temporarily to prevent the scheduler from removing PO lines in the case of an order edit'),
+    }
+
+    _defaults = {
+        'skip_pol_remove': False,
+    }
+
     def _fixup_created_picking(self, cr, uid, ids, line_moves, remain_moves, context):
         move_obj = self.pool.get('stock.move')
         line_obj = self.pool.get('purchase.order.line')
@@ -34,12 +42,14 @@ class PurchaseOrder(osv.Model):
 
         proc_to_po = {}
         for purchase in self.browse(cr, uid, ids, context=context):
+            purchase.write({'skip_pol_remove': True})
             # Get list of all procurements which are linked to this PO
             proc_ids = procurement_obj.search(cr, uid, [('purchase_id', '=', purchase.order_edit_id.id), ('purchase_id', '!=', False), ('state', 'not in', ('done', 'cancel'))], context=context)
             proc_to_po[purchase] = proc_ids
 
             # Remove PO line for all procurements so they all revert back to MTS, or confirmed MTO
             procurement_obj.write(cr, uid, proc_ids, {'purchase_id': False})
+            purchase.write({'skip_pol_remove': False})
 
         # 3. Finish fixing the pickings
         res = super(PurchaseOrder, self)._fixup_created_picking(cr, uid, ids, line_moves, remain_moves, context=context)
