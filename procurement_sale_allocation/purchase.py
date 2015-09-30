@@ -90,6 +90,11 @@ class PurchaseOrderLine(osv.Model):
         if procurement_ids_to_remove:
             procurement_obj.write(cr, uid, procurement_ids_to_remove, {'purchase_id': False}, context=context)
             procurement_obj.write(cr, uid, procurement_ids_to_remove, {'procure_method': 'make_to_order'}, context=context)
-        return super(PurchaseOrderLine, self).unlink(cr, uid, ids, context=context)
+            # We may have already unlinked some of the PO lines, skip them
+            ids = self.search(cr, uid, [('id', 'in', ids)], context=context)
+        if ids:
+            return super(PurchaseOrderLine, self).unlink(cr, uid, ids, context=context)
+        else:
+            return True
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
