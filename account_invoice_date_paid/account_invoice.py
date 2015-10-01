@@ -35,6 +35,13 @@ class AccountInvoice(osv.Model):
         self.write(cr, uid, ids, {'date_paid':datetime.now()}, context=context)
         return res
 
+    def copy(self, cr, uid, id, default=None, context=None):
+        if default is None:
+            default = {}
+        default.update({'date_paid':False})
+        copy_id = super(AccountInvoice, self).copy(cr, uid, id, default=default, context=context)
+        return copy_id
+
 
     _columns = {
             'date_paid' : fields.datetime('Date Paid', help='The date that the invoice became \'paid\' in the system.'),
