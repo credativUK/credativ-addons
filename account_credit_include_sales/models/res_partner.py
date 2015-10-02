@@ -52,6 +52,10 @@ class ResPartner(models.Model):
                                       ('state', 'not in', ['draft', 'sent', 'cancel']),
                                       ('invoiced', '=', False),
                                      ])
+            if orders:
+                # Prefetch the invoice data, doing so in amount_not_invoiced()
+                # seems to take ages
+                orders.mapped('invoice_ids.amount_total')
             uninvoiced_total = sum(amount_not_invoiced(order) for order in orders)
 
             partner.credit = res[partner.id]['credit'] + uninvoiced_total
