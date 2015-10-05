@@ -137,4 +137,52 @@ class PurchaseOrderLine(osv.Model):
                     move_obj.action_cancel(cr, uid, move_ids, context=context)
                     move_obj.write(cr, uid, move_ids, {'move_dest_id': False, 'purchase_line_id': False, 'picking_id': False}, context=context)
 
+    def _generate_purchase_line(self, cr, uid, product_id, qty, pricelist_id, partner_id, schedule_date, context=None):
+        # Generate a new PO line values
+        if context == None:
+            context = {}
+
+        picking_obj = self.pool.get('stock.picking.in')
+        purchase_obj = self.pool.get('purchase.order')
+        purchase_line_obj = self.pool.get('purchase.order.line')
+        product_obj = self.pool.get('product.product')
+        partner_obj = self.pool.get('res.partner')
+        pricelist_obj = self.pool.get('product.pricelist')
+
+        partner = partner_obj.browse(cr, uid, partner_id, context=context)
+        new_context = context.copy()
+        new_context.update({'lang': partner.lang, 'partner_id': partner.id})
+        product = product_obj.browse(cr, uid, product_id, context=new_context)
+        pricelist = pricelist_obj.browse(cr, uid, pricelist_id, context=context)
+        price = pricelist.price_get(product.id, qty, partner.id)
+
+        name = product.partner_ref
+        if product.description_purchase:
+            name += '\n'+ product.description_purchase
+        line_vals = {
+            'name': name,
+            'product_qty': qty,
+            'product_id': product.id,
+            'product_uom': product.uom_po_id.id,
+            'price_unit': price or 0.0,
+            'date_planned': schedule_date
+        }
+
+        product_change_vals = purchase_line_obj.onchange_product_id(cr, uid, [], pricelist_id=pricelist.id, product_id=line_vals['product_id'],
+            qty=line_vals['product_qty'], uom_id=line_vals['product_uom'], partner_id=partner.id,
+            fiscal_position_id=partner.property_account_position and partner.property_account_position.id,
+            date_planned=line_vals['date_planned'], name=line_vals['name'], price_unit=line_vals['price_unit'], context=context)
+        for key, value in product_change_vals.get('value', {}).iteritems():
+            if value and type(value) in (tuple, list):
+                if type(value[0]) is dict:
+                    line_vals[key] = [(0, 0, d) for d in value]
+                elif type(value[0]) in (int, long):
+                    line_vals[key] = [(6, 0, value)]
+                else:
+                    line_vals[key] = value
+            else:
+                line_vals[key] = value
+
+        return line_vals
+
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
