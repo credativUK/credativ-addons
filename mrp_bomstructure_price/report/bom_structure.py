@@ -106,7 +106,7 @@ class bom_structure(report_sxw.rml_parse):
                                         master_bom=master_bom)
 
                 total += res[0]['subtotal']
-                res[0].update(bom=bom, bom_line=bom_line)
+                res[0].update(bom_line=bom_line)
                 result.extend(res)
             else:
                 raise ValidationError(_('BoM "%s" contains a phantom BoM line but the product "%s" does not have any BoM defined.') % (bom.name, bom_line.product_id.name_get()[0][1]))
@@ -114,6 +114,7 @@ class bom_structure(report_sxw.rml_parse):
             'product_qty': factor,
             'subtotal': total,
             'level': level if level < 6 else 6,
+            'bom': bom,
         }
 
         # we are building a pre-order trace
@@ -123,11 +124,7 @@ class bom_structure(report_sxw.rml_parse):
 
     def get_children(self, bom):
         bom.ensure_one()
-        children = self._bom_explode(bom, None, bom.product_qty)
-        top = children[0]
-        top.update(bom=bom)
-
-        return children
+        return self._bom_explode(bom, None, bom.product_qty)
 
 
 class report_mrpbomstructure(models.AbstractModel):
