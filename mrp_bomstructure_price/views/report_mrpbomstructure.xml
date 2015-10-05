@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <template id="report_mrpbomstructure">
+            <t t-call="report.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <t t-call="report.internal_layout">
+                        <div class="page">
+                            <h2>BoM Structure for <span t-field="o.name"/></h2>
+                            <table class="table table-condensed">
+                                <thead>
+                                    <tr>
+                                        <th>Product name (BoM name)</th>
+                                        <th>Quantity</th>
+                                        <th>Unit price</th>
+                                        <th>Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-set="lines" t-value="get_children(o)"/>
+                                    <t t-set="l" t-value="lines.pop(0)"/>
+                                    <t t-set="bom" t-value="l['bom']"/>
+                                    <tr style="font-weight: bold;">
+                                        <t t-set="product" t-value="bom.product_id or bom.product_tmpl_id"/>
+                                        <td>
+                                            <!-- we need it to be a field so that we can view it properly, maybe forcing a Many2One widget on t-esc would help? -->
+                                            <t t-if="bom.product_id"><span t-field="bom.product_id"/></t>
+                                            <t t-if="not bom.product_id"><span t-field="bom.product_tmpl_id"/></t>
+                                            (<span t-field="bom.name"/>)
+                                        </td>
+                                        <td>
+                                            <span t-esc="formatLang(l['product_qty'])"/>
+                                            <span groups="product.group_uom" t-field="bom.product_uom"/>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-field="product.standard_price" t-field-options='{"widget": "monetary", "display_currency": "company.currency_id"}'/>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-esc="l['subtotal']" t-esc-options='{"widget": "monetary", "display_currency": "company.currency_id"}'/>
+                                        </td>
+                                    </tr>
+                                    <tr t-foreach="lines" t-as="l">
+                                        <t t-set="bom_line" t-value="l['bom_line']"/>
+                                        <td>
+                                            <span style="color: white;" t-esc="'... '*(l['level'])"/>
+                                            <span t-field="bom_line.product_id"/>
+                                            <t t-if="l.get('bom')">(<span t-esc="l['bom'].name"/>)</t>
+                                        </td>
+                                        <td>
+                                            <span t-esc="formatLang(l['product_qty'])"/>
+                                            <span t-field="bom_line.product_uom" groups="product.group_uom"/>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-field="bom_line.product_id.standard_price" t-field-options='{"widget": "monetary", "display_currency": "company.currency_id"}'/>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-esc="l['subtotal']" t-esc-options='{"widget": "monetary", "display_currency": "company.currency_id"}'/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+
+        <report
+            string="BOM Structure"
+            id="mrp.action_report_bom_structure"
+            model="mrp.bom"
+            name="mrp_bomstructure_price.report_mrpbomstructure"
+            file="mrp_bomstructure_price.report_mrpbomstructure"
+            report_type="qweb-pdf"
+        />
+    </data>
+</openerp>
