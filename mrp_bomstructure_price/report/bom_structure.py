@@ -83,7 +83,10 @@ class bom_structure(report_sxw.rml_parse):
             # If BoM should not behave like Phantom, just add the product,
             # otherwise explode further
             if bom_line.type != "phantom" and (not bom_id or bom_obj.browse(bom_id).type != "phantom"):
-                price = bom_line.product_id.standard_price * bom_line.product_uom._compute_qty(bom_line.product_uom.id, quantity, bom_line.product_id.uom_id.id)
+                price = bom_line.product_id.standard_price * \
+                        bom_line.product_uom._compute_qty(
+                            bom_line.product_uom.id, quantity,
+                            bom_line.product_id.uom_id.id, round=False)
                 total += price
                 result.append({
                     'bom_line': bom_line,
