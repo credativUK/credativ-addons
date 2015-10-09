@@ -37,6 +37,7 @@
     'data': [
         'sale_procurement_forecast_view.xml',
         'sale_procurement_forecast_data.xml',
+        'security/ir.model.access.csv',
     ],
     'installable': True,
     'active': False,
