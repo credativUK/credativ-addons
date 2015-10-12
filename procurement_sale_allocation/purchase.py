@@ -54,26 +54,38 @@ class PurchaseOrder(osv.Model):
         to_merge = list(set(ids) - set(no_merge))
         return super(PurchaseOrder, self).do_merge(cr, uid, to_merge, context=context)
 
+    def _remove_procurement_allocations(self, cr, uid, ids, context=None):
+        if context == None:
+            context = {}
+        ctx = context.copy()
+        ctx.update({'psa_proc_removed': True})
+        procurement_obj = self.pool.get('procurement.order')
+        purchase_line_obj = self.pool.get('purchase.order.line')
+        move_obj = self.pool.get('stock.move')
+
+        purchase_line_ids = purchase_line_obj.search(cr, uid, [('order_id', 'in', ids), ('move_dest_id', '!=', False)], context=ctx)
+        if purchase_line_ids:
+            move_ids = move_obj.search(cr, uid, [('purchase_line_id', 'in', purchase_line_ids), ('move_dest_id', '!=', False)], context=ctx)
+            if move_ids:
+                move_obj.write(cr, uid, move_ids, {'move_dest_id': False}, context=ctx)
+            purchase_line_obj.write(cr, uid, purchase_line_ids, {'move_dest_id': False}, context=ctx)
+
+        procurement_ids = procurement_obj.search(cr, uid, [('purchase_id', 'in', ids), ('state', '!=', 'cancel')], context=ctx)
+        # TODO: for all PO lines, procs and moves, unset move_dest_id
+        if procurement_ids:
+            procurement_obj.write(cr, uid, procurement_ids, {'purchase_id': False}, context=ctx)
 
     def action_cancel(self, cr, uid, ids, context=None):
         if context == None:
             context = {}
         ctx = context.copy()
         ctx.update({'psa_po_cancel': True})
-        procurement_obj = self.pool.get('procurement.order')
-        procurement_ids = procurement_obj.search(cr, uid, [('purchase_id', 'in', ids), ('state', '!=', 'cancel')], context=ctx)
-        if procurement_ids:
-            procurement_obj.write(cr, uid, procurement_ids, {'purchase_id': False}, context=ctx)
-            procurement_obj.write(cr, uid, procurement_ids, {'procure_method': 'make_to_order'}, context=ctx)
+        self._remove_procurement_allocations(cr, uid, ids, context=ctx)
         return super(PurchaseOrder, self).action_cancel(cr, uid, ids, context=ctx)
 
     def purchase_cancel(self, cr, uid, ids, context=None):
         wf_service = netsvc.LocalService("workflow")
-        procurement_obj = self.pool.get('procurement.order')
-        procurement_ids = procurement_obj.search(cr, uid, [('purchase_id', 'in', ids), ('state', '!=', 'cancel')], context=context)
-        if procurement_ids:
-            procurement_obj.write(cr, uid, procurement_ids, {'purchase_id': False}, context=context)
-            procurement_obj.write(cr, uid, procurement_ids, {'procure_method': 'make_to_order'}, context=context)
+        self._remove_procurement_allocations(cr, uid, ids, context=context)
         for (id, name) in self.name_get(cr, uid, ids):
             wf_service.trg_validate(uid, 'purchase.order', id, 'purchase_cancel', cr)
         return True

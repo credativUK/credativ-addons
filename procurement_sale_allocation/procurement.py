@@ -48,6 +48,8 @@ class ProcurementOrder(osv.Model):
         return True
 
     def write(self, cr, uid, ids, values, context=None):
+        if context is None:
+            context = {}
         purchase_obj = self.pool.get('purchase.order')
         purchase_line_obj = self.pool.get('purchase.order.line')
         wkf_service = netsvc.LocalService('workflow')
@@ -69,14 +71,18 @@ class ProcurementOrder(osv.Model):
                 if not purchase_orig and pol_ids:
                     # This is an MTO order being created, take no action
                     signal = None
+                elif purchase_orig and not purchase_new and proc['procure_method']=='make_to_order' and context.get('psa_proc_removed'):
+                    signal = 'signal_mto_mto_confirm'
+                    expected_acts = (('confirm_mto', 'buy', 'ready',), ('confirm',))
+                    message = _("Procurement deallocated from PO (%s) to MTO") % (purchase_orig.name,)
                 elif not purchase_orig and purchase_new:
                     signal = 'signal_mts_mto'
                     expected_acts = (('confirm_mts', 'make_to_stock', 'ready',), ('buy',))
-                    message = _("Procurement allocated to PO (%s)") % (purchase_new.name,)
+                    message = _("Procurement allocated from MTS to PO (%s)") % (purchase_new.name,)
                 elif (purchase_orig and not purchase_new) or (proc['procure_method']=='make_to_order' and not purchase_new):
                     signal = 'signal_mto_mts'
                     expected_acts = (('confirm_mto', 'buy', 'ready',), ('confirm_mts', 'cancel', 'ready', 'done'))
-                    message = _("Procurement deallocated from PO (%s)") % (purchase_orig.name,)
+                    message = _("Procurement deallocated from PO (%s) to MTS") % (purchase_orig.name,)
                 elif purchase_orig and purchase_new or (proc['procure_method']=='make_to_order' and purchase_new):
                     signal = 'signal_mto_mto'
                     expected_acts = (('confirm_mto', 'buy', 'ready',), ('buy',))
@@ -207,6 +213,11 @@ class ProcurementOrder(osv.Model):
         self._cancel_stock_assign(cr, uid, ids, context=context)
         self._cancel_po_assign(cr, uid, ids, context=context)
         # self._confirm_po_assign(cr, uid, ids, context=context) # Is done in action_po_assign
+        return True
+
+    def action_mto_to_mto_confirm(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, {'state': 'confirmed', 'procure_method': 'make_to_order', 'message': False}, context=context)
+        self._cancel_stock_assign(cr, uid, ids, context=context)
         return True
 
     def action_po_assign(self, cr, uid, ids, context=None):

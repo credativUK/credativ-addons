@@ -23,6 +23,13 @@
             <field name="kind">function</field>
             <field name="action">action_mto_to_mto()</field>
         </record>
+        <!-- MTO to MTO confirm - remove link to PO, set back to confirmed -->
+        <record id="act_mto_to_mto_confirm" model="workflow.activity">
+            <field name="wkf_id" ref="procurement.wkf_procurement"/>
+            <field name="name">mto_to_mto_confirm</field>
+            <field name="kind">function</field>
+            <field name="action">action_mto_to_mto_confirm()</field>
+        </record>
 
 
         <record id="trans_mto_to_mts_1a" model="workflow.transition">
@@ -85,6 +92,27 @@
         <record id="trans_mto_to_mto_2" model="workflow.transition">
             <field name="act_from" ref="act_mto_to_mto"/>
             <field name="act_to" ref="purchase.act_buy"/>
+            <field name="condition">True</field>
+        </record>
+
+        <record id="trans_mto_to_mto_confirm_1a" model="workflow.transition">
+            <field name="act_from" ref="procurement.act_confirm_mto"/>
+            <field name="act_to" ref="act_mto_to_mto_confirm"/>
+            <field name="signal">signal_mto_mto_confirm</field>
+        </record>
+        <record id="trans_mto_to_mto_confirm_1b" model="workflow.transition">
+            <field name="act_from" ref="purchase.act_buy"/>
+            <field name="act_to" ref="act_mto_to_mto_confirm"/>
+            <field name="signal">signal_mto_mto_confirm</field>
+        </record>
+        <record id="trans_mto_to_mto_confirm_1c" model="workflow.transition">
+            <field name="act_from" ref="procurement.act_make_done"/>
+            <field name="act_to" ref="act_mto_to_mto_confirm"/>
+            <field name="signal">signal_mto_mto_confirm</field>
+        </record>
+        <record id="trans_mto_to_mto_confirm_2" model="workflow.transition">
+            <field name="act_from" ref="act_mto_to_mto_confirm"/>
+            <field name="act_to" ref="procurement.act_confirm"/>
             <field name="condition">True</field>
         </record>
 
