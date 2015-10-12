@@ -56,8 +56,8 @@ class OrderEdit(object):
                         key = (move.product_id, move.sale_line_id.price_unit, tax, discount)
                     else:
                         tax = tuple([x.id for x in move.purchase_line_id.taxes_id])
-                        key = (move.product_id, move.purchase_line_id.price_unit, tax, discount)
                         discount = 0
+                        key = (move.product_id, move.purchase_line_id.price_unit, tax, discount)
                     done_totals[key] = done_totals.setdefault(key, 0) + move.product_qty
 
         # Get a list of lines for each product in the edit sale order

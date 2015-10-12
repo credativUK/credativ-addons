@@ -94,7 +94,7 @@ class PurchaseOrder(osv.osv, OrderEdit):
             self.message_post(cr, uid, [purchase.id], body=_('Purchase order %s cancelled due to order edit') % (purchase.name,), context=context)
         return res
 
-    def _fixup_created_picking(self, cr, uid, ids, line_moves, remain_moves, context):
+    def _fixup_created_picking(self, cr, uid, ids, line_moves, remain_moves, context=None):
         # This is a post confirm hook
         # - post-action hook: replace new stuff generated in the action with old stuff
         # identified in the pre-action hook

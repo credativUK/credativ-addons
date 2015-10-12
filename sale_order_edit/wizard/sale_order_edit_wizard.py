@@ -47,7 +47,7 @@ class SaleOrderEditWizard(osv.osv_memory):
                 'view_type': 'form',
                 'view_mode': 'form,tree',
                 'res_model': 'sale.order',
-                'target': 'inline',
+                'target': 'current',
                 'view_id': False,
                 'res_id': new_id,
                 'type': 'ir.actions.act_window',
