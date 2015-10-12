@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sale_forecast_manager,sale_forecast manager,model_sale_procurement_forecast,base.group_sale_manager,1,1,1,1
+access_sale_forecast_salesman,sale_forecast salesman,model_sale_procurement_forecast,base.group_sale_salesman,1,0,0,0
+access_sale_forecast_line_manager,sale_forecast_line manager,model_sale_procurement_forecast_line,base.group_sale_manager,1,1,1,1
+access_sale_forecast_line_salesman,sale_forecast_line salesman,model_sale_procurement_forecast_line,base.group_sale_salesman,1,0,0,0
