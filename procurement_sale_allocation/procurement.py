@@ -162,11 +162,9 @@ class ProcurementOrder(osv.Model):
                     else:
                         purchase_line_obj.unlink(cr, uid, [pol_ids[0]], context=ctx)
                     continue
-                # Adjust the PO moves
-                move_ids = move_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('purchase_line_id', '=', po_line.id), ('state', '!=', 'cancel')], context=ctx)
-                move_obj.write(cr, uid, move_ids, {'move_dest_id': False}, context=ctx)
+                # Adjust the PO moves - Find all linked to a PO line since a partial picking could split a move with the same move_dest_id into 2 parts
                 move_ids = move_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('purchase_line_id', '!=', False), ('state', '!=', 'cancel')], context=ctx)
-                assert len(move_ids) == 0, "Found extra moves linked to this procurement related to other purchase orders"
+                move_obj.write(cr, uid, move_ids, {'move_dest_id': False}, context=ctx)
                 # If there are multiple PO lines with the same product (and other merging criteria) - merge the POLs and moves togather
                 pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', False),
                                                              ('state', '!=', 'cancel'),
