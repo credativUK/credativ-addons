@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+-->
+<openerp>
+    <data>
+
+        <record id="view_order_form_so_delivery_date" model="ir.ui.view">
+            <field name="name">sale.order.form.so.delivery.date</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="arch" type="xml">
+               <field name="date_order" position="after">
+                   <field name="delivery_date_per_line" invisible="1"/>
+                   <field name="requested_delivery_date" attrs="{'invisible':[('delivery_date_per_line','=',True)]}"/>
+               </field>
+            </field>
+        </record>
+
+        <record id="view_order_form_delivery_dates" model="ir.ui.view">
+            <field name="name">sale.order.form.delivery.date</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale_stock.view_order_form_inherit"/>
+            <field name="arch" type="xml">
+                <data>
+                   <xpath expr="//page[@string='Order Lines']/field[@name='order_line']/tree[@string='Sales Order Lines']/field[@name='name']" position="after">
+                       <field name="default_delivery_date"   groups="so_line_delivery_date.group_delivery_date_per_line"/>
+                       <field name="requested_delivery_date" groups="so_line_delivery_date.group_delivery_date_per_line"/>
+                       <field name="days_until_delivery" invisible="1"/>
+                   </xpath>
+                   <xpath expr="//page[@string='Order Lines']/field[@name='order_line']/tree[@string='Sales Order Lines']" position="attributes">
+                       <attribute name="colors"> red:requested_delivery_date and (requested_delivery_date&lt;default_delivery_date) </attribute>
+                   </xpath>
+                   <label for="delay" position="replace"/>
+                   <xpath expr="//page[@string='Order Lines']/field[@name='order_line']/form[@string='Sales Order Lines']/group/group/div[field[@name='delay']]" position="replace"/>
+                   <xpath expr="//page[@string='Order Lines']/field[@name='order_line']/form[@string='Sales Order Lines']/group/group/field[@name='price_unit']" position="after">
+                       <label for="delay" help="Number of days from confirmation date of order until delivery. The requested delivery date will override this if it is set."/>
+                       <div>
+                           <field name="delay" on_change="onchange_delay(delay)" class="oe_inline" help="Number of days from confirmation date of order until delivery. The requested delivery date will override this if it is set."/> days
+                       </div>
+                        <label for="default_delivery_date"/>
+                       <div>
+                           <field name="default_delivery_date" class="oe_inline"/>
+                       </div>
+                       <label for="requested_delivery_date"/>
+                       <div>
+                           <field name="requested_delivery_date" on_change="onchange_requested_delivery_date(requested_delivery_date, default_delivery_date)" class="oe_inline"/>
+                       </div>
+                       <label for="days_until_delivery"/>
+                       <div>
+                           <field name="days_until_delivery" class="oe_inline"/> days
+                       </div>
+                   </xpath>
+                </data>
+            </field>
+        </record>
+
+        <report auto="False" id="report_sale_order_delivery_date" model="sale.order" name="sale.order.delivery.date"
+                rml="so_line_delivery_date/report/sale_order.rml" string="Quotation / Order (Delivery Dates)"
+                usage="default"/>
+    </data>
+</openerp>

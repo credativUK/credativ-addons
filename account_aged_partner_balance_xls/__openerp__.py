@@ -31,5 +31,5 @@
       'wizard/account_report_aged_partner_balance_view.xml',
       'report/account_report.xml',
   ],
-  'installable': True,
+  'installable': False,
 }

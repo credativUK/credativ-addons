@@ -31,5 +31,5 @@
     'data': [
         'wizard/procurement_cancel_multiple.xml',
         ],
-    'installable': True,
+    'installable': False,
 }

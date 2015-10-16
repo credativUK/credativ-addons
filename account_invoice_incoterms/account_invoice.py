@@ -24,9 +24,9 @@ from openerp import fields, models, api
 
 class account_invoice(models.Model):
     _inherit = 'account.invoice'
-    
+
     incoterm = fields.Many2one(comodel_name='stock.incoterms', compute='_compute_incoterm')
-    
+
     @api.one
     def _compute_incoterm(self):
         res = {}

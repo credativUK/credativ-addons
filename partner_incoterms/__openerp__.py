@@ -26,8 +26,8 @@
     'author' : 'credativ Ltd',
     'website' : 'http://credativ.co.uk',
     'depends' : [
-        'base', 
-        'purchase', 
+        'base',
+        'purchase',
         'sale_stock',
     ],
     'category' : 'Generic Modules/Purchase',
@@ -43,6 +43,6 @@ will be copied onto Purchase / Sales Order incoterms as default.
         'partner_view.xml',
     ],
     'active': False,
-    'installable': True
+    'installable': False
 }
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

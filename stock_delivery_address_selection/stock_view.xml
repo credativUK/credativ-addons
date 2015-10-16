@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="view_picking_form_delivery_address_selection" model="ir.ui.view">
+            <field name="name">stock.picking.form.delivery.address.selection</field>
+            <field name="model">stock.picking.out</field>
+            <field name="priority">32</field>
+            <field name="inherit_id" ref="stock.view_picking_form"/>
+            <field name="arch" type="xml">
+                <field name="partner_id" position="before">
+                    <field name="related_addresses" invisible="1"/>
+                    <field name="main_partner_id" string="Customer" on_change="onchange_partner_in(main_partner_id)"/>
+                    <field name="move_lines" invisible="1"/>
+                </field>
+                <field name="partner_id" position="attributes">
+                    <attribute name="string">Delivery Address</attribute>
+                    <!-- Original onchange functionality is taken over by main_partner_id
+                         (which mimics the original partner_id). -->
+                    <attribute name="on_change">onchange_delivery_address(partner_id, main_partner_id, move_lines)</attribute>
+                    <!-- To set a domain based on a many2many, use [0][2]
+                         to 'dereference' Odoo's internal representation. -->
+                    <attribute name="domain">[('id','in',related_addresses[0][2])]</attribute>
+                </field>
+            </field>
+        </record>
+
+    </data>
+</openerp>

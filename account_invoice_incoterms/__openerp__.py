@@ -40,6 +40,6 @@ Display sale and purchase incoterm on the invoice report.
         'account_invoice_view.xml',
     ],
     'active': False,
-    'installable': True
+    'installable': False
 }
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

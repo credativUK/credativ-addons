@@ -28,7 +28,7 @@
     "depends": [
         'crm'
     ],
-    'installable': True,
+    'installable': False,
     'data': [
         'view/crm_view.xml',
         'view/partner_view.xml',

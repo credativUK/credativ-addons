@@ -38,6 +38,6 @@ The zip file must include image files whose names match the corresponding produc
             'wizard/uploader_view.xml',
             ],
         'css':['static/src/css/field_binary_css.css',],
-        'installable' : True,
+        'installable' : False,
         'active' : False,
 }

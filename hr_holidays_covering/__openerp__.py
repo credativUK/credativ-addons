@@ -30,5 +30,5 @@
   'website': 'http://www.credativ.co.uk',
   'depends': ['hr_holidays'],
   'data' : ['hr_holidays_covering_view.xml'],
-  'installable': True,
+  'installable': False,
 }

@@ -38,6 +38,6 @@ Add partner payable and recivable fields on kaban view.
         'view/res_partner_view.xml',
     ],
     'active': False,
-    'installable': True
+    'installable': False
 }
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

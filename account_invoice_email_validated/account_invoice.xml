@@ -1,0 +1,24 @@
+<?xml version="1.0" ?>
+<openerp>
+    <data noupdate="0">
+        <!-- Add a server action to trigger email -->
+        <record id="action_invoice_validate_email" model="ir.actions.server">
+            <field name="name">Email validated invoices</field>
+            <field name="model_id" ref="account.model_account_invoice"/>
+            <field name="sequence">5</field>
+            <field name="condition">True</field>
+            <field name="type">ir.actions.server</field>
+            <field name="state">code</field>
+            <field name="code">
+data_pool = self.pool.get('ir.model.data')
+ids = data_pool.search(cr, uid, [('model', '=', 'email.template'), ('module', '=', 'account'), ('name', '=', 'email_template_edi_invoice')])
+pool.get('email.template').send_mail(cr, uid, data_pool.browse(cr, uid, ids)[0].res_id, context['active_id'], context=context)
+            </field>
+        </record>
+
+        <!-- Trigger server action when invoice is validated -->
+        <record id="account.act_open" model="workflow.activity">
+            <field name="action_id" ref="action_invoice_validate_email"/>
+        </record>
+    </data>
+</openerp>

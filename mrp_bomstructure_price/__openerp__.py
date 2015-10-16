@@ -31,5 +31,5 @@
     ],
     'data': ['views/report_mrpbomstructure.xml',
              ],
-    'installable': True,
+    'installable': False,
 }

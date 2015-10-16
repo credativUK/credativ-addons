@@ -30,5 +30,5 @@
   'website': 'http://www.credativ.co.uk',
   'depends': ['mrp'],
   'data' : ['mrp_bom_view.xml'],
-  'installable': True,
+  'installable': False,
 }

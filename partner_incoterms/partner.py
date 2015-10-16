@@ -24,7 +24,7 @@ from openerp import fields, models
 
 class res_partner(models.Model):
     _inherit = 'res.partner'
-    
+
     default_incoterm_id = fields.Many2one('stock.incoterms', 'Default Purchase Incoterm', help='Default Incoterm used in a Purchase Order when this partner is selected as the supplier.')
     default_sale_incoterm_id = fields.Many2one('stock.incoterms', 'Default Sale Incoterm', help='Default Incoterm used in a Sale Order when this partner is selected as the customer.')
 

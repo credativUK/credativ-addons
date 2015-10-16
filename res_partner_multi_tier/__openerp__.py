@@ -1,6 +1,6 @@
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution   
+#    OpenERP, Open Source Management Solution
 #    Copyright (C) 2015 credativ ltd (<http://www.credativ.co.uk>). All Rights Reserved
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -34,7 +34,7 @@ This module allows multiple levels in the partner hierarchy by allowing contacts
         'res_partner_view.xml'
     ],
     'auto_install': False,
-    'installable': True,
+    'installable': False,
 }
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
 

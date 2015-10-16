@@ -24,7 +24,7 @@ from openerp import fields, models, api
 
 class sale_order(models.Model):
     _inherit = 'sale.order'
-    
+
     def onchange_partner_id(self, cr, uid, ids, partner_id, context=None):
         res = super(sale_order, self).onchange_partner_id(cr, uid, ids, partner_id, context=context)
         if partner_id:

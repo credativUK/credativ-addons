@@ -24,9 +24,9 @@ from openerp import fields, models, api
 
 class purchase_order(models.Model):
     _inherit = 'purchase.order'
-    
+
     incoterm_id = fields.Many2one('stock.incoterms', 'Incoterm', states={'confirmed':[('readonly',True)], 'approved':[('readonly',True)],'done':[('readonly',True)]})
-    
+
     def onchange_partner_id(self, cr, uid, ids, partner_id, context=None):
         res = super(purchase_order, self).onchange_partner_id(cr, uid, ids, partner_id, context=context)
         if partner_id:

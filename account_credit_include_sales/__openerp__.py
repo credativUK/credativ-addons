@@ -29,5 +29,5 @@
   'website': 'http://www.credativ.co.uk',
   'depends': ['account_voucher', 'sale'],
   'data' : [],
-  'installable': True,
+  'installable': False,
 }
