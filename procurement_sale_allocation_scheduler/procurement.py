@@ -21,6 +21,9 @@
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from psycopg2 import OperationalError
+import traceback
+
 from openerp import netsvc
 from openerp import pooler
 from openerp.osv import osv
@@ -28,6 +31,9 @@ from openerp.osv import fields
 from openerp.tools.translate import _
 from openerp.tools import DEFAULT_SERVER_DATE_FORMAT, DEFAULT_SERVER_DATETIME_FORMAT
 from openerp import tools
+
+import logging
+_logger = logging.getLogger(__name__)
 
 class ProcurementOrder(osv.Model):
     _inherit = 'procurement.order'
@@ -45,7 +51,7 @@ class ProcurementOrder(osv.Model):
                 cr = pooler.get_db(use_new_cursor).cursor()
             while True:
                 report_ids = []
-                ids = procurement_obj.search(cr, uid, [('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order'), ('note', 'not like', '%_mto_to_mts_done_%')], offset=offset, limit=200, order='priority, date_planned', context=context)
+                ids = procurement_obj.search(cr, uid, [('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order'), ('note', 'not like', '%_mto_to_mts_done_%')], offset=offset, limit=50, order='priority, date_planned', context=context)
                 for proc in procurement_obj.browse(cr, uid, ids):
                     if maxdate >= proc.date_planned:
                         cr.execute('SAVEPOINT mto_to_stock')
@@ -83,7 +89,7 @@ class ProcurementOrder(osv.Model):
             exclude_prod_loc = [] # List of (product_id, location_id) for indicating no stock is available
             while True:
                 report_ids = []
-                ids = procurement_obj.search(cr, uid, [('state', 'in', ('confirmed', 'exception')), ('procure_method', '=', 'make_to_stock')], offset=offset, limit=200, order='priority, date_planned', context=context)
+                ids = procurement_obj.search(cr, uid, [('state', 'in', ('confirmed', 'exception')), ('procure_method', '=', 'make_to_stock')], offset=offset, limit=50, order='priority, date_planned', context=context)
                 for proc in procurement_obj.browse(cr, uid, ids):
                     if maxdate >= proc.date_planned:
                         # We already know there are no POs available, skip
@@ -156,7 +162,7 @@ class ProcurementOrder(osv.Model):
                 while True:
                     report_ids = []
                     ids = procurement_obj.search(cr, uid, [('product_id', '=', product_id), ('state', '=', 'running'), ('purchase_id', '!=', False),
-                                                           ('procure_method', '=', 'make_to_order'), ('date_planned', '<=', maxdate)], offset=offset, limit=200, order='priority, date_planned', context=context)
+                                                           ('procure_method', '=', 'make_to_order'), ('date_planned', '<=', maxdate)], offset=offset, limit=50, order='priority, date_planned', context=context)
                     for proc in procurement_obj.browse(cr, uid, ids):
                         max_qty = stock_prod_loc.get(proc.location_id.id)
                         if max_qty is not None and proc.product_qty >= max_qty:
@@ -188,18 +194,28 @@ class ProcurementOrder(osv.Model):
                     pass
         return True
 
+    def _get_procure_functions(self, cr, uid, ids=None, use_new_cursor=False, context=None):
+        return [
+            self._procure_confirm_mto_confirmed_to_mts, # Allocate confirmed MTO to MTS if stock available
+            super(ProcurementOrder, self)._procure_confirm, # Standard Allocate
+            self._procure_confirm_mts_exception_to_mto, # Allocate MTS to MTO if no stock
+            self._procure_confirm_mto_running_to_mts, # Allocate running MTO to MTS if stock available
+        ]
 
     def _procure_confirm(self, cr, uid, ids=None, use_new_cursor=False, context=None):
-        # Allocate confirmed MTO to MTS if stock available
-        self._procure_confirm_mto_confirmed_to_mts(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
-        # Standard Allocate
-        res = super(ProcurementOrder, self)._procure_confirm(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
-        # Allocate MTS to MTO if no stock
-        self._procure_confirm_mts_exception_to_mto(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
-        # Allocate running MTO to MTS if stock available
-        self._procure_confirm_mto_running_to_mts(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
+        functions = self._get_procure_functions(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
+        exceptions = []
+        for func in functions:
+            try:
+                func(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
+            except OperationalError, e:
+                exception = "OperationalError while %s running scheduler, continue [%s]:\n\n%s" % (e, use_new_cursor, traceback.format_exc())
+                _logger.error(exception)
+                exceptions.append(exception)
+                if not use_new_cursor:
+                    raise e
 
-        return res
+        return True
 
     def action_po_assign(self, cr, uid, ids, context=None):
         purchase_obj = self.pool.get('purchase.order')
