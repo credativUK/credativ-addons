@@ -34,6 +34,8 @@ class PurchaseOrder(osv.Model):
             states.append('cancel')
         restricted_ids = []
         for purchase in self.browse(cr, uid, ids, context=context):
+            if not purchase.order_edit_id:
+                continue
             if purchase.state in states:
                 restricted_ids.append(purchase.id)
             for line in purchase.order_line:
