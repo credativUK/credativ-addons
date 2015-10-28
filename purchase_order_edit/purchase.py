@@ -60,9 +60,10 @@ class PurchaseOrder(osv.osv, OrderEdit):
         return super(PurchaseOrder, self).copy_data(cr, uid, id_, default, context=context)
 
     def action_picking_create(self, cr, uid, ids, context=None):
-        if self.allocate_check_restrict(cr, uid, ids, context=context):
-            raise osv.except_osv(_('Error!'),
-                _('Purchase order has become restricted and it is no longer possible to edit'))
+        for order in self.browse(cr, uid, ids, context=context):
+            if order.order_edit_id and self.allocate_check_restrict(cr, uid, [order.order_edit_id.id], context=context):
+                raise osv.except_osv(_('Error!'),
+                    _('Purchase order has become restricted and it is no longer possible to edit'))
         line_moves, remain_moves = self.check_consolidation(cr, uid, ids, context)
         res = super(PurchaseOrder, self).action_picking_create(cr, uid, ids, context=context)
         self._fixup_created_picking(cr, uid, ids, line_moves, remain_moves, context)
