@@ -47,8 +47,9 @@ class WebRest(http.Controller):
         if menu_id is None or act_id is None:
             return http.local_redirect("/web")
 
-        return http.local_redirect("/web/#id=" + str(kw['id']) +
-                                   "&view_type=form&model=" + kw['model'] +
-                                   "&menu_id=" + str(menu_id) +
-                                   "&action=" + str(act_id),
-                                   query=http.request.params, keep_hash=True)
+        base_url = "/web/#id={}&view_type=form&model={}&menu_id={}&action={}"
+        redirect_url = base_url.format(kw['id'], kw['model'], menu_id, act_id)
+
+        return http.local_redirect(redirect_url,
+                                   query=http.request.params,
+                                   keep_hash=True)
