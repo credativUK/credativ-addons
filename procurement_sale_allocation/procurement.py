@@ -90,7 +90,7 @@ class ProcurementOrder(osv.Model):
                 if signal:
                     # Check either PO is able to allow allocaitons or deallocations
                     purchase_restrict_ids = purchase_obj.allocate_check_restrict(cr, uid, filter(lambda x: x, [purchase_orig and purchase_orig.state != 'cancel' and purchase_orig.id, purchase_new and purchase_new.id]), context=context)
-                    if purchase_restrict_ids:
+                    if purchase_restrict_ids and not context.get('force_po_unassign'):
                         purchase_restrict_names = [x['name'] for x in purchase_obj.read(cr, uid, purchase_restrict_ids, ['name',], context=context)]
                         raise osv.except_osv(_('Error!'),_('The following purchase orders do not allow stock to be allocated or deallocated: %s') % (purchase_restrict_names,))
                     if purchase_new:
@@ -175,6 +175,10 @@ class ProcurementOrder(osv.Model):
                                                              ('account_analytic_id', '=', po_line.account_analytic_id.id),
                                                              ('order_id', '=', po_line.order_id.id),
                                                              ], context=ctx)
+                if len(pol_ids) > 1:
+                    # Filter out PO lines which have done or cancelled moves, leave these separate
+                    pols = purchase_line_obj.browse(cr, uid, pol_ids, context=ctx)
+                    pol_ids = [pol.id for pol in pols if not pol.move_ids or all([sm.state == 'assigned' for sm in pol.move_ids])]
                 if len(pol_ids) > 1:
                     purchase_line_obj.do_merge(cr, uid, pol_ids, context=ctx)
         return True

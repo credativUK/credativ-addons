@@ -26,16 +26,38 @@ class StockMove(osv.Model):
     _inherit = 'stock.move'
 
     def action_cancel(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+        procurement_obj = self.pool.get('procurement.order')
+        wkf_service = netsvc.LocalService('workflow')
+
+        # If we are cancelling a PO move, deallocate any procurements it is meant to be fulfilling
+        # We need to get these IDs before the super as we lose the link to move_dest_id
+        unassign_proc_ids = []
+        if ids:
+            cr.execute("""SELECT proc.id
+                FROM stock_move sm_po
+                INNER JOIN procurement_order proc ON proc.move_id = sm_po.move_dest_id
+                WHERE sm_po.purchase_line_id IS NOT NULL
+                AND sm_po.id IN %s""", (tuple(ids),))
+            unassign_proc_ids = [x[0] for x in cr.fetchall()]
+
         res = super(StockMove, self).action_cancel(cr, uid, ids, context=context)
         if ids:
             # Find all procurements stuck in the purchase subflow and remove their purchase order link
-            procurement_obj = self.pool.get('procurement.order')
-            wkf_service = netsvc.LocalService('workflow')
             proc_ids = procurement_obj.search(cr, uid, [('move_id', 'in', ids), ('state', 'in', ('running', 'confirmed')), ('purchase_id', '!=', False)], context=context)
             if proc_ids:
                 procurement_obj.write(cr, uid, proc_ids, {'purchase_id': False}, context=context)
                 for proc_id in proc_ids:
                     wkf_service.trg_validate(uid, 'procurement.order', proc_id, 'button_cancel', cr)
+
+            # If we are in a PO and are allocated to a procurement, deallocate the procurement
+            if unassign_proc_ids:
+                ctx = context.copy()
+                ctx['force_po_unassign'] = True
+                for procurement in procurement_obj.browse(cr, uid, unassign_proc_ids, context=ctx):
+                    procurement.write({'purchase_id': False}, context=ctx)
+                    procurement.write({'procure_method': procurement.procure_method}, context=ctx)
         return res
 
 class StockPicking(osv.Model):
