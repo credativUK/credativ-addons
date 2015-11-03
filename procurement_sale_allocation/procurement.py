@@ -89,6 +89,7 @@ class ProcurementOrder(osv.Model):
                     message = _("Procurement reallocated from PO (%s) to PO (%s)") % (purchase_orig.name, purchase_new.name)
                 if signal:
                     # Check either PO is able to allow allocaitons or deallocations
+                    context.update({'psa_skip_moves': True})
                     purchase_restrict_ids = purchase_obj.allocate_check_restrict(cr, uid, filter(lambda x: x, [purchase_orig and purchase_orig.state != 'cancel' and purchase_orig.id, purchase_new and purchase_new.id]), context=context)
                     if purchase_restrict_ids and not context.get('force_po_unassign'):
                         purchase_restrict_names = [x['name'] for x in purchase_obj.read(cr, uid, purchase_restrict_ids, ['name',], context=context)]
@@ -122,6 +123,9 @@ class ProcurementOrder(osv.Model):
             pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', False), ('state', '!=', 'cancel'), ('order_id', '=', proc.purchase_id.id), ('product_id', '=', proc.product_id.id)], order="date_planned desc, product_qty asc", context=context)
             pol_assign_id = False
             for line in purchase_line_obj.browse(cr, uid, pol_ids, context=context):
+                if any([move.state in ('done', 'cancel') for move in line.move_ids]):
+                    # Only allow allocation to lines with no moves (draft) or available moves (in progress)
+                    continue
                 purchase_uom_qty = uom_obj._compute_qty(cr, uid, proc.product_uom.id, proc.product_qty, line.product_uom.id)
                 if line.product_qty >= purchase_uom_qty:
                     pol_assign_id = line.id

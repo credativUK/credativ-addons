@@ -39,9 +39,10 @@ class PurchaseOrder(osv.Model):
             for line in purchase.order_line:
                 if line.state in states:
                     restricted_ids.append(purchase.id)
-                for move in line.move_ids:
-                    if move.state in states:
-                        restricted_ids.append(purchase.id)
+                if not context.get('psa_skip_moves'):
+                    for move in line.move_ids:
+                        if move.state in states:
+                            restricted_ids.append(purchase.id)
         return list(set(restricted_ids))
 
 class PurchaseOrderLine(osv.Model):

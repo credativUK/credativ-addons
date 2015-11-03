@@ -111,6 +111,7 @@ class ProcurementOrder(osv.Model):
                         if not po_ids:
                             exclude_prod_loc.append((proc.product_id.id, proc.location_id.id))
                         for po_id in po_ids:
+                            context.update({'psa_skip_moves': True})
                             if purchase_obj.allocate_check_stock(cr, uid, [po_id], [proc.id], context=context) and \
                                     not purchase_obj.allocate_check_restrict(cr, uid, [po_id], context=context):
                                 if proc.state == 'exception':
