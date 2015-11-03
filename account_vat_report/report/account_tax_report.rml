@@ -139,7 +139,7 @@
       <para style="P2">Tax Statement</para>
       <para style="text_Left"></para>
       <section>
-          <para>[[ repeatIn(get_lines(data['form']['based_on'], data['form']['company_id'], 1), 'o') ]]</para>
+          <para>[[ repeatIn(get_lines(data['form']['based_on'], data['form']['company_id'], data['form']['chart_tax_id']), 'o') ]]</para>
           <blockTable colWidths="80.0, 470.0" rowHeights="10">
               <tr>
                   <td>
