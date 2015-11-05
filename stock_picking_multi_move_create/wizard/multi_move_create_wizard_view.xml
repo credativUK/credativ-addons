@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_stock_picking_multi_move_create_wizard" model="ir.ui.view">
+            <field name="name">Create multiple moves</field>
+            <field name="model">stock.picking.multi.move.create.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Split in Serial Numbers" version="7.0">
+                    <label string="Any existing moves on this picking will be updated with the following locations"/>
+                    <group>
+                        <field name="location_id"/>
+                        <field name="location_dest_id"/>
+                    </group>
+                    <group colspan="2">
+                        <field name="product_ids" nolabel="1" colspan="1">
+                            <tree string="Products" editable="bottom">
+                                <field name="default_code"/>
+                                <field name="name"/>
+                            </tree>
+                        </field>
+                        <field name="draft_moves" nolabel="1" colspan="1">
+                            <tree string="Moves to be created" editable="bottom">
+                                <field name="product_id"/>
+                                <field name="product_qty"/>
+                            </tree>
+                        </field>
+                    </group>
+                    <footer>
+                        <button name="action_update" type="object" string="Update"/>
+                        <button name="action_confirm" type="object" string="Confirm"/>
+                        <button string="Cancel" class="oe_link" special="cancel" />
+                    </footer>
+                </form>
+            </field>
+        </record> 
+        
+        <record id="action_view_stock_picking_multi_move_create_wizard" model="ir.actions.act_window">
+            <field name="name">Create multiple moves</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">stock.picking.multi.move.create.wizard</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+    </data>
+</openerp>
