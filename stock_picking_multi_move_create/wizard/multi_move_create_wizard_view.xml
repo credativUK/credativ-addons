@@ -14,8 +14,8 @@
                     <group colspan="2">
                         <field name="product_ids" nolabel="1" colspan="1">
                             <tree string="Products" editable="bottom">
-                                <field name="default_code"/>
-                                <field name="name"/>
+                                <field name="default_code" readonly="1"/>
+                                <field name="name" readonly="1"/>
                             </tree>
                         </field>
                         <field name="draft_moves" nolabel="1" colspan="1">
@@ -27,7 +27,7 @@
                     </group>
                     <footer>
                         <button name="action_update" type="object" string="Update"/>
-                        <button name="action_confirm" type="object" string="Confirm"/>
+                        <button name="action_confirm" type="object" string="Confirm" class="oe_highlight"/>
                         <button string="Cancel" class="oe_link" special="cancel" />
                     </footer>
                 </form>

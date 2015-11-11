@@ -11,5 +11,25 @@
                 </xpath>
             </field>
         </record>
+        <record id="view_picking_out_multi_move_create_form" model="ir.ui.view">
+            <field name="name">stock.picking.out.multi.move.create.form</field>
+            <field name="model">stock.picking.out</field>
+            <field name="inherit_id" ref="stock.view_picking_out_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//button[@name='action_process']" position="after">
+                    <button name="%(action_view_stock_picking_multi_move_create_wizard)d" states="draft" string="Batch Add Lines" type="action" class="oe_highlight"/>
+                </xpath>
+            </field>
+        </record>
+        <record id="view_picking_in_multi_move_create_form" model="ir.ui.view">
+            <field name="name">stock.picking.in.multi.move.create.form</field>
+            <field name="model">stock.picking.in</field>
+            <field name="inherit_id" ref="stock.view_picking_in_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//button[@name='action_process']" position="after">
+                    <button name="%(action_view_stock_picking_multi_move_create_wizard)d" states="draft" string="Batch Add Lines" type="action" class="oe_highlight"/>
+                </xpath>
+            </field>
+        </record>
     </data>
 </openerp>

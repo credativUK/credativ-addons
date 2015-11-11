@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution   
+#    OpenERP, Open Source Management Solution
 #    Copyright (C) 2015 credativ Ltd (<http://credativ.co.uk>).
 #    All Rights Reserved
 #
@@ -21,7 +21,6 @@
 ##############################################################################
 
 from osv import osv, fields
-from tools.translate import _
 
 import openerp.addons.decimal_precision as dp
 
@@ -38,6 +37,8 @@ class MultiMoveCreateWizard(osv.osv_memory):
 
     def default_get(self, cr, uid, fields, context):
         picking_id = context and context.get('active_id', False) or False
+        if not picking_id:
+            raise osv.except_osv(_('Error!'),_("No picking ID found.  This action must be triggered with an active picking."))
         res = super(MultiMoveCreateWizard, self).default_get(cr, uid, fields, context=context)
         picking = self.pool.get('stock.picking').browse(cr, uid, picking_id, context=context)
         if picking and picking.move_lines:
@@ -87,11 +88,10 @@ class MultiMoveCreateWizard(osv.osv_memory):
         move_obj = self.pool.get('stock.move')
         prod_obj = self.pool.get('product.product')
         pick_obj = self.pool.get('stock.picking')
-        for wizard_data in self.read(cr, uid, ids, ['picking_id', 'draft_moves', 'location_id', 'location_dest_id'], context=context): # also read 
+        for wizard_data in self.read(cr, uid, ids, ['picking_id', 'draft_moves', 'location_id', 'location_dest_id'], context=context):
             picking_id = wizard_data['picking_id'][0]
             location_id = wizard_data['location_id'][0]
             location_dest_id = wizard_data['location_dest_id'][0]
-            picking = pick_obj.browse(cr, uid, picking_id, context=context)
             existing_move_ids = pick_obj.read(cr, uid, picking_id, ['move_lines'], context=context)['move_lines']
             # Update existing moves to have the same locations
             move_obj.write(cr, uid, existing_move_ids, {'location_id': location_id, 'location_dest_id': location_dest_id}, context=context)

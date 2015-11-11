@@ -36,7 +36,6 @@
        "stock_view.xml",
         ],
     "data" : [
-        
         ],
     "auto_install": False,
 }
