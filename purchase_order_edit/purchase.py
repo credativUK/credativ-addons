@@ -25,6 +25,11 @@ from tools.translate import _
 import netsvc
 from openerp.addons.base_order_edit.order_edit import OrderEdit
 
+import logging
+_logger = logging.getLogger(__name__)
+from inspect import currentframe, getframeinfo
+from datetime import datetime
+
 class PurchaseOrder(osv.osv, OrderEdit):
     _inherit = 'purchase.order'
 
@@ -33,15 +38,21 @@ class PurchaseOrder(osv.osv, OrderEdit):
     }
 
     def action_run_order_edit(self, cr, uid, ids, context=None):
+        _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
         if context is None:
             context = {}
         if not ids:
             return {}
         oe_obj = self.pool.get('purchase.order.edit_wizard')
 
+        _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
         context.update({'active_id': ids[0], 'active_ids': [ids[0]]})
+        _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
         oe_id = oe_obj.create(cr, uid, {}, context=context)
-        return oe_obj.edit_order(cr, uid, [oe_id], context=context)
+        _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
+        res = oe_obj.edit_order(cr, uid, [oe_id], context=context)
+        _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
+        return res
 
     def allocate_check_restrict(self, cr, uid, ids, context=None):
         restricted_ids = super(PurchaseOrder, self).allocate_check_restrict(cr, uid, ids, context=context)
@@ -60,16 +71,24 @@ class PurchaseOrder(osv.osv, OrderEdit):
         return super(PurchaseOrder, self).copy_data(cr, uid, id_, default, context=context)
 
     def action_picking_create(self, cr, uid, ids, context=None):
+        _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
         for order in self.browse(cr, uid, ids, context=context):
+            _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
             if order.order_edit_id and self.allocate_check_restrict(cr, uid, [order.order_edit_id.id], context=context):
                 raise osv.except_osv(_('Error!'),
                     _('Purchase order has become restricted and it is no longer possible to edit'))
+        _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
         line_moves, remain_moves = self.check_consolidation(cr, uid, ids, context)
+        _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
         res = super(PurchaseOrder, self).action_picking_create(cr, uid, ids, context=context)
+        _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
         self._fixup_created_picking(cr, uid, ids, line_moves, remain_moves, context)
+        _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
         for order in self.browse(cr, uid, ids, context=context):
             if order.order_edit_id:
+                _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
                 self._edit_cancel(cr, uid, [order.order_edit_id.id], 'Edit Cancel:%s' % order.order_edit_id.name, accept_done=True, cancel_assigned=True, context=context)
+        _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
         return res
 
     def _cancel_check_order(self, purchase, cancel_assigned, accept_done, context=None):

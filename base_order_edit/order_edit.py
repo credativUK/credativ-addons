@@ -28,6 +28,11 @@ import re
 import itertools
 from collections import defaultdict
 
+import logging
+_logger = logging.getLogger(__name__)
+from inspect import currentframe, getframeinfo
+from datetime import datetime
+
 class OrderEdit(object):
 
     def _consolidate_edit_lines(self, cr, uid, original, order, context=None):
@@ -164,6 +169,7 @@ class OrderEdit(object):
         return line_moves, remain_moves
 
     def copy_for_edit(self, cr, uid, id_, context=None):
+        _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
         if context is None:
             context = {}
         context = context.copy()
@@ -180,20 +186,28 @@ class OrderEdit(object):
             'purchase.order': ('confirmed','approved'),
             }
 
+        _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
         if order.state in order_states[self._name]:
+            _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
             new_id = self.copy(cr, uid, id_, default={'order_edit_id': order.id}, context=context)
+            _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
             original_order_name = re.sub('-edit[0-9]+$', '', order.name)
             similar_name_ids = self.search(cr, uid, [('name', 'like', original_order_name + '%')], context=context)
+            _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
             similar_names = set(similar_order['name'] for similar_order in self.read(cr, uid, similar_name_ids, ['name'], context=context))
+            _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
             for i in itertools.count(1):
                 new_name = '%s-edit%d' % (original_order_name, i)
                 if new_name not in similar_names:
                     break
+            _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
             vals = {'name': new_name, 'order_edit_id': order.id}
 
             self.write(cr, uid, new_id, vals, context=context)
 
+            _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
             self.message_post(cr, uid, [id_], body=_('Order has been copied to be edited in order %s') % (new_name,), context=context)
+            _logger.info('TIME:%s, LINE:%s', datetime.now(), getframeinfo(currentframe()).lineno)
             return new_id
         else:
             raise osv.except_osv(_('Error!'), _('Only able to edit orders which are in progress.'))
