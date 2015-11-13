@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_stock_picking_in_distribute_wizard" model="ir.ui.view">
+            <field name="name">Distribute incoming moves</field>
+            <field name="model">stock.picking.in.distribute_wizard</field>
+            <field name="arch" type="xml">
+                <form string="Distribute incoming moves" version="7.0">
+                    <label string="Following location is where all products will be received"/>
+                    <label string="Any moves with this location as the new destination will not be moved"/>
+                    <label string="Any moves with a different location will be received here and then ready to be received in the destination location"/>
+                    <label string="Select existing move to receive. Keep move field blank to receive extra item in picking"/>
+                    <group>
+                        <field name="location_id" readonly="1"/>
+                        <field name="supplier_location_id" readonly="1"/>
+                        <field name="date" invisible="1"/>
+                        <field name="picking_id" invisible="1"/>
+                    </group>
+                    <group colspan="2">
+                        <field name="products_remaining" nolabel="1" colspan="1">
+                            <tree string="Products Remaining" create="false" delete="false" edit="false" >
+                                <field name="product_id"/>
+                                <field name="product_qty"/>
+                            </tree>
+                        </field>
+                        <field name="distribution_moves" nolabel="1" colspan="1" context="{'location_dest_id': location_id}">
+                            <tree string="Moves to be created" editable="bottom">
+                                <field name="move_id" domain="[('picking_id','=',parent.picking_id)]" on_change="onchange_moves(move_id,context)"/>
+                                <field name="product_id"/>
+                                <field name="product_qty"/>
+                                <field name="location_dest_id" domain="[('usage','=','internal')]"/>
+                            </tree>
+                        </field>
+                    </group>
+                    <footer>
+                        <button name="action_confirm" type="object" string="Confirm" class="oe_highlight"/>
+                        <button name="action_recompute" type="object" string="Recompute" class="oe_highlight" help="Recompute remaning product quantity"/>
+                        <button string="Cancel" class="oe_link" special="cancel" />
+                    </footer>
+                </form>
+            </field>
+        </record> 
+        <record id="action_view_stock_picking_in_distribute_wizard" model="ir.actions.act_window">
+            <field name="name">Distribute incoming moves</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">stock.picking.in.distribute_wizard</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+    </data>
+</openerp>
