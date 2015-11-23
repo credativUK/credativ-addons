@@ -40,7 +40,7 @@ class StockPickingInDistributeWizard(osv.osv_memory):
         'distribution_moves': fields.one2many('stock.picking.in.distribute_wizard.lines', 'wizard_id', 'Distribution Moves'),
         'location_id': fields.many2one('stock.location', 'Source Location', required=True),
         'supplier_location_id': fields.many2one('stock.location', 'Supplier Location', required=True),
-        'date': fields.datetime('Date', required=True),
+        'date': fields.datetime('Date'),
         }
 
     def default_get(self, cr, uid, fields, context):
@@ -80,7 +80,8 @@ class StockPickingInDistributeWizard(osv.osv_memory):
         partial_data = {
             'delivery_date': partial.date
         }
-        internal_moves = []
+
+        internal_moves = defaultdict(list)
         for wizard_line in partial.distribution_moves:
             line_uom = wizard_line.product_id.uom_id
             move_id = wizard_line.move_id.id
@@ -107,7 +108,6 @@ class StockPickingInDistributeWizard(osv.osv_memory):
                 if float_compare(qty_in_initial_uom, without_rounding_qty, precision_rounding=initial_uom.rounding) != 0:
                     raise osv.except_osv(_('Warning!'), _('The rounding of the initial uom does not allow you to ship "%s %s", as it would let a quantity of "%s %s" to ship and only rounding of "%s %s" is accepted by the uom.') % (wizard_line.product_qty, line_uom.name, wizard_line.move_id.product_qty - without_rounding_qty, initial_uom.name, initial_uom.rounding, initial_uom.name))
             else:
-                new_moves = []
                 move_id = stock_move.create(cr, uid, {'name': self.pool.get('ir.sequence').get(cr, uid, seq_obj_name),
                                                       'product_id': wizard_line.product_id.id,
                                                       'product_qty': wizard_line.product_qty,
@@ -116,15 +116,9 @@ class StockPickingInDistributeWizard(osv.osv_memory):
                                                       'location_dest_id': partial.location_id.id,
                                                       'picking_id': partial.picking_id.id
                                                       }, context=context)
-                new_moves.append(move_id)
-                partial_data['move%s' % (move_id)] = {
-                    'product_id': wizard_line.product_id.id,
-                    'product_qty': wizard_line.product_qty,
-                    'product_uom': wizard_line.product_id.uom_id.id,
-                }
 
             if wizard_line.move_id and wizard_line.location_dest_id.id != partial.location_id.id:
-                internal_moves.append((0, 0, {'name': self.pool.get('ir.sequence').get(cr, uid, seq_obj_name),
+                internal_moves[wizard_line.location_dest_id.id].append((0, 0, {'name': self.pool.get('ir.sequence').get(cr, uid, seq_obj_name),
                                               'product_id': wizard_line.product_id.id,
                                               'product_qty': wizard_line.product_qty,
                                               'product_uom': wizard_line.product_id.uom_id.id,
@@ -132,38 +126,47 @@ class StockPickingInDistributeWizard(osv.osv_memory):
                                               'location_dest_id': wizard_line.location_dest_id.id,
                                               }))
 
-            partial_data['move%s' % (move_id)] = {
-                'product_id': wizard_line.product_id.id,
-                'product_qty': wizard_line.product_qty,
-                'product_uom': wizard_line.product_id.uom_id.id,
-            }
+            move_data = partial_data.get('move%s' % (move_id))
+            if move_data:
+                move_data['product_qty'] += wizard_line.product_qty
 
-            if (picking_type == 'in') and (wizard_line.product_id.cost_method == 'average'):
-                partial_data['move%s' % (wizard_line.move_id.id)].update(product_price=wizard_line.cost,
-                                                                         product_currency=wizard_line.currency.id)
+            else:
+                partial_data['move%s' % (move_id)] = {
+                    'product_id': wizard_line.product_id.id,
+                    'product_qty': wizard_line.product_qty,
+                    'product_uom': wizard_line.product_id.uom_id.id,
+                }
+
+            # TODO implement average product cost method
+            #if (picking_type == 'in') and (wizard_line.product_id.cost_method == 'average'):
+                #partial_data['move%s' % (wizard_line.move_id.id)].update(product_price=wizard_line.cost,
+                                                                         #product_currency=wizard_line.currency.id)
 
         # Create internal moves to move stock to different location
         if internal_moves:
-            new_picking = stock_picking.copy(cr, uid, partial.picking_id.id,
-                                             {
-                                                 'move_lines': internal_moves,
-                                                 'state': 'draft',
-                                                 'type': 'internal',
-                                                 })
-            wf_service.trg_validate(uid, 'stock.picking', new_picking, 'button_confirm', cr)
-            stock_picking.action_move(cr, uid, [new_picking], context=context)
+            for move_id, move_lines in internal_moves.iteritems():
+                new_picking = stock_picking.copy(cr, uid, partial.picking_id.id,
+                                                    {
+                                                    'move_lines': move_lines,
+                                                    'state': 'draft',
+                                                    'type': 'internal',
+                                                    })
+                wf_service.trg_validate(uid, 'stock.picking', new_picking, 'button_confirm', cr)
+                stock_picking.action_move(cr, uid, [new_picking], context=context)
+                wf_service.trg_validate(uid, 'stock.picking', new_picking, 'button_done', cr)
 
         stock_picking.do_partial(cr, uid, [partial.picking_id.id],
                                  partial_data, context=context)
         return {'type': 'ir.actions.act_window_close'}
 
     def action_recompute(self, cr, uid, ids, context=None):
-        picking = self.pool.get('stock.picking')
 
-        try:
-            picking_id = context['picking_id']
-        except KeyError:
-            pass
+        # Race condition. Javascript somethings gives errors without this code.
+        # FIXME: Find a way to fix this javascript issue
+        import time;time.sleep(0.1)
+
+        picking = self.pool.get('stock.picking')
+        picking_id = context.get('picking_id', [])
 
         prod_remain_list = []
         products_remaining = defaultdict(int)
@@ -174,11 +177,14 @@ class StockPickingInDistributeWizard(osv.osv_memory):
             for move in wizard.distribution_moves:
                 products_remaining[move.product_id] -= move.product_qty
 
-        cr.execute('DELETE FROM stock_picking_in_distribute_wizard_products_remaining WHERE wizard_id IN %s', (tuple(ids),))
+        prod_rem = self.pool.get('stock.picking.in.distribute_wizard.products_remaining')
+        rem_ids = prod_rem.search(cr, uid, [('wizard_id','in',ids)])
+        prod_rem.unlink(cr, uid, rem_ids, context=context)
         for product_id, product_qty in products_remaining.iteritems():
-            prod_remain_list.append((0, 0, {'product_id': product_id.id,
-                                            'product_qty': product_qty}))
-        self.write(cr, uid, ids, {'products_remaining': prod_remain_list})
+            prod_rem.create(cr, uid, {'product_id': product_id.id,
+                                      'product_qty': product_qty,
+                                      'wizard_id': ids[0]})
+
         return {
             'type': 'ir.actions.act_window',
             'view_mode': 'form',
@@ -186,6 +192,7 @@ class StockPickingInDistributeWizard(osv.osv_memory):
             'res_id': ids[0],
             'res_model': 'stock.picking.in.distribute_wizard',
             'target': 'new',
+            'context': context,
         }
 
 
@@ -210,8 +217,8 @@ class MultiMoveCreateWizardLines(osv.osv_memory):
                                             'Destination Location',
                                             required=True),
         'move_id': fields.many2one('stock.move',
-                                   'Move',
-                                   require=True)
+                                   'Move'),
+
         }
 
     _defaults = {
