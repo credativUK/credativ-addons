@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="queue_task_form_view" model="ir.ui.view">
+            <field name="name">queue.task.form.view</field>
+            <field name="model">queue.task</field>
+            <field name="arch" type="xml">
+                <form string="Run a task">
+                    <field name="name"/>
+                    <field name="queue_job_id"/>
+                    <field name="model"/>
+                    <field name="res_id"/>
+                    <field name="function_name"/>
+                    <field name="func_args"/>
+                    <field name="user_id"/>
+                    <field name="duplicate"/>
+                    <button type="object" name="run_task" string="Run Now"/>
+                    <button type="object" name="queue_task" string="Run In Background"/>
+                </form>
+            </field>
+        </record>
+
+    </data>
+</openerp>
