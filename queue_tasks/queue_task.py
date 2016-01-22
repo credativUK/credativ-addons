@@ -136,7 +136,7 @@ class queue_task(orm.Model):
             if not func_call:
                 raise orm.except_orm('Incorrect Function', 'Function %s for model %s is not configured to defer' % (task.function_name, task.model,))
 
-            func_call(cr, task_uid, *args, **kwargs)
+            func_call(model, cr, task_uid, *args, **kwargs)
 
         return True
 
