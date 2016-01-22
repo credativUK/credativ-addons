@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="purchase_order_form_defer" model="ir.ui.view">
+            <field name="name">purchase.order.form.defer</field>
+            <field name="model">purchase.order</field>
+            <field name="inherit_id" ref="purchase.purchase_order_form" />
+            <field name="arch" type="xml">
+                <!--Cancel Draft-->
+                <xpath expr="//button[@name='purchase_cancel']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+                <xpath expr="//button[@name='purchase_cancel']" position="after">
+                    <button name="purchase_cancel_defer" states="draft,confirmed,sent" type="object" string="Cancel Order"/>
+                </xpath>
+                <!--Confirm Draft-->
+                <xpath expr="//button[@name='purchase_confirm' and @states='draft']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+                <xpath expr="//button[@name='purchase_confirm' and @states='draft']" position="after">
+                    <button name="purchase_confirm_defer" states="draft" type="object" string="Confirm Order"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
