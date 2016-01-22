@@ -35,7 +35,7 @@ run in the background as a connector queue job.
             ],
         'update_xml' : [
             'queue_task_view.xml',
-            #'security/security.csv',
+            'security/ir.model.access.csv',
             ],
         'installable' : True,
         'active' : False,

@@ -6,17 +6,21 @@
             <field name="name">queue.task.form.view</field>
             <field name="model">queue.task</field>
             <field name="arch" type="xml">
-                <form string="Run a task">
-                    <field name="name"/>
-                    <field name="queue_job_id"/>
-                    <field name="model"/>
-                    <field name="res_id"/>
-                    <field name="function_name"/>
-                    <field name="func_args"/>
-                    <field name="user_id"/>
-                    <field name="duplicate"/>
-                    <button type="object" name="run_task" string="Run Now"/>
-                    <button type="object" name="queue_task" string="Run In Background"/>
+                <form string="Run a task" version="7.0">
+                    <separator string="Run a task"/>
+                    <h1><field name="name" label="0"/></h1>
+                    <field name="duplicate" invisible="1"/>
+                    <label string="This job can take a long time to run, would you like to run it now in the foreground or queue it to run in the background?" attrs="{'invisible': [('queue_job_id', '!=', False)]}"/>
+                    <separator/>
+                    <label string="This job is already queued to run, would you like to run it again?" attrs="{'invisible': ['|', ('duplicate', '=', False), ('queue_job_id', '!=', False)]}"  class="oe_highlight"/>
+                    <label string="This job has been queued to run in the background. You will be notified by email once it has completed." attrs="{'invisible': [('queue_job_id', '=', False)]}"/>
+                    <separator/>
+                    <field name="queue_job_id" attrs="{'invisible': [('queue_job_id', '=', False)]}"/>
+                    <footer>
+                        <button type="object" name="run_task" string="Run Now" attrs="{'invisible': [('queue_job_id', '!=', False)]}"/>
+                        <button type="object" name="queue_task" string="Run In Background" attrs="{'invisible': [('queue_job_id', '!=', False)]}"/>
+                        <button string="Close" special="cancel" class="oe_highlight" />
+                    </footer>
                 </form>
             </field>
         </record>
