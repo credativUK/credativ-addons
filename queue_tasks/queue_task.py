@@ -66,11 +66,12 @@ def defer(name):
 def _run_task_proxy(session, model_name, record_id):
     queue_task_obj = session.pool.get('queue.task')
     job = queue_task_obj.browse(session.cr, session.uid, record_id)
+    job_id, job_name = job.id, job.name
     try:
         res = queue_task_obj.run_task(session.cr, session.uid, [record_id])
-        queue_task_obj.log_message(session.cr, session.uid, [job.id], "Job %s has completed" % (job.name))
+        queue_task_obj.log_message(session.cr, session.uid, [job_id], "Job %s has completed" % (job_name))
     except Exception, e:
-        queue_task_obj.log_message(session.cr, session.uid, [job.id], "Job %s has failed with an error:\n\n%s" % (job.name, e))
+        queue_task_obj.log_message(session.cr, session.uid, [job_id], "Job %s has failed with an error:\n\n%s" % (job_name, e))
         raise e
     return res
 
