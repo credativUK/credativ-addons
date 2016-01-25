@@ -115,7 +115,7 @@ class queue_task(orm.Model):
 
     def run_task(self, cr, uid, ids, context=None):
         for task in self.browse(cr, uid, ids, context=context):
-            if uid !=  SUPERUSER_ID or task.user_id.id != uid: # Check we are the superuser or the current user to prevent privilege escalation
+            if uid != SUPERUSER_ID and task.user_id.id != uid: # Check we are the superuser or the current user to prevent privilege escalation
                 raise orm.except_orm('Incorrect User', 'A queue task should run as either the same user or the super user')
             task_uid = task.user_id.id
 
@@ -150,7 +150,7 @@ class queue_task(orm.Model):
             if not job_ids:
                 raise orm.except_orm('Could not queue job', 'Job could not be queued in the background')
 
-            self.write(cr, uid, [job.id], {'queue_job_id': job_ids[0]}, context=context)
+            self.write(cr, SUPERUSER_ID, [job.id], {'queue_job_id': job_ids[0]}, context=context)
             self.log_message(cr, uid, [job.id], "Job %s has been queued to run in the background" % (job.name))
             res = {
                     'name': 'Job queued',
