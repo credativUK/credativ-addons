@@ -29,10 +29,13 @@ class purchase_order(orm.Model):
 
     @defer("Cancel Purchase Order")
     def purchase_cancel_defer(self, cr, uid, ids, context=None):
-        wf_service = netsvc.LocalService("workflow")
-        for id in ids:
-            wf_service.trg_validate(uid, 'purchase.order', id, 'purchase_cancel', cr)
-        return True
+        if getattr(self, 'purchase_cancel'):
+            return self.purchase_cancel(cr, uid, ids, context=context)
+        else:
+            wf_service = netsvc.LocalService("workflow")
+            for id in ids:
+                wf_service.trg_validate(uid, 'purchase.order', id, 'purchase_cancel', cr)
+            return True
 
     @defer("Confirm Purchase Order")
     def purchase_confirm_defer(self, cr, uid, ids, context=None):
