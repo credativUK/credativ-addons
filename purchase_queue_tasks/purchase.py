@@ -43,3 +43,7 @@ class purchase_order(orm.Model):
         for id in ids:
             wf_service.trg_validate(uid, 'purchase.order', id, 'purchase_confirm', cr)
         return True
+
+    @defer("Cancel Purchase Order")
+    def action_cancel_defer(self, cr, uid, ids, context=None):
+        return self.action_cancel(cr, uid, ids, context=context)

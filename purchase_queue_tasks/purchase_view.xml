@@ -21,6 +21,13 @@
                 <xpath expr="//button[@name='purchase_confirm' and @states='draft']" position="after">
                     <button name="purchase_confirm_defer" states="draft" type="object" string="Confirm Order"/>
                 </xpath>
+                <!-- Cancel -->
+                <xpath expr="//button[@name='action_cancel']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+                <xpath expr="//button[@name='action_cancel']" position="after">
+                    <button name="action_cancel_defer" states="approved,except_picking,except_invoice" string="Cancel Order" type="object" />
+                </xpath>
             </field>
         </record>
 
