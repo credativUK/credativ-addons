@@ -29,7 +29,7 @@ class purchase_order(orm.Model):
 
     @defer("Cancel Purchase Order")
     def purchase_cancel_defer(self, cr, uid, ids, context=None):
-        if getattr(self, 'purchase_cancel'):
+        if getattr(self, 'purchase_cancel', None):
             return self.purchase_cancel(cr, uid, ids, context=context)
         else:
             wf_service = netsvc.LocalService("workflow")
