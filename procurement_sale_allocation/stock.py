@@ -55,9 +55,8 @@ class StockMove(osv.Model):
             if unassign_proc_ids:
                 ctx = context.copy()
                 ctx['force_po_unassign'] = True
-                for procurement in procurement_obj.browse(cr, uid, unassign_proc_ids, context=ctx):
-                    procurement.write({'purchase_id': False}, context=ctx)
-                    procurement.write({'procure_method': procurement.procure_method}, context=ctx)
+                procurement_obj.write(cr, uid, unassign_proc_ids, {'purchase_id': False}, context=ctx)
+                procurement_obj.write(cr, uid, unassign_proc_ids, {'procure_method': 'make_to_order'}, context=ctx)
         return res
 
 class StockPicking(osv.Model):
