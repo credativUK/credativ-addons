@@ -106,6 +106,7 @@ class PurchaseOrderLine(osv.Model):
                 # merge the line with an existing line
                 o_line['product_qty'] += order_line.product_qty * order_line.product_uom.factor / o_line['uom_factor']
                 o_line['orig_line_ids'].append(order_line.id)
+                o_line['count'] += 1
             else:
                 # append a new "standalone" line
                 for field in ('product_qty', 'product_uom'):
@@ -116,8 +117,11 @@ class PurchaseOrderLine(osv.Model):
                 o_line['uom_factor'] = order_line.product_uom and order_line.product_uom.factor or 1.0
                 o_line['orig_line_ids'] = [order_line.id,]
                 o_line['state'] = order_line.state
+                o_line['count'] = 1
 
         for order_line in order_infos.values():
+            if order_line['count'] == 1:
+                continue
             del order_line['uom_factor']
             if len(order_line['orig_line_ids']) > 1:
                 # Cancel old moves
