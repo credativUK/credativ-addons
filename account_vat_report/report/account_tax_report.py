@@ -330,8 +330,8 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
                 + 'ON aml.account_id = act.id ' \
                 + 'LEFT JOIN res_partner part ' \
                 + 'ON inv.partner_id = part.id ' \
-                + 'WHERE (aml.credit > 0 OR aml.debit > 0) ' \
-                + 'AND aml.state != \'draft\' ' \
+                + 'WHERE ' \
+                + 'aml.state != \'draft\' ' \
                 + 'AND aml.period_id IN %s ' % period_lst
 
             if company_id:
@@ -369,7 +369,7 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
                     'act_code'  : res[3],
                     'account'   : res[4],
                     'reference' : res[5] and res[5][:10].capitalize(), #Fix distorted text
-                    'partner'   : partner[:23],
+                    'partner'   : partner and partner[:23] or '',
             }
             ret.append(res_dict)
             tax_code_total += float(res[2])
