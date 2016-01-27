@@ -72,7 +72,7 @@ def _run_task_proxy(session, model_name, record_id):
         queue_task_obj.log_message(session.cr, session.uid, [job_id], "Job %s has completed" % (job_name))
     except Exception, e:
         queue_task_obj.log_message(session.cr, session.uid, [job_id], "Job %s has failed with an error:\n\n%s" % (job_name, e))
-        raise e
+        raise
     return res
 
 class queue_task(orm.Model):
