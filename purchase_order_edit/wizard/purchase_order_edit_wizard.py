@@ -37,10 +37,16 @@ class PurchaseOrderEditWizard(osv.osv_memory):
         return res
 
     def edit_order(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+        ctx = context.copy()
+        ctx['no_store_function'] = True # Prevent tax recalculation while duplicating the PO lines
         purchase_obj = self.pool.get('purchase.order')
 
         for data in self.browse(cr, uid, ids, context=context):
-            new_id = purchase_obj.copy_for_edit(cr, uid, data.purchase_order_id.id, context=context)
+            new_id = purchase_obj.copy_for_edit(cr, uid, data.purchase_order_id.id, context=ctx)
+            new_po = purchase_obj.browse(cr, uid, [new_id], context=context)[0] # Use the standard context to recalc the stored fields
+            new_po._store_set_values(['amount_untaxed', 'amount_total', 'minimum_planned_date', 'amount_tax', 'minimum_planned_date'])
 
         return {
                 'name': 'Edit Order',
