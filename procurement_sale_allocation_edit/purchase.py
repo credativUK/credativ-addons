@@ -48,7 +48,7 @@ class PurchaseOrder(osv.Model):
             proc_to_po[purchase] = proc_ids
 
             # Remove PO line for all procurements so they all revert back to MTS, or confirmed MTO
-            procurement_obj.write(cr, uid, proc_ids, {'purchase_id': False})
+            procurement_obj.write(cr, uid, proc_ids, {'purchase_id': False}, context=context)
             purchase.write({'skip_pol_remove': False})
 
         # 3. Finish fixing the pickings
