@@ -17,12 +17,12 @@
             </field>
         </record>
 
-        <record id="view_picking_out_form_defer" model="ir.ui.view">
+        <!--Deferring Delivery Orders is never needed-->
+        <!--<record id="view_picking_out_form_defer" model="ir.ui.view">
             <field name="name">stock.picking.out.form.defer</field>
             <field name="model">stock.picking.out</field>
             <field name="inherit_id" ref="stock.view_picking_out_form" />
             <field name="arch" type="xml">
-                <!--Cancel Picking-->
                 <xpath expr="//button[@name='button_cancel']" position="attributes">
                     <attribute name="invisible">1</attribute>
                 </xpath>
@@ -30,7 +30,7 @@
                     <button name="button_cancel_defer" states="assigned,confirmed,draft" type="object" string="Cancel Transfer" groups="base.group_user"/>
                 </xpath>
             </field>
-        </record>
+        </record>-->
 
         <record id="view_picking_in_form_defer" model="ir.ui.view">
             <field name="name">stock.picking.in.form.defer</field>
