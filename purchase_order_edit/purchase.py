@@ -25,6 +25,10 @@ from tools.translate import _
 import netsvc
 from openerp.addons.base_order_edit.order_edit import OrderEdit
 
+import cProfile, pstats, StringIO
+import logging
+_logger = logging.getLogger(__name__)
+
 class PurchaseOrder(osv.osv, OrderEdit):
     _inherit = 'purchase.order'
 
@@ -35,13 +39,32 @@ class PurchaseOrder(osv.osv, OrderEdit):
     def action_run_order_edit(self, cr, uid, ids, context=None):
         if context is None:
             context = {}
+        ctx = context.copy()
+        # FIXME: Hack to prevent PO or POL translations from being copied, of which there are none
+        # This appears to be a core bug in OpenERP that is spends about 80% of the time
+        # preparing fields for translation even though none of them are translatable!
+        ctx.setdefault('__copy_translations_seen', {})
+        ctx['__copy_translations_seen'].setdefault('purchase.order', [])
+        ctx['__copy_translations_seen']['purchase.order'].extend(ids)
+
         if not ids:
             return {}
         oe_obj = self.pool.get('purchase.order.edit_wizard')
 
-        context.update({'active_id': ids[0], 'active_ids': [ids[0]]})
-        oe_id = oe_obj.create(cr, uid, {}, context=context)
-        return oe_obj.edit_order(cr, uid, [oe_id], context=context)
+        pr = cProfile.Profile()
+        pr.enable()
+
+        ctx.update({'active_id': ids[0], 'active_ids': [ids[0]]})
+        oe_id = oe_obj.create(cr, uid, {}, context=ctx)
+        res = oe_obj.edit_order(cr, uid, [oe_id], context=ctx)
+
+        pr.disable()
+        s = StringIO.StringIO()
+        ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
+        ps.print_stats()
+        _logger.warning('PO Edit IDs %s:\n%s' % (ids, s.getvalue()))
+
+        return res
 
     def allocate_check_restrict(self, cr, uid, ids, context=None):
         restricted_ids = super(PurchaseOrder, self).allocate_check_restrict(cr, uid, ids, context=context)
@@ -60,6 +83,10 @@ class PurchaseOrder(osv.osv, OrderEdit):
         return super(PurchaseOrder, self).copy_data(cr, uid, id_, default, context=context)
 
     def action_picking_create(self, cr, uid, ids, context=None):
+
+        pr = cProfile.Profile()
+        pr.enable()
+
         for order in self.browse(cr, uid, ids, context=context):
             if order.order_edit_id and self.allocate_check_restrict(cr, uid, [order.order_edit_id.id], context=context):
                 raise osv.except_osv(_('Error!'),
@@ -70,6 +97,13 @@ class PurchaseOrder(osv.osv, OrderEdit):
         for order in self.browse(cr, uid, ids, context=context):
             if order.order_edit_id:
                 self._edit_cancel(cr, uid, [order.order_edit_id.id], 'Edit Cancel:%s' % order.order_edit_id.name, accept_done=True, cancel_assigned=True, context=context)
+
+        pr.disable()
+        s = StringIO.StringIO()
+        ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
+        ps.print_stats()
+        _logger.warning('PO Confirm IDs %s:\n%s' % (ids, s.getvalue()))
+
         return res
 
     def _cancel_check_order(self, purchase, cancel_assigned, accept_done, context=None):

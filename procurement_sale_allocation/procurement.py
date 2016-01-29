@@ -58,62 +58,141 @@ class ProcurementOrder(osv.Model):
         if ids and 'purchase_id' in values:
             procs = self.read(cr, uid, ids, ['purchase_id', 'name', 'procure_method', 'move_id', 'product_id', 'state'], context=context) # This must be a read since we need the 'before' data
         res = super(ProcurementOrder, self).write(cr, uid, ids, values, context=context)
-        for proc in procs:
-            if proc['state'] in ['draft', 'confirmed', 'exception']:
-                continue
-            if (proc['purchase_id'] and proc['purchase_id'][0] or False) != values['purchase_id']:
-                signal, message = None, None
-                purchase_orig = proc['purchase_id'] and purchase_obj.browse(cr, uid, [proc['purchase_id'][0]], context=context)[0] or None
-                purchase_new = values['purchase_id'] and purchase_obj.browse(cr, uid, [values['purchase_id']], context=context)[0] or None
-                pol_ids = []
-                if proc['move_id']:
-                    pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', proc['move_id'][0]), ('state', '!=', 'cancel'), ('order_id.state', '!=', 'cancel'), ('product_id', '=', proc['product_id'][0])], context=context)
-                if not purchase_orig and pol_ids:
-                    # This is an MTO order being created, take no action
+
+        if ids and 'purchase_id' in values:
+            signals = {}
+            purchase_orig_ids, purchase_new_ids = set(), set()
+
+            cr.execute("""SELECT proc.id
+                FROM procurement_order proc
+                INNER JOIN stock_move sm
+                ON proc.move_id = sm.id
+                INNER JOIN purchase_order_line pol
+                ON pol.move_dest_id = sm.id
+                AND pol.state != 'cancel'
+                AND pol.product_id = proc.product_id
+                INNER JOIN purchase_order po
+                ON po.id = pol.order_id
+                AND po.state != 'cancel'
+                WHERE proc.id IN %s""", (tuple(ids),))
+            proc_ids_with_pols = [x[0] for x in cr.fetchall()]
+
+            for proc in procs:
+                if proc['state'] in ['draft', 'confirmed', 'exception']:
+                    continue
+                if (proc['purchase_id'] and proc['purchase_id'][0] or False) != values['purchase_id']:
                     signal = None
-                elif purchase_orig and not purchase_new and proc['procure_method']=='make_to_order' and context.get('psa_proc_removed'):
-                    signal = 'signal_mto_mto_confirm'
-                    expected_acts = (('confirm_mto', 'buy', 'ready',), ('confirm',))
-                    message = _("Procurement deallocated from PO (%s) to MTO") % (purchase_orig.name,)
-                elif not purchase_orig and purchase_new:
-                    signal = 'signal_mts_mto'
-                    expected_acts = (('confirm_mts', 'make_to_stock', 'ready',), ('buy',))
-                    message = _("Procurement allocated from MTS to PO (%s)") % (purchase_new.name,)
-                elif (purchase_orig and not purchase_new) or (proc['procure_method']=='make_to_order' and not purchase_new):
-                    signal = 'signal_mto_mts'
-                    expected_acts = (('confirm_mto', 'buy', 'ready',), ('confirm_mts', 'cancel', 'ready', 'done'))
-                    message = _("Procurement deallocated from PO (%s) to MTS") % (purchase_orig.name,)
-                elif purchase_orig and purchase_new or (proc['procure_method']=='make_to_order' and purchase_new):
-                    signal = 'signal_mto_mto'
-                    expected_acts = (('confirm_mto', 'buy', 'ready',), ('buy',))
-                    message = _("Procurement reallocated from PO (%s) to PO (%s)") % (purchase_orig.name, purchase_new.name)
-                if signal:
-                    # Check either PO is able to allow allocaitons or deallocations
-                    context.update({'psa_skip_moves': True})
-                    purchase_restrict_ids = purchase_obj.allocate_check_restrict(cr, uid, filter(lambda x: x, [purchase_orig and purchase_orig.state != 'cancel' and purchase_orig.id, purchase_new and purchase_new.id]), context=context)
-                    if purchase_restrict_ids and not context.get('force_po_unassign'):
-                        purchase_restrict_names = [x['name'] for x in purchase_obj.read(cr, uid, purchase_restrict_ids, ['name',], context=context)]
-                        raise osv.except_osv(_('Error!'),_('The following purchase orders do not allow stock to be allocated or deallocated: %s') % (purchase_restrict_names,))
-                    if purchase_new:
-                        # Check PO has enough stock to allow this procurement to be assigned
-                        if not (purchase_obj.allocate_check_stock(cr, uid, [purchase_new.id,], [proc['id'],], context=context)):
-                            raise osv.except_osv(_('Error!'),_("The purchase order %s does not have enough space to allocate procurement %s.") % (purchase_new.name, proc['name']))
-                    if purchase_orig:
-                        # It is not possible to break out of a subflow unless we get a signal from it, we force it to be complete here
-                        cr.execute('select id, wkf_id from wkf_instance where res_id=%s and res_type=%s', (proc['id'], 'procurement.order'))
-                        for inst_id, wkf_id in cr.fetchall():
-                            cr.execute('update wkf_workitem set state=%s where inst_id=%s', ('complete', inst_id))
+                    purchase_orig = proc['purchase_id'] or False
+                    purchase_new = values['purchase_id'] or False
+                    pol_ids = []
+                    if not purchase_orig and proc['id'] in proc_ids_with_pols: # This is an MTO order being created, take no action
+                        signal = None
+                    elif purchase_orig and not purchase_new and proc['procure_method']=='make_to_order' and context.get('psa_proc_removed'):
+                        signal = 'signal_mto_mto_confirm'
+                    elif not purchase_orig and purchase_new:
+                        signal = 'signal_mts_mto'
+                    elif (purchase_orig and not purchase_new) or (proc['procure_method']=='make_to_order' and not purchase_new):
+                        signal = 'signal_mto_mts'
+                    elif purchase_orig and purchase_new or (proc['procure_method']=='make_to_order' and purchase_new):
+                        signal = 'signal_mto_mto'
+                    if signal:
+                        signals.setdefault(signal, []).append((proc['id'], purchase_orig[0], purchase_new))
+                        if purchase_orig:
+                            purchase_orig_ids.add(purchase_orig[0])
+                        if purchase_new:
+                            purchase_new_ids.add(purchase_new)
 
-                    # Sanity checking to make sure we are in the correct activity before and after processing the workflow
-                    self._verify_wkf_change(cr, uid, proc['id'], expected_acts[0], purchase_orig and purchase_orig.id or False, context=context)
-                    wkf_service.trg_validate(uid, 'procurement.order', proc['id'], signal, cr)
-                    self._verify_wkf_change(cr, uid, proc['id'], expected_acts[1], purchase_new and purchase_new.id or False, context=context)
+            context.update({'psa_skip_moves': True})
 
-                    self.message_post(cr, uid, [proc['id']], body=message, context=context)
+            # Check PO restrictions
+            purchase_ids = []
+            purchase_ids = purchase_obj.search(cr, uid, ['|', ('id', 'in', list(purchase_new_ids)), '&', ('id', 'in', list(purchase_orig_ids)), ('state', '!=', 'cancel')], context=context)
+            if not context.get('force_po_unassign') and (purchase_orig_ids or purchase_new_ids):
+                purchase_restrict_ids = purchase_obj.allocate_check_restrict(cr, uid, purchase_ids, context=context)
+                if purchase_restrict_ids:
+                    purchase_restrict_names = [x['name'] for x in purchase_obj.read(cr, uid, purchase_restrict_ids, ['name',], context=context)]
+                    raise osv.except_osv(_('Error!'),_('The following purchase orders do not allow stock to be allocated or deallocated: %s') % (purchase_restrict_names,))
+
+            # Read PO names
+            purchase_name_dict = {}
+            if purchase_ids:
+                purchase_names = purchase_obj.read(cr, uid, purchase_ids, ['name'], context=context)
+                for purchase_name in purchase_names:
+                    purchase_name_dict[purchase_name['id']] = purchase_name['name']
+
+            if signals.get('signal_mto_mto_confirm'):
+                signal = 'signal_mto_mto_confirm'
+                expected_acts = (('confirm_mto', 'buy', 'ready',), ('confirm',))
+                proc_ids = [x[0] for x in signals.get('signal_mto_mto_confirm')]
+                self.write(cr, uid, proc_ids, {'state': 'confirmed', 'procure_method': 'make_to_order', 'message': False}, context=context)
+                self._cancel_stock_assign(cr, uid, proc_ids, context=context)
+                self._cancel_po_assign(cr, uid, proc_ids, context=context)
+                for proc_data in signals.get('signal_mto_mto_confirm'):
+                    # It is not possible to break out of a subflow unless we get a signal from it, we force it to be complete here
+                    cr.execute('select id, wkf_id from wkf_instance where res_id=%s and res_type=%s', (proc_data[0], 'procurement.order'))
+                    for inst_id, wkf_id in cr.fetchall():
+                        cr.execute('update wkf_workitem set state=%s where inst_id=%s', ('complete', inst_id))
+
+                    self._verify_wkf_change(cr, uid, proc_data[0], expected_acts[0], proc_data[1], context=context)
+                    wkf_service.trg_validate(uid, 'procurement.order', proc_data[0], signal, cr)
+                    self._verify_wkf_change(cr, uid, proc_data[0], expected_acts[1], proc_data[2] or False, context=context)
+                    message = _("Procurement deallocated from PO (%s) to MTO") % (purchase_name_dict[proc_data[1]],)
+                    self.message_post(cr, uid, [proc_data[0]], body=message, context=context)
+
+            if signals.get('signal_mts_mto'):
+                signal = 'signal_mts_mto'
+                expected_acts = (('confirm_mts', 'make_to_stock', 'ready',), ('buy',))
+                proc_ids = [x[0] for x in signals.get('signal_mts_mto')]
+                self.write(cr, uid, proc_ids, {'state': 'running', 'procure_method': 'make_to_order', 'message': False}, context=context)
+                self._cancel_stock_assign(cr, uid, proc_ids, context=context)
+                for proc_data in signals.get('signal_mts_mto'):
+                    self._verify_wkf_change(cr, uid, proc_data[0], expected_acts[0], proc_data[1], context=context)
+                    wkf_service.trg_validate(uid, 'procurement.order', proc_data[0], signal, cr)
+                    self._verify_wkf_change(cr, uid, proc_data[0], expected_acts[1], proc_data[2] or False, context=context)
+                    message = _("Procurement allocated from MTS to PO (%s)") % (purchase_name_dict[proc_data[2]],)
+                    self.message_post(cr, uid, [proc_data[0]], body=message, context=context)
+
+            if signals.get('signal_mto_mts'):
+                signal = 'signal_mto_mts'
+                expected_acts = (('confirm_mto', 'buy', 'ready',), ('confirm_mts', 'cancel', 'ready', 'done'))
+                proc_ids = [x[0] for x in signals.get('signal_mto_mts')]
+                self.write(cr, uid, proc_ids, {'state': 'exception', 'procure_method': 'make_to_stock', 'message': False}, context=context)
+                self._cancel_stock_assign(cr, uid, proc_ids, context=context)
+                self._cancel_po_assign(cr, uid, proc_ids, context=context)
+                for proc_data in signals.get('signal_mto_mts'):
+                    # It is not possible to break out of a subflow unless we get a signal from it, we force it to be complete here
+                    cr.execute('select id, wkf_id from wkf_instance where res_id=%s and res_type=%s', (proc_data[0], 'procurement.order'))
+                    for inst_id, wkf_id in cr.fetchall():
+                        cr.execute('update wkf_workitem set state=%s where inst_id=%s', ('complete', inst_id))
+
+                    self._verify_wkf_change(cr, uid, proc_data[0], expected_acts[0], proc_data[1], context=context)
+                    wkf_service.trg_validate(uid, 'procurement.order', proc_data[0], signal, cr)
+                    self._verify_wkf_change(cr, uid, proc_data[0], expected_acts[1], proc_data[2] or False, context=context)
+                    message = _("Procurement deallocated from PO (%s) to MTS") % (purchase_name_dict[proc_data[1]],)
+                    self.message_post(cr, uid, [proc_data[0]], body=message, context=context)
+
+            if signals.get('signal_mto_mto'):
+                signal = 'signal_mto_mto'
+                expected_acts = (('confirm_mto', 'buy', 'ready',), ('buy',))
+                proc_ids = [x[0] for x in signals.get('signal_mto_mto')]
+                self.write(cr, uid, proc_ids, {'state': 'running', 'procure_method': 'make_to_order', 'message': False}, context=context)
+                self._cancel_stock_assign(cr, uid, proc_ids, context=context)
+                self._cancel_po_assign(cr, uid, proc_ids, context=context)
+                for proc_data in signals.get('signal_mto_mto'):
+                    # It is not possible to break out of a subflow unless we get a signal from it, we force it to be complete here
+                    cr.execute('select id, wkf_id from wkf_instance where res_id=%s and res_type=%s', (proc_data[0], 'procurement.order'))
+                    for inst_id, wkf_id in cr.fetchall():
+                        cr.execute('update wkf_workitem set state=%s where inst_id=%s', ('complete', inst_id))
+
+                    self._verify_wkf_change(cr, uid, proc_data[0], expected_acts[0], proc_data[1], context=context)
+                    wkf_service.trg_validate(uid, 'procurement.order', proc_data[0], signal, cr)
+                    self._verify_wkf_change(cr, uid, proc_data[0], expected_acts[1], proc_data[2] or False, context=context)
+                    message = _("Procurement reallocated from PO (%s) to PO (%s)") % (purchase_name_dict[proc_data[1]], purchase_name_dict[proc_data[2]])
+                    self.message_post(cr, uid, [proc_data[0]], body=message, context=context)
 
         return res
 
-    def _confirm_po_assign(self, cr, uid, ids, context=None):
+    def _confirm_po_assign(self, cr, uid, ids, context=None): # TODO: Improvements????
         move_obj = self.pool.get('stock.move')
         purchase_line_obj = self.pool.get('purchase.order.line')
         purchase_obj = self.pool.get('purchase.order')
@@ -149,84 +228,60 @@ class ProcurementOrder(osv.Model):
         move_obj = self.pool.get('stock.move')
         purchase_obj = self.pool.get('purchase.order')
         purchase_line_obj = self.pool.get('purchase.order.line')
-        for proc in self.browse(cr, uid, ids, context=ctx):
-            # Find all PO lines with my stock move ID as the move_dest_id
-            if not proc.move_id:
-                continue
-            pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('order_id.state', '!=', 'cancel')], context=ctx)
-            assert len(pol_ids) in (0, 1), "Found multiple purchase order lines for this procurement"
-            if pol_ids:
-                # Remove the move_dest_id from this PO line and the PO lines moves
-                purchase_line_obj.write(cr, uid, [pol_ids[0]], {'move_dest_id': False}, context=ctx)
-                po_line = purchase_line_obj.browse(cr, uid, pol_ids[0], context=ctx)
-                # If the PO is still in draft and we cancel the procurement we can safely discard the PO line completly
-                if po_line.order_id.state == 'draft' and not getattr(po_line.order_id, 'skip_pol_remove', False):
-                    if len(po_line.order_id.order_line) == 1:
-                        purchase_obj.unlink(cr, uid, [po_line.order_id.id], context=ctx)
-                    else:
-                        purchase_line_obj.unlink(cr, uid, [pol_ids[0]], context=ctx)
-                    continue
-                # Adjust the PO moves - Find all linked to a PO line since a partial picking could split a move with the same move_dest_id into 2 parts
-                move_ids = move_obj.search(cr, uid, [('move_dest_id', '=', proc.move_id.id), ('purchase_line_id', '!=', False), ('state', '!=', 'cancel')], context=ctx)
-                move_obj.write(cr, uid, move_ids, {'move_dest_id': False}, context=ctx)
-                # If there are multiple PO lines with the same product (and other merging criteria) - merge the POLs and moves togather
-                pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', False),
-                                                             ('state', '!=', 'cancel'),
-                                                             ('name', '=', po_line.name),
-                                                             ('date_planned', '=', po_line.date_planned),
-                                                             ('price_unit', '=', po_line.price_unit),
-                                                             ('product_id', '=', po_line.product_id.id),
-                                                             ('account_analytic_id', '=', po_line.account_analytic_id.id),
-                                                             ('order_id', '=', po_line.order_id.id),
-                                                             ], context=ctx)
-                if len(pol_ids) > 1:
-                    # Filter out PO lines which have done or cancelled moves, leave these separate
-                    pols = purchase_line_obj.browse(cr, uid, pol_ids, context=ctx)
-                    pol_ids = [pol.id for pol in pols if not pol.move_ids or all([sm.state == 'assigned' for sm in pol.move_ids])]
-                if len(pol_ids) > 1:
-                    purchase_line_obj.do_merge(cr, uid, pol_ids, context=ctx)
+
+        to_unassign = []
+        move_obj = self.pool.get('stock.move')
+        for proc_data in self.read(cr, uid, ids, ['move_id']):
+            if proc_data['move_id']:
+                to_unassign.append(proc_data['move_id'][0])
+
+        pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', 'in', to_unassign), ('order_id.state', '!=', 'cancel')], context=ctx)
+        skip_condition = ('skip_pol_remove' in purchase_obj._columns) and [('order_id.skip_pol_remove', '=', False)] or []
+        draft_pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', 'in', to_unassign), ('order_id.state', '=', 'draft')] + skip_condition, context=ctx)
+
+        if pol_ids:
+            # Remove the move_dest_id from this PO line and the PO lines moves
+            draft_purchase_line_data = purchase_line_obj.read(cr, uid, draft_pol_ids, ['order_id'], context=ctx)
+            purchase_line_data = purchase_line_obj.read(cr, uid, pol_ids, ['order_id'], context=ctx)
+            purchase_line_obj.write(cr, uid, pol_ids, {'move_dest_id': False}, context=ctx)
+            # If the PO is still in draft and we cancel the procurement we can safely discard the PO line completly
+            purchase_line_obj.unlink(cr, uid, draft_pol_ids, context=ctx)
+            # Adjust the PO moves - Find all linked to a PO line since a partial picking could split a move with the same move_dest_id into 2 parts
+            move_ids = move_obj.search(cr, uid, [('move_dest_id', 'in', to_unassign), ('purchase_line_id', '!=', False), ('state', '!=', 'cancel')], context=ctx)
+            move_obj.write(cr, uid, move_ids, {'move_dest_id': False}, context=ctx)
+
+            # Delete any POs which have no order lines and are draft
+            draft_po_ids = list(set([x['order_id'][0] for x in draft_purchase_line_data]))
+            for draft_po in purchase_obj.read(cr, uid, draft_po_ids, ['order_line'], context=ctx):
+                if not len(draft_po['order_line']):
+                    purchase_obj.unlink(cr, uid, [draft_po['id']], context=ctx)
+
+            # Attempt to merge all lines for POs
+            po_ids = list(set([x['order_id'][0] for x in purchase_line_data]))
+            po_ids = purchase_obj.search(cr, uid, [('id', 'in', po_ids)], context=ctx) # Re-search as some may have just been deleted
+            for po in purchase_obj.browse(cr, uid, po_ids, context=ctx):
+                merge_pol_ids = [pol.id for pol in po.order_line if not pol.move_dest_id and (not pol.move_ids or all([sm.state == 'assigned' for sm in pol.move_ids]))]
+                if len(merge_pol_ids) > 1:
+                    purchase_line_obj.do_merge(cr, uid, merge_pol_ids, context=ctx)
+
         return True
 
     def _cancel_stock_assign(self, cr, uid, ids, context=None):
         to_unassign = []
-        for proc in self.browse(cr, uid, ids):
-            if proc.move_id and proc.move_id.state == 'assigned':
-                to_unassign.append(proc.move_id.id)
+        move_obj = self.pool.get('stock.move')
+        for proc_data in self.read(cr, uid, ids, ['move_id']):
+            if proc_data['move_id']:
+                to_unassign.append(proc_data['move_id'][0])
+        to_unassign = move_obj.search(cr, uid, [('id', 'in', to_unassign), ('state', '=', 'assigned')])
         if to_unassign:
-            self.pool.get('stock.move').cancel_assign(cr, uid, to_unassign, context=context)
+            move_obj.cancel_assign(cr, uid, to_unassign, context=context)
         return True
 
     def action_cancel(self, cr, uid, ids):
         self._cancel_po_assign(cr, uid, ids)
         return super(ProcurementOrder, self).action_cancel(cr, uid, ids)
 
-    def action_mto_to_mts(self, cr, uid, ids, context=None):
-        if context is None:
-            context = {}
-        self.write(cr, uid, ids, {'state': 'exception', 'procure_method': 'make_to_stock', 'message': False}, context=context)
-        self._cancel_stock_assign(cr, uid, ids, context=context)
-        self._cancel_po_assign(cr, uid, ids, context=context)
-        return True
-
-    def action_mts_to_mto(self, cr, uid, ids, context=None):
-        self.write(cr, uid, ids, {'state': 'running', 'procure_method': 'make_to_order', 'message': False}, context=context)
-        self._cancel_stock_assign(cr, uid, ids, context=context)
-        # self._confirm_po_assign(cr, uid, ids, context=context) # Is done in action_po_assign
-        return True
-
-    def action_mto_to_mto(self, cr, uid, ids, context=None):
-        self.write(cr, uid, ids, {'state': 'running', 'procure_method': 'make_to_order', 'message': False}, context=context)
-        self._cancel_stock_assign(cr, uid, ids, context=context)
-        self._cancel_po_assign(cr, uid, ids, context=context)
-        # self._confirm_po_assign(cr, uid, ids, context=context) # Is done in action_po_assign
-        return True
-
-    def action_mto_to_mto_confirm(self, cr, uid, ids, context=None):
-        self.write(cr, uid, ids, {'state': 'confirmed', 'procure_method': 'make_to_order', 'message': False}, context=context)
-        self._cancel_stock_assign(cr, uid, ids, context=context)
-        return True
-
-    def action_po_assign(self, cr, uid, ids, context=None):
+    def action_po_assign(self, cr, uid, ids, context=None): # TODO: Improvements (break out of workflow?)
         purchase_line_obj = self.pool.get('purchase.order.line')
         other_ids = []
         res = []

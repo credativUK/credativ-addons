@@ -6,29 +6,29 @@
         <record id="act_mto_to_mts" model="workflow.activity">
             <field name="wkf_id" ref="procurement.wkf_procurement"/>
             <field name="name">mto_to_mts</field>
-            <field name="kind">function</field>
-            <field name="action">action_mto_to_mts()</field>
+            <field name="kind">dummy</field>
+            <field name="action"></field>
         </record>
         <!-- MTS to MTO - add link to PO (after transition) -->
         <record id="act_mts_to_mto" model="workflow.activity">
             <field name="wkf_id" ref="procurement.wkf_procurement"/>
             <field name="name">mts_to_mto</field>
-            <field name="kind">function</field>
-            <field name="action">action_mts_to_mto()</field>
+            <field name="kind">dummy</field>
+            <field name="action"></field>
         </record>
         <!-- MTO to MTO - remove link to PO, add new link to PO (after transition) -->
         <record id="act_mto_to_mto" model="workflow.activity">
             <field name="wkf_id" ref="procurement.wkf_procurement"/>
             <field name="name">mto_to_mto</field>
-            <field name="kind">function</field>
-            <field name="action">action_mto_to_mto()</field>
+            <field name="kind">dummy</field>
+            <field name="action"></field>
         </record>
         <!-- MTO to MTO confirm - remove link to PO, set back to confirmed -->
         <record id="act_mto_to_mto_confirm" model="workflow.activity">
             <field name="wkf_id" ref="procurement.wkf_procurement"/>
             <field name="name">mto_to_mto_confirm</field>
-            <field name="kind">function</field>
-            <field name="action">action_mto_to_mto_confirm()</field>
+            <field name="kind">dummy</field>
+            <field name="action"></field>
         </record>
 
 

@@ -54,10 +54,9 @@ class StockMove(osv.Model):
             # If we are in a PO and are allocated to a procurement, deallocate the procurement
             if unassign_proc_ids:
                 ctx = context.copy()
-                ctx['force_po_unassign'] = True
-                for procurement in procurement_obj.browse(cr, uid, unassign_proc_ids, context=ctx):
-                    procurement.write({'purchase_id': False}, context=ctx)
-                    procurement.write({'procure_method': procurement.procure_method}, context=ctx)
+                ctx.update({'psa_proc_removed': True, 'force_po_unassign': True})
+                procurement_obj.write(cr, uid, unassign_proc_ids, {'purchase_id': False}, context=ctx)
+
         return res
 
 class StockPicking(osv.Model):
