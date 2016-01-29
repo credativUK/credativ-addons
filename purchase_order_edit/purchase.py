@@ -39,6 +39,14 @@ class PurchaseOrder(osv.osv, OrderEdit):
     def action_run_order_edit(self, cr, uid, ids, context=None):
         if context is None:
             context = {}
+        ctx = context.copy()
+        # FIXME: Hack to prevent PO or POL translations from being copied, of which there are none
+        # This appears to be a core bug in OpenERP that is spends about 80% of the time
+        # preparing fields for translation even though none of them are translatable!
+        ctx.setdefault('__copy_translations_seen', {})
+        ctx['__copy_translations_seen'].setdefault('purchase.order', [])
+        ctx['__copy_translations_seen']['purchase.order'].extend(ids)
+
         if not ids:
             return {}
         oe_obj = self.pool.get('purchase.order.edit_wizard')
@@ -46,9 +54,9 @@ class PurchaseOrder(osv.osv, OrderEdit):
         pr = cProfile.Profile()
         pr.enable()
 
-        context.update({'active_id': ids[0], 'active_ids': [ids[0]]})
-        oe_id = oe_obj.create(cr, uid, {}, context=context)
-        res = oe_obj.edit_order(cr, uid, [oe_id], context=context)
+        ctx.update({'active_id': ids[0], 'active_ids': [ids[0]]})
+        oe_id = oe_obj.create(cr, uid, {}, context=ctx)
+        res = oe_obj.edit_order(cr, uid, [oe_id], context=ctx)
 
         pr.disable()
         s = StringIO.StringIO()
