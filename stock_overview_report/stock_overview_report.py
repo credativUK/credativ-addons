@@ -23,14 +23,14 @@ from openerp.osv import fields, osv
 from openerp.tools.translate import _
 import openerp.addons.decimal_precision as dp
 from openerp.tools.misc import DEFAULT_SERVER_DATETIME_FORMAT
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 class StockOverviewReport(osv.osv_memory):
     _name = 'stock.overview.report'
     _description = "Stock Overview Report"
     _rec_name = 'date'
-    _transient_max_hours = 12.0
+    _transient_max_hours = 48.0
     _transient_max_count = 0.0
 
     _columns = {
@@ -57,6 +57,46 @@ class StockOverviewReport(osv.osv_memory):
             })
         return res
 
+    def _view(self, cr, uid, id, context=None):
+        user = self.pool.get("res.users").read(cr, uid, uid, ['partner_id'], context=context)
+        user_timezone = self.pool.get("res.partner").read(cr, uid, user['partner_id'][0],['tz'], context=context)['tz']
+        if not user_timezone:
+            user_timezone = 'UTC'
+
+        wizard = self.browse(cr, uid, id, context=context)
+
+        cr.execute('select id from ir_ui_view where model=%s and type=%s', ('stock.overview.report.line', 'tree'))
+        view_ids = cr.fetchone()
+        view_id = view_ids and view_ids[0] or False
+
+        cr.execute('select id from ir_ui_view where model=%s and type=%s', ('stock.overview.report.line', 'search'))
+        search_ids = cr.fetchone()
+        search_id = search_ids and search_ids[0] or False
+
+        return {
+            'domain': "[('wizard_id','=',%d)]" % (id,),
+            'name': _('Stock Overview Report for %s - %s') % (wizard.date, user_timezone),
+            'view_type': 'form',
+            'view_mode': 'tree',
+            'res_model': 'stock.overview.report.line',
+            'views': [(view_id, 'tree'),],
+            'search_view_id': search_id,
+            'type': 'ir.actions.act_window',
+            'nodestroy': True,
+            'limit': 100000,
+            'context': '{"search_default_has_stock": True, "product_display_format": "code", "search_default_group_company_id": True, "search_default_group_category_id": True, "search_default_group_warehouse_id": True}',
+        }
+
+    def view_or_populate_lines(self, cr, uid, ids, context=None):
+        for wizard in self.browse(cr, uid, ids, context=context):
+            if not wizard.date:
+                date_start = datetime.now().strftime('%Y-%m-%d')
+                date_end = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+                wizard_ids = self.search(cr, uid, [('date', '>=', date_start), ('date', '<=', date_end)], order='date desc', context=context)
+                if wizard_ids:
+                    return self._view(cr, uid, wizard_ids[0], context=context)
+            return self.populate_lines(cr, uid, [wizard.id], context=context)
+
     def populate_lines(self, cr, uid, ids, context=None):
         if context is None:
             context = {}
@@ -80,6 +120,7 @@ class StockOverviewReport(osv.osv_memory):
                 date = datetime.strptime(wizard.date, DEFAULT_SERVER_DATETIME_FORMAT)
                 local_date = pytz.utc.localize(date, is_dst=None).astimezone(pytz.timezone(user_timezone))
             else:
+                self.write(cr, uid, [wizard.id], {'date': datetime.now().strftime(DEFAULT_SERVER_DATETIME_FORMAT)}, context=context)
                 local_date = datetime.now(pytz.timezone(user_timezone))
             sql_mode = self.pool.get('ir.config_parameter').get_param(cr, uid, 'stock.overview.report.sql_mode')
             if sql_mode == 'True':
@@ -100,27 +141,7 @@ class StockOverviewReport(osv.osv_memory):
                                 })
                             line_obj.create(cr, uid, data, context=context)
 
-            cr.execute('select id from ir_ui_view where model=%s and type=%s', ('stock.overview.report.line', 'tree'))
-            view_ids = cr.fetchone()
-            view_id = view_ids and view_ids[0] or False
-
-            cr.execute('select id from ir_ui_view where model=%s and type=%s', ('stock.overview.report.line', 'search'))
-            search_ids = cr.fetchone()
-            search_id = search_ids and search_ids[0] or False
-
-            res = {
-                'domain': "[('wizard_id','=',%d)]" % (wizard.id,),
-                'name': _('Stock Overview Report for %s - %s') % (local_date.strftime(DEFAULT_SERVER_DATETIME_FORMAT), user_timezone),
-                'view_type': 'form',
-                'view_mode': 'tree',
-                'res_model': 'stock.overview.report.line',
-                'views': [(view_id, 'tree'),],
-                'search_view_id': search_id,
-                'type': 'ir.actions.act_window',
-                'nodestroy': True,
-                'limit': 100000,
-                'context': '{"search_default_has_stock": True, "product_display_format": "code", "search_default_group_company_id": True, "search_default_group_category_id": True, "search_default_group_warehouse_id": True}',
-            }
+            res = self._view(cr, uid, wizard.id, context=context)
         return res
 
     def _get_sql(self, cr, uid, ids, wizard, context=None):
@@ -230,11 +251,15 @@ class StockOverviewReport(osv.osv_memory):
 
         return field_names, insert_query, insert_params, with_query, with_params, select_query, select_params, from_query
 
+    def autopopulate(self, cr, uid, context=None):
+        wizard_id = self.create(cr, uid, {}, context=context)
+        self.populate_lines(cr, uid, [wizard_id], context=context)
+
 class StockOverviewReportLine(osv.osv_memory):
     _name = 'stock.overview.report.line'
     _description = "Stock Overview Report Line"
     _rec_name = 'product_id'
-    _transient_max_hours = 12.0
+    _transient_max_hours = 48.0
     _transient_max_count = 0.0
 
     _columns = {

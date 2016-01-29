@@ -13,8 +13,8 @@
                     <label string="Generate a report for the following date, or leave blank for now, which will show the stock levels at that date."/>
                     <field name="date"/>
                     <footer>
-                        <button name="populate_lines" string="Generate Report" type="object" class="oe_highlight"/>
-                        or
+                        <button name="view_or_populate_lines" string="View Existing Report" help="Will view an existing report for today, or generate a new one to view" type="object" class="oe_highlight" attrs="{'invisible': [('date', '!=', False)]}"/>
+                        <button name="populate_lines" string="(Re-)Generate Report" help="Will always regenerate a report to view" type="object" class="oe_highlight"/>
                         <button string="Cancel" class="oe_link" special="cancel"/>
                     </footer>
                 </form>
