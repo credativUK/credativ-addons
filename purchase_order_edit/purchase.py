@@ -54,7 +54,7 @@ class PurchaseOrder(osv.osv, OrderEdit):
         s = StringIO.StringIO()
         ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
         ps.print_stats()
-        _logger.warning('PO Edit IDs %d:\n%s' % (ids, s.getvalue()))
+        _logger.warning('PO Edit IDs %s:\n%s' % (ids, s.getvalue()))
 
         return res
 
@@ -94,7 +94,7 @@ class PurchaseOrder(osv.osv, OrderEdit):
         s = StringIO.StringIO()
         ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
         ps.print_stats()
-        _logger.warning('PO Confirm IDs %d:\n%s' % (ids, s.getvalue()))
+        _logger.warning('PO Confirm IDs %s:\n%s' % (ids, s.getvalue()))
 
         return res
 
