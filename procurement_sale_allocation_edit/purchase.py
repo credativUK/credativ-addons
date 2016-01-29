@@ -35,20 +35,25 @@ class PurchaseOrder(osv.Model):
     }
 
     def _fixup_created_picking(self, cr, uid, ids, line_moves, remain_moves, context):
+        if context is None:
+            context = {}
         move_obj = self.pool.get('stock.move')
         line_obj = self.pool.get('purchase.order.line')
         procurement_obj = self.pool.get('procurement.order')
         wf_service = netsvc.LocalService("workflow")
 
         proc_to_po = {}
+        ctx = context.copy()
+        ctx['skip_merge_pol'] = True
+        ctx.update({'skip_merge_pol': True, 'psa_proc_removed': True})
         for purchase in self.browse(cr, uid, ids, context=context):
             purchase.write({'skip_pol_remove': True})
             # Get list of all procurements which are linked to this PO
             proc_ids = procurement_obj.search(cr, uid, [('purchase_id', '=', purchase.order_edit_id.id), ('purchase_id', '!=', False), ('state', 'not in', ('done', 'cancel'))], context=context)
             proc_to_po[purchase] = proc_ids
 
-            # Remove PO line for all procurements so they all revert back to MTS, or confirmed MTO
-            procurement_obj.write(cr, uid, proc_ids, {'purchase_id': False}, context=context)
+            # Remove PO line for all procurements so they all revert back to confirmed MTO
+            procurement_obj.write(cr, uid, proc_ids, {'purchase_id': False, 'procure_method': 'make_to_order'}, context=ctx)
             purchase.write({'skip_pol_remove': False})
 
         # 3. Finish fixing the pickings
@@ -56,19 +61,22 @@ class PurchaseOrder(osv.Model):
 
         for purchase, proc_ids in proc_to_po.iteritems():
             # For each procurement attempt to allocate to this PO
-            for proc in procurement_obj.browse(cr, uid, proc_ids, context=context):
+            procurement_obj.write(cr, uid, proc_ids, {'purchase_id': purchase.id}, context=context)
+            t, i = len(proc_ids), 0
+            failed_proc_ids = []
+            for proc_id in proc_ids:
+                i += 1
+                _logger.warning('PO Edit Conf, Part 2: %s/%s' % (i, t))
                 cr.execute('SAVEPOINT procurement')
-                failed = False
                 try:
-                    if proc.state == 'exception':
-                        wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
-                    procurement_obj.write(cr, uid, [proc.id], {'purchase_id': purchase.id, 'procure_method': 'make_to_order'}, context=context)
-                    wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
+                    wf_service.trg_validate(uid, 'procurement.order', proc_id, 'button_check', cr)
                 except osv.except_osv:
-                    failed = True
                     cr.execute('ROLLBACK TO SAVEPOINT procurement')
+                    failed_proc_ids.append(proc_id)
                 else:
                     cr.execute('RELEASE SAVEPOINT procurement')
+                if failed_proc_ids:
+                    procurement_obj.write(cr, uid, failed_proc_ids, {'purchase_id': False}, context=context)
 
                 # For each failed allocation, if the sale line type is MTO, reset the procurement and change back to MTO
                 if failed and proc.move_id.sale_line_id and proc.move_id.sale_line_id.type == 'make_to_order':
