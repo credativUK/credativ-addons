@@ -161,12 +161,19 @@ class ProcurementOrder(osv.Model):
                 self._cancel_po_assign(cr, uid, proc_ids, context=context)
                 for proc_data in signals.get('signal_mto_mts'):
                     # It is not possible to break out of a subflow unless we get a signal from it, we force it to be complete here
-                    cr.execute('select id, wkf_id from wkf_instance where res_id=%s and res_type=%s', (proc_data[0], 'procurement.order'))
-                    for inst_id, wkf_id in cr.fetchall():
-                        cr.execute('update wkf_workitem set state=%s where inst_id=%s', ('complete', inst_id))
-
-                    self._verify_wkf_change(cr, uid, proc_data[0], expected_acts[0], proc_data[1], context=context)
-                    wkf_service.trg_validate(uid, 'procurement.order', proc_data[0], signal, cr)
+                    needs_trigger = True # The subflow can be broken out of if the RFQ is deleted
+                    cr.execute('''select wi.id, ww.state, wa.name from wkf_instance wi
+                                  inner join wkf_workitem ww on ww.inst_id = wi.id
+                                  inner join wkf_activity wa on wa.id = ww.act_id
+                                  where wi.res_id=%s and wi.res_type=%s''', (proc_data[0], 'procurement.order'))
+                    for inst_id, wkf_state, wkf_activity in cr.fetchall():
+                        if wkf_activity == 'buy':
+                            cr.execute('update wkf_workitem set state=%s where inst_id=%s', ('complete', inst_id))
+                        elif wkf_activity in ('done', 'cancel'):
+                            needs_trigger = False
+                    if needs_trigger:
+                        self._verify_wkf_change(cr, uid, proc_data[0], expected_acts[0], proc_data[1], context=context)
+                        wkf_service.trg_validate(uid, 'procurement.order', proc_data[0], signal, cr)
                     self._verify_wkf_change(cr, uid, proc_data[0], expected_acts[1], proc_data[2] or False, context=context)
                     message = _("Procurement deallocated from PO (%s) to MTS") % (purchase_name_dict[proc_data[1]],)
                     self.message_post(cr, uid, [proc_data[0]], body=message, context=context)
