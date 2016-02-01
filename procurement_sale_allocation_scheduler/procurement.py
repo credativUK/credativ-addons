@@ -40,6 +40,7 @@ class ProcurementOrder(osv.Model):
 
     def _procure_confirm_mto_confirmed_to_mts(self, cr, uid, ids=None, use_new_cursor=False, context=None):
         procurement_obj = self.pool.get('procurement.order')
+        location_obj = self.pool.get('stock.location')
         wf_service = netsvc.LocalService("workflow")
         company = self.pool.get('res.users').browse(cr, uid, uid, context=context).company_id
         maxdate = (datetime.today() + relativedelta(days=company.schedule_range)).strftime(tools.DEFAULT_SERVER_DATE_FORMAT)
@@ -51,18 +52,33 @@ class ProcurementOrder(osv.Model):
                 cr = pooler.get_db(use_new_cursor).cursor()
             while True:
                 report_ids = []
-                ids = procurement_obj.search(cr, uid, [('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order'), ('note', 'not like', '%_mto_to_mts_done_%')], offset=offset, limit=50, order='priority, date_planned', context=context)
+                ids = procurement_obj.search(cr, uid, [('note', 'not like', '%_mto_to_mts_done_%'), '|',
+                                                           '&', ('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order'),
+                                                           '&', '&', ('state', 'in', ('confirmed', 'exception')), ('procure_method', '=', 'make_to_stock'), ('note', 'like', '%_mto_to_mts_fail_%')], offset=offset, limit=50, order='priority, date_planned', context=context)
                 for proc in procurement_obj.browse(cr, uid, ids):
                     if maxdate >= proc.date_planned:
-                        cr.execute('SAVEPOINT mto_to_stock')
-                        procurement_obj.write(cr, uid, [proc.id], {'procure_method': 'make_to_stock'}, context=context)
-                        wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
-                        proc.refresh()
-                        # Moved to exception since no MTS stock is available, rollback and try the next one
-                        if proc.state == 'exception':
-                            cr.execute('ROLLBACK TO SAVEPOINT mto_to_stock')
+                        ok = True
+                        if proc.move_id:
+                            # Check if there is qty at this location but do not yet reserve it.
+                            # Reservation can fail due to transient errors, we want to keep retrying these
+                            ok = location_obj._product_reserve(cr, uid, [proc.move_id.location_id.id], proc.move_id.product_id.id, proc.move_id.product_qty, {'uom': proc.move_id.product_uom.id}, lock=False)
+                        if ok:
+                            if proc.state == 'exception':
+                                wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
+                            if proc.procure_method != 'make_to_stock':
+                                procurement_obj.write(cr, uid, [proc.id], {'procure_method': 'make_to_stock'}, context=context)
+                            wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
+                            proc.refresh()
+                            # Moved to exception since another thread might be reserving it instead, rollback and try again later
+                            if proc.state == 'exception' and '_mto_to_mts_fail_' not in proc.note:
+                                cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id = %s""", ('\n\n_mto_to_mts_fail_',proc.id))
+                        else:
+                            # No stock is available, continue
                             cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id = %s""", ('\n\n_mto_to_mts_done_',proc.id))
-                        cr.execute('RELEASE SAVEPOINT mto_to_stock')
+                            if proc.state == 'exception':
+                                wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
+                            if proc.procure_method != 'make_to_order':
+                                procurement_obj.write(cr, uid, [proc.id], {'procure_method': 'make_to_order'}, context=context)
                 if use_new_cursor:
                     cr.commit()
                 offset += len(ids)
