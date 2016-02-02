@@ -37,7 +37,8 @@ recalculated, which is slow for stock level calculations.
     'init_xml' : [],
     'demo_xml' : [],
     'update_xml' : [
-        'stock_overview_report_view.xml'
+        'stock_overview_report_view.xml',
+        'stock_overview_report_data.xml',
     ],
     'active': True,
     'installable': True,
