@@ -21,7 +21,7 @@
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from psycopg2 import OperationalError
+from psycopg2.extensions import TransactionRollbackError
 import traceback
 
 from openerp import netsvc
@@ -34,6 +34,8 @@ from openerp import tools
 
 import logging
 _logger = logging.getLogger(__name__)
+
+MAX_TRIES = 5
 
 class ProcurementOrder(osv.Model):
     _inherit = 'procurement.order'
@@ -221,16 +223,19 @@ class ProcurementOrder(osv.Model):
 
     def _procure_confirm(self, cr, uid, ids=None, use_new_cursor=False, context=None):
         functions = self._get_procure_functions(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
-        exceptions = []
         for func in functions:
-            try:
-                func(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
-            except OperationalError, e:
-                exception = "OperationalError while %s running scheduler, continue [%s]:\n\n%s" % (e, use_new_cursor, traceback.format_exc())
-                _logger.error(exception)
-                exceptions.append(exception)
-                if not use_new_cursor:
-                    raise e
+            tries = 0
+            while tries < MAX_TRIES:
+                try:
+                    func(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
+                    break
+                except TransactionRollbackError, e:
+                    exception = "Serialisation error %s while running scheduler, continue [%s]:\n\n%s" % (e, use_new_cursor, traceback.format_exc())
+                    _logger.error(exception)
+                    if not use_new_cursor:
+                        raise
+                    tries += 1
+                    continue
 
         return True
 
