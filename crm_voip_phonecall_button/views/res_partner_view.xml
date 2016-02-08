@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+        <!-- Add CRM phonecall button on partner form view -->
+        <record id="view_partners_form_crm_voip_logs" model="ir.ui.view">
+            <field name="name">view.res.partner.form.crm.voip.logs</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_form"/>
+            <field eval="18" name="priority"/>
+            <field name="arch" type="xml">
+                    <div name="button_box" position="inside">
+                        <button type="action"
+                            class="oe_stat_button"
+                            id="phonecall_button"
+                            icon="fa-pencil-square-o"
+                            name="%(crm_voip.crm_phonecall_view)d"
+                            context="{'search_default_partner_id': active_id,'default_partner_id': active_id}">
+                            <field name="phonecalls_count" widget="statinfo"/>
+                        </button>
+                    </div>
+            </field>
+        </record>
+
+    </data>
+</openerp>
+
