@@ -28,7 +28,7 @@ class res_partner(osv.osv):
 
     # TODO: Convert to new api
     def _phonecalls_count(self, cr, uid, ids, field_name, arg, context=None):
-        res = dict(map(lambda x: (x,{'phone_logs_count': 0}), ids))
+        res = dict(map(lambda x: (x,0), ids))
         # the user may not have access rights for phonecalls
         try:
             for partner in self.browse(cr, uid, ids, context):
@@ -37,9 +37,7 @@ class res_partner(osv.osv):
                 else:
                     operator = '='
                 schedulecall_ids = self.pool['crm.phonecall'].search(cr, uid, [('partner_id', operator, partner.id), ('state', '=', 'open')], context=context)
-                res[partner.id] = {
-                    'phone_logs_count': len(schedulecall_ids),
-                }
+                res[partner.id] =  len(schedulecall_ids)
         except:
             pass
         return res
