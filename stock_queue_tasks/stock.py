@@ -34,7 +34,6 @@ class stock_picking(orm.Model):
         else:
             wf_service = netsvc.LocalService("workflow")
             for id in ids:
-                import ipdb; ipdb.set_trace();
                 wf_service.trg_validate(uid, 'stock.picking', id, 'button_cancel', cr)
             return True
 
