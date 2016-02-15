@@ -30,13 +30,17 @@ class StockOverviewReport(osv.osv_memory):
     _name = 'stock.overview.report'
     _description = "Stock Overview Report"
     _rec_name = 'date'
-    _transient_max_hours = 48.0
-    _transient_max_count = 0.0
 
     _columns = {
         'date': fields.datetime('Stock level date', help='The date the stock levels will be taken for. Leave blank to use the current date and time.'),
         'line_ids': fields.one2many('stock.overview.report.line', 'wizard_id', 'Stock Overview Report Lines'),
      }
+
+    def __init__(self, pool, cr):
+        res = super(StockOverviewReport, self).__init__(pool, cr)
+        self._transient_max_hours = 48.0
+        self._transient_max_count = False
+        return res
 
     def _get_report_fields(self):
         return ['uom_id', 'qty_available', 'virtual_available', 'incoming_qty', 'outgoing_qty', 'categ_id']
@@ -259,8 +263,12 @@ class StockOverviewReportLine(osv.osv_memory):
     _name = 'stock.overview.report.line'
     _description = "Stock Overview Report Line"
     _rec_name = 'product_id'
-    _transient_max_hours = 48.0
-    _transient_max_count = 0.0
+
+    def __init__(self, pool, cr):
+        res = super(StockOverviewReportLine, self).__init__(pool, cr)
+        self._transient_max_hours = 48.0
+        self._transient_max_count = False
+        return res
 
     _columns = {
         'wizard_id': fields.many2one('stock.overview.report', 'Stock Overview Report'),
