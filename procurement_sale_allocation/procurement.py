@@ -78,6 +78,7 @@ class ProcurementOrder(osv.Model):
             proc_ids_with_pols = [x[0] for x in cr.fetchall()]
 
             for proc in procs:
+                po_unlink_ids = []
                 if proc['state'] in ['draft', 'confirmed', 'exception']:
                     continue
                 if (proc['purchase_id'] and proc['purchase_id'][0] or False) != values['purchase_id']:
@@ -126,7 +127,7 @@ class ProcurementOrder(osv.Model):
                 proc_ids = [x[0] for x in signals.get('signal_mto_mto_confirm')]
                 self.write(cr, uid, proc_ids, {'state': 'confirmed', 'procure_method': 'make_to_order', 'message': False}, context=context)
                 self._cancel_stock_assign(cr, uid, proc_ids, context=context)
-                self._cancel_po_assign(cr, uid, proc_ids, context=context)
+                po_unlink_ids = self._cancel_po_assign(cr, uid, proc_ids, context=context)
                 for proc_data in signals.get('signal_mto_mto_confirm'):
                     # It is not possible to break out of a subflow unless we get a signal from it, we force it to be complete here
                     cr.execute('select id, wkf_id from wkf_instance where res_id=%s and res_type=%s', (proc_data[0], 'procurement.order'))
@@ -158,7 +159,7 @@ class ProcurementOrder(osv.Model):
                 proc_ids = [x[0] for x in signals.get('signal_mto_mts')]
                 self.write(cr, uid, proc_ids, {'state': 'exception', 'procure_method': 'make_to_stock', 'message': False}, context=context)
                 self._cancel_stock_assign(cr, uid, proc_ids, context=context)
-                self._cancel_po_assign(cr, uid, proc_ids, context=context)
+                po_unlink_ids = self._cancel_po_assign(cr, uid, proc_ids, context=context)
                 for proc_data in signals.get('signal_mto_mts'):
                     # It is not possible to break out of a subflow unless we get a signal from it, we force it to be complete here
                     needs_trigger = True # The subflow can be broken out of if the RFQ is deleted
@@ -184,7 +185,7 @@ class ProcurementOrder(osv.Model):
                 proc_ids = [x[0] for x in signals.get('signal_mto_mto')]
                 self.write(cr, uid, proc_ids, {'state': 'running', 'procure_method': 'make_to_order', 'message': False}, context=context)
                 self._cancel_stock_assign(cr, uid, proc_ids, context=context)
-                self._cancel_po_assign(cr, uid, proc_ids, context=context)
+                po_unlink_ids = self._cancel_po_assign(cr, uid, proc_ids, context=context)
                 for proc_data in signals.get('signal_mto_mto'):
                     # It is not possible to break out of a subflow unless we get a signal from it, we force it to be complete here
                     cr.execute('select id, wkf_id from wkf_instance where res_id=%s and res_type=%s', (proc_data[0], 'procurement.order'))
@@ -196,6 +197,9 @@ class ProcurementOrder(osv.Model):
                     self._verify_wkf_change(cr, uid, proc_data[0], expected_acts[1], proc_data[2] or False, context=context)
                     message = _("Procurement reallocated from PO (%s) to PO (%s)") % (purchase_name_dict[proc_data[1]], purchase_name_dict[proc_data[2]])
                     self.message_post(cr, uid, [proc_data[0]], body=message, context=context)
+
+            if po_unlink_ids:
+                purchase_obj.unlink(cr, uid, po_unlink_ids, context=context)
 
         return res
 
@@ -236,6 +240,7 @@ class ProcurementOrder(osv.Model):
         purchase_obj = self.pool.get('purchase.order')
         purchase_line_obj = self.pool.get('purchase.order.line')
 
+        po_to_unlink = []
         to_unassign = []
         move_obj = self.pool.get('stock.move')
         for proc_data in self.read(cr, uid, ids, ['move_id']):
@@ -261,7 +266,7 @@ class ProcurementOrder(osv.Model):
             draft_po_ids = list(set([x['order_id'][0] for x in draft_purchase_line_data]))
             for draft_po in purchase_obj.read(cr, uid, draft_po_ids, ['order_line'], context=ctx):
                 if not len(draft_po['order_line']):
-                    purchase_obj.unlink(cr, uid, [draft_po['id']], context=ctx)
+                    po_to_unlink.append(draft_po['id'])
 
             # Attempt to merge all lines for POs
             po_ids = list(set([x['order_id'][0] for x in purchase_line_data]))
@@ -271,7 +276,7 @@ class ProcurementOrder(osv.Model):
                 if len(merge_pol_ids) > 1:
                     purchase_line_obj.do_merge(cr, uid, merge_pol_ids, context=ctx)
 
-        return True
+        return po_to_unlink
 
     def _cancel_stock_assign(self, cr, uid, ids, context=None):
         to_unassign = []
@@ -285,7 +290,9 @@ class ProcurementOrder(osv.Model):
         return True
 
     def action_cancel(self, cr, uid, ids):
-        self._cancel_po_assign(cr, uid, ids)
+        po_unlink_ids = self._cancel_po_assign(cr, uid, ids)
+        if po_unlink_ids:
+            self.pool.get('purchase.order').unlink(cr, uid, po_unlink_ids, context=context)
         return super(ProcurementOrder, self).action_cancel(cr, uid, ids)
 
     def action_po_assign(self, cr, uid, ids, context=None): # TODO: Improvements (break out of workflow?)
