@@ -23,6 +23,7 @@ from openerp.osv import fields, osv
 from openerp.tools.translate import _
 import openerp.addons.decimal_precision as dp
 from openerp.tools.misc import DEFAULT_SERVER_DATETIME_FORMAT
+from openerp import SUPERUSER_ID
 from datetime import datetime, timedelta
 import pytz
 
@@ -41,6 +42,10 @@ class StockOverviewReport(osv.osv_memory):
         self._transient_max_hours = 48.0
         self._transient_max_count = False
         return res
+
+    def _search(self, cr, user, args, offset=0, limit=None, order=None, context=None, count=False, access_rights_uid=None):
+        """ Use the Superuser ID here to allow all users to see all other runs of the wizard if the ACL permits """
+        return super(StockOverviewReport, self)._search(cr, SUPERUSER_ID, args, offset=offset, limit=limit, order=order, context=context, count=count, access_rights_uid=access_rights_uid)
 
     def _get_report_fields(self):
         return ['uom_id', 'qty_available', 'virtual_available', 'incoming_qty', 'outgoing_qty', 'categ_id']
@@ -269,6 +274,10 @@ class StockOverviewReportLine(osv.osv_memory):
         self._transient_max_hours = 48.0
         self._transient_max_count = False
         return res
+
+    def _search(self, cr, user, args, offset=0, limit=None, order=None, context=None, count=False, access_rights_uid=None):
+        """ Use the Superuser ID here to allow all users to see all other runs of the wizard if the ACL permits """
+        return super(StockOverviewReportLine, self)._search(cr, SUPERUSER_ID, args, offset=offset, limit=limit, order=order, context=context, count=count, access_rights_uid=access_rights_uid)
 
     _columns = {
         'wizard_id': fields.many2one('stock.overview.report', 'Stock Overview Report'),
