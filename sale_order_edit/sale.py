@@ -201,6 +201,9 @@ class SaleOrder(osv.osv, OrderEdit):
         proc_pool = self.pool.get('procurement.order')
         wf_service = netsvc.LocalService("workflow")
 
+        all_old_moves = set()
+        all_new_moves = set()
+
         if line_moves is not None:
             for line_id, old_moves in line_moves.iteritems():
                 line = line_pool.browse(cr, uid, line_id)
@@ -211,6 +214,8 @@ class SaleOrder(osv.osv, OrderEdit):
                     except IndexError:
                         raise osv.except_osv(_('Error!'), _('The edited order must include any done or assigned moves'))
                     # Move old stock_move and stock_picking to new order
+                    all_new_moves.add(old_move.id)
+                    all_old_moves = all_old_moves.union([m.id for m in old_move.picking_id.move_lines])
                     picking = created_move.picking_id
                     move_pool.write(cr, uid, [old_move.id], {'sale_line_id': line_id})
                     pick_pool.write(cr, uid, old_move.picking_id.id, {'sale_id':line.order_id.id})
@@ -245,6 +250,7 @@ class SaleOrder(osv.osv, OrderEdit):
                 for created_move in created_moves:
                     new_picking = created_move.picking_id
                     move_pool.write(cr, uid, created_move.id, {'sale_line_id': line_id, 'picking_id': old_picking_copy})
+                    all_new_moves.add(created_move.id)
                     new_picking.refresh()
                     if not new_picking.move_lines:
                         pick_pool.write(cr, uid, new_picking.id, {'sale_id': False})
@@ -253,7 +259,13 @@ class SaleOrder(osv.osv, OrderEdit):
                         pick_pool.action_cancel(cr, uid, [new_picking.id])
             if old_picking_copy:
                 wf_service.trg_validate(uid, 'stock.picking', old_picking_copy, 'button_confirm', cr)
-            # Old confirmed moves get canceled during refund
+            # Old confirmed pickings get canceled during refund
+
+        # Any old confirmed moves which were copied over in the moved picking should be removed now
+        cancel_moves = list(all_old_moves - all_new_moves)
+        if cancel_moves:
+            move_pool.write(cr, uid, cancel_moves, {'picking_id': False})
+            move_pool.action_cancel(cr, uid, cancel_moves)
 
         return True
 
