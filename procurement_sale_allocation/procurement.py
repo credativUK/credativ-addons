@@ -97,7 +97,7 @@ class ProcurementOrder(osv.Model):
                     elif purchase_orig and purchase_new or (proc['procure_method']=='make_to_order' and purchase_new):
                         signal = 'signal_mto_mto'
                     if signal:
-                        signals.setdefault(signal, []).append((proc['id'], purchase_orig[0], purchase_new))
+                        signals.setdefault(signal, []).append((proc['id'], purchase_orig and purchase_orig[0], purchase_new))
                         if purchase_orig:
                             purchase_orig_ids.add(purchase_orig[0])
                         if purchase_new:
