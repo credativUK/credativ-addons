@@ -39,6 +39,7 @@ recalculated, which is slow for stock level calculations.
     'update_xml' : [
         'stock_overview_report_view.xml',
         'stock_overview_report_data.xml',
+        'security/ir.model.access.csv',
     ],
     'active': True,
     'installable': True,
