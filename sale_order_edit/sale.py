@@ -215,10 +215,14 @@ class SaleOrder(osv.osv, OrderEdit):
                         raise osv.except_osv(_('Error!'), _('The edited order must include any done or assigned moves'))
                     # Move old stock_move and stock_picking to new order
                     all_new_moves.add(old_move.id)
-                    all_old_moves = all_old_moves.union([m.id for m in old_move.picking_id.move_lines])
-                    picking = created_move.picking_id
                     move_pool.write(cr, uid, [old_move.id], {'sale_line_id': line_id})
-                    pick_pool.write(cr, uid, old_move.picking_id.id, {'sale_id':line.order_id.id})
+                    picking = created_move.picking_id
+                    old_picking = old_move.picking_id
+                    if old_picking.state == 'confirmed': # Move available move to new picking if current picking not available
+                        move_pool.write(cr, uid, [old_move.id], {'picking_id': picking.id})
+                    else: # Picking is not confirmed it may be exported to the warehouse, copy to new order
+                        all_old_moves = all_old_moves.union([m.id for m in old_picking.move_lines])
+                        pick_pool.write(cr, uid, old_picking.id, {'sale_id':line.order_id.id})
                     proc_ids = proc_pool.search(cr, uid, [('move_id', '=', old_move.id), ('state', 'not in', ('cancel',))], context=context)
                     line_pool.write(cr, uid, [line.id,], {'procurement_id': proc_ids and proc_ids[0] or False}, context=context)
                     # Cancel and remove new replaced stock_move and stock_picking
