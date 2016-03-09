@@ -35,6 +35,27 @@ from openerp import tools
 import logging
 _logger = logging.getLogger(__name__)
 
+PROC_ERROR = 'Error running procurement scheduler'
+
+class AttemptProcurement(object):
+    def __init__(self, cr, proc):
+        self.cr = cr
+        self.proc = proc
+
+    def __enter__(self):
+        self.cr.execute("SAVEPOINT attempt_procurement")
+        return self.cr
+
+    def __exit__(self, ex_type, ex_value, tb):
+        if ex_type and ex_type != OperationalError: # We have an exception, mark the procurement as such
+            self.cr.execute("ROLLBACK TO SAVEPOINT attempt_procurement")
+            if self.proc.message != PROC_ERROR:
+                self.proc.message_post(body='%s:\n\n%s' % (PROC_ERROR, traceback.format_tb(tb),))
+                self.proc.write({'message': PROC_ERROR})
+
+        self.cr.execute("RELEASE SAVEPOINT attempt_procurement")
+        return True # Danger, this supresses any exceptions, this is what we want
+
 class ProcurementOrder(osv.Model):
     _inherit = 'procurement.order'
 
@@ -57,28 +78,29 @@ class ProcurementOrder(osv.Model):
                                                            '&', ('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order'),
                                                            '&', '&', ('state', 'in', ('confirmed', 'exception')), ('procure_method', '=', 'make_to_stock'), ('note', 'like', '%_mto_to_mts_fail_%')], limit=50, order='priority, date_planned', context=context)
                 for proc in procurement_obj.browse(cr, uid, ids):
-                    ok = True
-                    if proc.move_id:
-                        # Check if there is qty at this location but do not yet reserve it.
-                        # Reservation can fail due to transient errors, we want to keep retrying these
-                        ok = location_obj._product_reserve(cr, uid, [proc.move_id.location_id.id], proc.move_id.product_id.id, proc.move_id.product_qty, {'uom': proc.move_id.product_uom.id}, lock=False)
-                    if ok:
-                        if proc.state == 'exception':
-                            wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
-                        if proc.procure_method != 'make_to_stock':
-                            procurement_obj.write(cr, uid, [proc.id], {'procure_method': 'make_to_stock'}, context=context)
-                        wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
-                        proc.refresh()
-                        # Moved to exception since another thread might be reserving it instead, rollback and try again later
-                        if proc.state == 'exception' and '_mto_to_mts_fail_' not in proc.note:
-                            cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id = %s""", ('\n\n_mto_to_mts_fail_',proc.id))
-                    else:
-                        # No stock is available, continue
-                        cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id = %s""", ('\n\n_mto_to_mts_done_',proc.id))
-                        if proc.state == 'exception':
-                            wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
-                        if proc.procure_method != 'make_to_order':
-                            procurement_obj.write(cr, uid, [proc.id], {'procure_method': 'make_to_order'}, context=context)
+                    with AttemptProcurement(cr, proc):
+                        ok = True
+                        if proc.move_id:
+                            # Check if there is qty at this location but do not yet reserve it.
+                            # Reservation can fail due to transient errors, we want to keep retrying these
+                            ok = location_obj._product_reserve(cr, uid, [proc.move_id.location_id.id], proc.move_id.product_id.id, proc.move_id.product_qty, {'uom': proc.move_id.product_uom.id}, lock=False)
+                        if ok:
+                            if proc.state == 'exception':
+                                wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
+                            if proc.procure_method != 'make_to_stock':
+                                procurement_obj.write(cr, uid, [proc.id], {'procure_method': 'make_to_stock'}, context=context)
+                            wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
+                            proc.refresh()
+                            # Moved to exception since another thread might be reserving it instead, rollback and try again later
+                            if proc.state == 'exception' and '_mto_to_mts_fail_' not in proc.note:
+                                cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id = %s""", ('\n\n_mto_to_mts_fail_',proc.id))
+                        else:
+                            # No stock is available, continue
+                            cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id = %s""", ('\n\n_mto_to_mts_done_',proc.id))
+                            if proc.state == 'exception':
+                                wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
+                            if proc.procure_method != 'make_to_order':
+                                procurement_obj.write(cr, uid, [proc.id], {'procure_method': 'make_to_order'}, context=context)
                 if use_new_cursor:
                     cr.commit()
                 if not ids: break
@@ -108,33 +130,34 @@ class ProcurementOrder(osv.Model):
             while True:
                 ids = procurement_obj.search(cr, uid, [('date_planned', '<', maxdate), max_sched_condition, ('state', 'in', ('confirmed', 'exception')), ('procure_method', '=', 'make_to_stock')], offset=offset, limit=50, order='priority, date_planned', context=context)
                 for proc in procurement_obj.browse(cr, uid, ids):
-                    # We already know there are no POs available, skip
-                    if (proc.product_id.id, proc.location_id.id) in exclude_prod_loc:
-                        continue
-                    # Find purchase lines for this product
-                    po_ids = []
-                    pol_ids = purchase_line_obj.search(cr, uid, [
-                                ('state', '=', 'confirmed'),
-                                ('product_id', '=', proc.product_id.id),
-                                ('move_dest_id', '=', False),
-                                ('order_id.location_id', '=', proc.location_id.id),
-                                ('order_id.procurements_auto_allocate', '=', True),
-                            ], order='date_planned asc', context=context)
-                    if pol_ids:
-                        for pol in purchase_line_obj.read(cr, uid, pol_ids, ['order_id'], context=context):
-                            if pol['order_id'][0] not in po_ids:
-                                po_ids.append(pol['order_id'][0])
-                    if not po_ids:
-                        exclude_prod_loc.append((proc.product_id.id, proc.location_id.id))
-                    for po_id in po_ids:
-                        context.update({'psa_skip_moves': True})
-                        if purchase_obj.allocate_check_stock(cr, uid, [po_id], [proc.id], context=context) and \
-                                not purchase_obj.allocate_check_restrict(cr, uid, [po_id], context=context):
-                            if proc.state == 'exception':
-                                wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
-                            wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
-                            procurement_obj.write(cr, uid, [proc.id], {'purchase_id': po_id}, context=context)
-                            break
+                    with AttemptProcurement(cr, proc):
+                        # We already know there are no POs available, skip
+                        if (proc.product_id.id, proc.location_id.id) in exclude_prod_loc:
+                            continue
+                        # Find purchase lines for this product
+                        po_ids = []
+                        pol_ids = purchase_line_obj.search(cr, uid, [
+                                    ('state', '=', 'confirmed'),
+                                    ('product_id', '=', proc.product_id.id),
+                                    ('move_dest_id', '=', False),
+                                    ('order_id.location_id', '=', proc.location_id.id),
+                                    ('order_id.procurements_auto_allocate', '=', True),
+                                ], order='date_planned asc', context=context)
+                        if pol_ids:
+                            for pol in purchase_line_obj.read(cr, uid, pol_ids, ['order_id'], context=context):
+                                if pol['order_id'][0] not in po_ids:
+                                    po_ids.append(pol['order_id'][0])
+                        if not po_ids:
+                            exclude_prod_loc.append((proc.product_id.id, proc.location_id.id))
+                        for po_id in po_ids:
+                            context.update({'psa_skip_moves': True})
+                            if purchase_obj.allocate_check_stock(cr, uid, [po_id], [proc.id], context=context) and \
+                                    not purchase_obj.allocate_check_restrict(cr, uid, [po_id], context=context):
+                                if proc.state == 'exception':
+                                    wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
+                                wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
+                                procurement_obj.write(cr, uid, [proc.id], {'purchase_id': po_id}, context=context)
+                                break
                 if use_new_cursor:
                     cr.commit()
                 offset += len(ids)
@@ -246,17 +269,8 @@ class ProcurementOrder(osv.Model):
             while True:
                 ids = procurement_obj.search(cr, uid, [max_sched_condition, ('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order'), ('date_planned', '<', maxdate)], limit=100, order='priority, date_planned', context=context)
                 for proc in procurement_obj.browse(cr, uid, ids, context=context):
-                    try:
+                    with AttemptProcurement(cr, proc):
                         wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
-
-                        if use_new_cursor:
-                            cr.commit()
-                    except OperationalError:
-                        if use_new_cursor:
-                            cr.rollback()
-                            continue
-                        else:
-                            raise
                 if not ids or prev_ids == ids:
                     break
                 else:
@@ -266,17 +280,8 @@ class ProcurementOrder(osv.Model):
             while True:
                 ids = procurement_obj.search(cr, uid, [max_sched_condition, ('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_stock'), ('date_planned', '<', maxdate)], limit=100)
                 for proc in procurement_obj.browse(cr, uid, ids):
-                    try:
+                    with AttemptProcurement(cr, proc):
                         wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
-
-                        if use_new_cursor:
-                            cr.commit()
-                    except OperationalError:
-                        if use_new_cursor:
-                            cr.rollback()
-                            continue
-                        else:
-                            raise
                 if not ids or prev_ids == ids:
                     break
                 else:
