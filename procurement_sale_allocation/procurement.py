@@ -269,12 +269,13 @@ class ProcurementOrder(osv.Model):
                     po_to_unlink.append(draft_po['id'])
 
             # Attempt to merge all lines for POs
-            po_ids = list(set([x['order_id'][0] for x in purchase_line_data]))
-            po_ids = purchase_obj.search(cr, uid, [('id', 'in', po_ids)], context=ctx) # Re-search as some may have just been deleted
-            for po in purchase_obj.browse(cr, uid, po_ids, context=ctx):
-                merge_pol_ids = [pol.id for pol in po.order_line if not pol.move_dest_id and (not pol.move_ids or all([sm.state == 'assigned' for sm in pol.move_ids]))]
-                if len(merge_pol_ids) > 1:
-                    purchase_line_obj.do_merge(cr, uid, merge_pol_ids, context=ctx)
+            if not context.get('psa_skip_merge', False):
+                po_ids = list(set([x['order_id'][0] for x in purchase_line_data]))
+                po_ids = purchase_obj.search(cr, uid, [('id', 'in', po_ids)], context=ctx) # Re-search as some may have just been deleted
+                for po in purchase_obj.browse(cr, uid, po_ids, context=ctx):
+                    merge_pol_ids = [pol.id for pol in po.order_line if not pol.move_dest_id and (not pol.move_ids or all([sm.state == 'assigned' for sm in pol.move_ids]))]
+                    if len(merge_pol_ids) > 1:
+                        purchase_line_obj.do_merge(cr, uid, merge_pol_ids, context=ctx)
 
         return po_to_unlink
 
