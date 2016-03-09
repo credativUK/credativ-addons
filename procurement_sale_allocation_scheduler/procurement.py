@@ -50,8 +50,10 @@ class AttemptProcurement(object):
         if ex_type and ex_type != OperationalError: # We have an exception, mark the procurement as such
             self.cr.execute("ROLLBACK TO SAVEPOINT attempt_procurement")
             if self.proc.message != PROC_ERROR:
-                self.proc.message_post(body='%s:\n\n%s' % (PROC_ERROR, traceback.format_tb(tb),))
+                self.proc.message_post(body='%s:<br/>\n<br/>\n<pre>%s</pre>' % (PROC_ERROR, traceback.format_exc()))
                 self.proc.write({'message': PROC_ERROR})
+        elif ex_type and ex_type == OperationalError: # We have an exception, but it is just an opperational error, ignore it
+            self.cr.execute("ROLLBACK TO SAVEPOINT attempt_procurement")
 
         self.cr.execute("RELEASE SAVEPOINT attempt_procurement")
         return True # Danger, this supresses any exceptions, this is what we want
