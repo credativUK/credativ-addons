@@ -19,9 +19,13 @@
 #
 ##############################################################################
 
+import logging
+
 from osv import osv, fields
 from openerp.tools.translate import _
 from openerp.osv.orm import browse_record, browse_null
+
+_logger = logging.getLogger(__name__)
 
 class PurchaseOrder(osv.Model):
     _inherit = 'purchase.order'
@@ -54,23 +58,26 @@ class PurchaseOrderLine(osv.Model):
         line = self.browse(cr, uid, id, context=context)
         new_line_id = False
         if line.product_qty > qty:
-            cancel_moves = []
-            if line.state not in ('draft', 'cancel'):
-                cancel_moves = [x.id for x in line.move_ids]
+            orig_moves = [m.id for m in line.move_ids]
+            move_states = list(set([m.state for m in line.move_ids]))
+            if len(move_states) == 1:
+                move_state = move_states[0]
+            elif len(move_states) > 1:
+                raise osv.except_osv(_('Error!'),_('Unable to split purchase line %s when it has a combination of moves in different states: %s') % (line.id, move_states))
             self.write(cr, uid, [line.id], {'product_qty': qty}, context=context)
             new_line_id = self.copy(cr, uid, line.id, {'product_qty': line.product_qty - qty}, context=context)
             self.write(cr, uid, [new_line_id], {'state': line.state}, context=context)
             if line.state not in ('draft', 'cancel'):
                 line = self.browse(cr, uid, line.id, context=context)
-                if line.order_id.picking_ids: # Bug in PO lines may cause some to be confirmed before pickings exist, only modify moves if picking exists
+                if orig_moves:
                     move_id = move_obj.create(cr, uid, purchase_obj._prepare_order_line_move(cr, uid, line.order_id, line, line.order_id.picking_ids[0].id, context=context))
-                    move_obj.write(cr, uid, [move_id,], {'state': 'assigned'}, context=context)
+                    move_obj.write(cr, uid, [move_id,], {'state': move_state}, context=context)
                     new_line = self.browse(cr, uid, new_line_id, context=context)
                     move_id = move_obj.create(cr, uid, purchase_obj._prepare_order_line_move(cr, uid, new_line.order_id, new_line, new_line.order_id.picking_ids[0].id, context=context))
-                    move_obj.write(cr, uid, [move_id,], {'state': 'assigned'}, context=context)
-            if cancel_moves:
-                move_obj.write(cr, uid, cancel_moves, {'move_dest_id': False, 'purchase_line_id': False, 'picking_id': False}, context=context)
-                move_obj.action_cancel(cr, uid, cancel_moves, context=context)
+                    move_obj.write(cr, uid, [move_id,], {'state': move_state}, context=context)
+            if orig_moves:
+                move_obj.write(cr, uid, orig_moves, {'move_dest_id': False, 'purchase_line_id': False, 'picking_id': False}, context=context)
+                move_obj.action_cancel(cr, uid, orig_moves, context=context)
         elif line.product_qty < qty:
             raise osv.except_osv(_('Error!'),_('Unable to split purchase line into a greater quantity than it has'))
         return line.id, new_line_id
@@ -125,22 +132,28 @@ class PurchaseOrderLine(osv.Model):
             del order_line['uom_factor']
             if len(order_line['orig_line_ids']) > 1:
                 # Cancel old moves
-                move_ids = move_obj.search(cr, uid, [('purchase_line_id', 'in', order_line['orig_line_ids'])], context=context)
+                orig_moves = move_obj.search(cr, uid, [('purchase_line_id', 'in', order_line['orig_line_ids'])], context=context)
+                move_states = list(set([m['state'] for m in move_obj.read(cr, uid, orig_moves, ['state'], context=context)]))
+                if len(move_states) == 1:
+                    move_state = move_states[0]
+                elif len(move_states) > 1:
+                    _logger.warning(_('Unable to merge purchase lines %s when it has a combination of moves in different states: %s') % ( order_line['orig_line_ids'], move_states))
+                    continue
                 # Create new move and cancel old PO lines
                 first = True
                 for line in self.browse(cr, uid, order_line['orig_line_ids'], context=context):
                     if first:
                         first = False
                         self.write(cr, uid, [line.id], {'product_qty': order_line['product_qty']}, context=context)
-                        if line.order_id.picking_ids: # Only create moves if moves already exist - ie this is an active order
+                        if orig_moves:
                             move_id = move_obj.create(cr, uid, purchase_obj._prepare_order_line_move(cr, uid, line.order_id, line, line.order_id.picking_ids[0].id, context=context))
-                            move_obj.write(cr, uid, [move_id,], {'state': 'assigned'}, context=context)
+                            move_obj.write(cr, uid, [move_id,], {'state': move_state}, context=context)
                     else:
                         self.write(cr, uid, [line.id], {'state': 'cancel'}, context=context)
                         self.unlink(cr, uid, [line.id], context=context)
-                if move_ids:
-                    move_obj.action_cancel(cr, uid, move_ids, context=context)
-                    move_obj.write(cr, uid, move_ids, {'move_dest_id': False, 'purchase_line_id': False, 'picking_id': False}, context=context)
+                if orig_moves:
+                    move_obj.action_cancel(cr, uid, orig_moves, context=context)
+                    move_obj.write(cr, uid, orig_moves, {'move_dest_id': False, 'purchase_line_id': False, 'picking_id': False}, context=context)
 
     def _generate_purchase_line(self, cr, uid, product_id, qty, pricelist_id, partner_id, schedule_date, context=None):
         # Generate a new PO line values
