@@ -111,7 +111,8 @@ class queue_task(orm.Model):
                 model = self.pool.get(task.model)
                 if not model:
                     raise orm.except_orm('Incorrect Model', 'Could not find model %s' % (task.model,))
-                model.message_post(_cr, uid, [task.res_id], body=message, context=context)
+                if hasattr(model, "message_post"):
+                    model.message_post(_cr, uid, [task.res_id], body=message, context=context)
             _cr.commit()
 
     def run_task(self, cr, uid, ids, context=None):
