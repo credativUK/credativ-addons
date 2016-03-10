@@ -62,3 +62,10 @@ class stock_picking_out(orm.Model):
             for id in ids:
                 wf_service.trg_validate(uid, 'stock.picking', id, 'button_cancel', cr)
             return True
+
+class stock_invoice_onshipping(orm.TransientModel):
+    _inherit = 'stock.invoice.onshipping'
+
+    @defer("Create Invoice")
+    def open_invoice_defer(self, cr, uid, ids, context=None):
+        return self.open_invoice(cr, uid, ids, context=context)
