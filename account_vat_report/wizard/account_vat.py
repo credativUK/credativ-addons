@@ -19,7 +19,7 @@
 #
 ##############################################################################
 import time
-from osv import osv, fields
+from openerp.osv import osv, fields
 
 class account_vat_invoices(osv.osv_memory):
     _name = 'account.vat.invoices'

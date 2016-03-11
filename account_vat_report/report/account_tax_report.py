@@ -22,8 +22,8 @@
 import time
 
 from openerp.addons.account.report.common_report_header import common_report_header
-from report import report_sxw
-from tools.translate import _
+from openerp.report import report_sxw
+from openerp.tools.translate import _
 
 
 class tax_report_invoices(report_sxw.rml_parse, common_report_header):
