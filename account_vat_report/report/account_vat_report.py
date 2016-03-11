@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Copyright 2014 credativ Ltd
+#    Copyright (C) 2016 credativ Ltd (<http://credativ.co.uk>).
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as
-#    published by the Free Software Foundation, either version 3 of the
-#    License, or (at your option) any later version.
+#    it under the terms of the GNU Affero General Public License as published
+#    by the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,43 +18,36 @@
 #
 ##############################################################################
 
-
 import time
+from functools import partial
 
-from openerp.addons.account.report.common_report_header import common_report_header
+from openerp.osv import osv
 from openerp.report import report_sxw
 from openerp.tools.translate import _
+from openerp.addons.account.report.common_report_header import common_report_header
 
-
-class tax_report_invoices(report_sxw.rml_parse, common_report_header):
-
-    _name = 'report.account.vat.invoices'
-
+class vat_report(report_sxw.rml_parse, common_report_header):
 
     def set_context(self, objects, data, ids, report_type=None):
         new_ids = ids
-        res = {}
         self.period_ids = []
         period_obj = self.pool.get('account.period')
         self.display_detail = data['form']['display_detail']
-        res['periods'] = ''
-        res['fiscalyear'] = data['form'].get('fiscalyear_id', False)
+        self.fiscalyear_id = data['form'].get('fiscalyear_id', False)
+
         if data['form'].get('period_from', False) and data['form'].get('period_to', False):
             self.period_ids = period_obj.build_ctx_periods(self.cr, self.uid, data['form']['period_from'], data['form']['period_to'])
-            periods_l = period_obj.read(self.cr, self.uid, self.period_ids, ['name'])
-            for period in periods_l:
-                if res['periods'] == '':
-                    res['periods'] = period['name']
-                else:
-                    res['periods'] += ", "+ period['name']
-        return super(tax_report_invoices, self).set_context(objects, data, new_ids, report_type=report_type)
-
+        else:
+            if not self.fiscalyear_id:
+                self.cr.execute ("select id from account_fiscalyear")
+                self.fiscalyear_id = self.cr.fetchall()[0][0]
+            self.period_ids = period_obj.search(self.cr, self.uid, [('fiscalyear_id', '=', self.fiscalyear_id)])
+        return super(vat_report, self).set_context(objects, data, new_ids, report_type=report_type)
 
     def __init__(self, cr, uid, name, context=None):
-        super(tax_report_invoices, self).__init__(cr, uid, name, context=context)
+        super(vat_report, self).__init__(cr, uid, name, context=context)
         self.localcontext.update({
             'time': time,
-            'get_codes': self._get_codes,
             'get_general': self._get_general,
             'get_currency': self._get_currency,
             'get_lines': self._get_lines,
@@ -65,9 +58,7 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
             'get_basedon': self._get_basedon,
             'get_account_move_lines': self._get_account_move_lines,
             'get_tax_code_total': self._get_tax_code_total,
-            'get_vat_box_str': self._get_vat_box_str,
             'get_tax_code_name': self._get_tax_code_name,
-            'get_date_limit': self._get_date_limit,
         })
 
 
@@ -81,23 +72,14 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
 
     def _get_account(self, data):
         if data.get('form', False) and data['form'].get('chart_account_id', False):
-            return pooler.get_pool(self.cr.dbname).get('account.account').browse(self.cr, self.uid, data['form']['chart_account_id']).name
+            return self.pool.get('account.account').browse(self.cr, self.uid, data['form']['chart_account_id']).name
         return ''
 
 
     def _get_lines(self, based_on, company_id=False, parent=False, level=0, context=None):
         period_list = self.period_ids
-        res = self._get_codes(based_on, company_id, parent, level, period_list, context=context)
-        if period_list:
-            res = self._add_codes(based_on, res, period_list, context=context)
-        else:
-            self.cr.execute ("select id from account_fiscalyear")
-            fy = self.cr.fetchall()
-            self.cr.execute ("select id from account_period where fiscalyear_id = %s",(fy[0][0],))
-            periods = self.cr.fetchall()
-            for p in periods:
-                period_list.append(p[0])
-            res = self._add_codes(based_on, res, period_list, context=context)
+        codes = self._get_codes(based_on, company_id, parent, level, period_list, context=context)
+        res = self._add_codes(based_on, codes, period_list, context=context)
 
         i = 0
         top_result = []
@@ -187,7 +169,7 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
 
     def _get_codes(self, based_on, company_id, parent=False, level=0, period_list=[], context=None):
         obj_tc = self.pool.get('account.tax.code')
-        ids = obj_tc.search(self.cr, self.uid, [('parent_id','=',parent),('company_id','=',company_id)], order='sequence', context=context)
+        ids = obj_tc.search(self.cr, self.uid, [('parent_id','=',parent),('company_id','=',company_id)], order='sequence, id', context=context)
 
         res = []
         for code in obj_tc.browse(self.cr, self.uid, ids, {'based_on': based_on}):
@@ -195,7 +177,6 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
 
             res += self._get_codes(based_on, company_id, code.id, level+1, context=context)
         return res
-
 
     def _add_codes(self, based_on, account_list=[], period_list=[], context=None):
         res = []
@@ -215,7 +196,7 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
 
     def _get_currency(self, form, context=None):
         return self.pool.get('res.company').browse(self.cr, self.uid, form['company_id'], context=context).currency_id.name
-   
+
 
     def _get_account_move_lines(self, tax_id, based_on, company_id=False, context=None):
         cr  = self.cr
@@ -300,88 +281,17 @@ class tax_report_invoices(report_sxw.rml_parse, common_report_header):
         return '%0.2f' % total
 
 
-    def _get_vat_box_str(self, tax_id, context=None):
-        cr  = self.cr
-        uid = self.uid
-        tax_obj = self.pool.get('account.tax.code')
-        tax = tax_obj.browse(cr, uid, tax_id, context=context)
-        return 'VAT Box %s' % tax.code
-
-
     def _get_tax_code_name(self, tax_id, context=None):
         cr  = self.cr
         uid = self.uid
         tax_obj = self.pool.get('account.tax.code')
         return tax_obj.browse(cr, uid, tax_id, context=context).name
 
-
-    def _get_date_limit(self, year, period, bound='low', context=None):
-        cr  = self.cr
-        uid = self.uid
-        pd_obj = self.pool.get('account.period')
-        yr_obj = self.pool.get('account.fiscalyear')
-
-        ret = ''
-        field = (bound == 'high') and 'date_stop' or 'date_start'
-        if period:
-            ret = pd_obj.read(cr, uid, period, [field], context=context)[field]
-        else:
-            op = (bound == 'high') and 'MAX' or 'MIN'
-            sql = 'SELECT ' + op + '(' + field + ') ' \
-                + 'FROM account_period ' \
-                + 'WHERE fiscalyear_id = %d' % year
-            cr.execute(sql)
-            res = cr.fetchall()
-            if res and res[0]:
-                ret = res[0][0]
-        return ret
-
-
-    def sort_result(self, accounts, context=None):
-        # On boucle sur notre rapport
-        result_accounts = []
-        ind=0
-        old_level=0
-        while ind<len(accounts):
-            #
-            account_elem = accounts[ind]
-            #
-
-            #
-            # we will now check if the level is lower than the previous level, in this case we will make a subtotal
-            if (account_elem['level'] < old_level):
-                bcl_current_level = old_level
-                bcl_rup_ind = ind - 1
-
-                while (bcl_current_level >= int(accounts[bcl_rup_ind]['level']) and bcl_rup_ind >= 0 ):
-                    res_tot = { 'code': accounts[bcl_rup_ind]['code'],
-                        'name': '',
-                        'debit': 0,
-                        'credit': 0,
-                        'tax_amount': accounts[bcl_rup_ind]['tax_amount'],
-                        'type': accounts[bcl_rup_ind]['type'],
-                        'level': 0,
-                        'pos': 0
-                    }
-
-                    if res_tot['type'] == 1:
-                        # on change le type pour afficher le total
-                        res_tot['type'] = 2
-                        result_accounts.append(res_tot)
-                    bcl_current_level =  accounts[bcl_rup_ind]['level']
-                    bcl_rup_ind -= 1
-
-            old_level = account_elem['level']
-            result_accounts.append(account_elem)
-            ind+=1
-
-        return result_accounts
-
-
-
-report_sxw.report_sxw('report.account.vat.invoices', 'account.tax.code',
-    'addons/account_vat_report/report/account_tax_report.rml', parser=tax_report_invoices, header="internal")
-
+class report_vat(osv.AbstractModel):
+    _name = 'report.account_vat_report.vat_invoices'
+    _inherit = 'report.abstract_report'
+    _template = 'account_vat_report.report_vat'
+    _wrapped_report_class = vat_report
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
  

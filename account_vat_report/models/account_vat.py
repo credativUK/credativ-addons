@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    OpenERP, Open Source Management Solution
-#    Copyright (C) 2004-2010 Tiny SPRL (<http://tiny.be>).
+#    Copyright (C) 2016 credativ Ltd (<http://credativ.co.uk>).
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as
-#    published by the Free Software Foundation, either version 3 of the
-#    License, or (at your option) any later version.
+#    it under the terms of the GNU Affero General Public License as published
+#    by the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,10 +17,12 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
+
 import time
+
 from openerp.osv import osv, fields
 
-class account_vat_invoices(osv.osv_memory):
+class account_vat_invoices(osv.TransientModel):
     _name = 'account.vat.invoices'
     _description = 'Account Vat Invoices'
     _columns = {
@@ -68,12 +69,8 @@ class account_vat_invoices(osv.osv_memory):
             if isinstance(datas['form'][field], tuple):
                 datas['form'][field] = datas['form'][field][0]
         datas['form']['company_id'] = self.pool.get('account.tax.code').browse(cr, uid, [datas['form']['chart_tax_id']], context=context)[0].company_id.id
-        return {
-            'type': 'ir.actions.report.xml',
-            'report_name': 'account.vat.invoices',
-            'datas': datas,
-            'header':False,
-        }
+
+        return self.pool['report'].get_action(cr, uid, [], 'account_vat_report.vat_invoices', data=datas, context=context)
 
 account_vat_invoices()
 
