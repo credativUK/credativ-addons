@@ -192,19 +192,29 @@ class ProcurementOrder(osv.Model):
                     ids = procurement_obj.search(cr, uid, [max_sched_condition, ('product_id', '=', product_id), ('state', '=', 'running'), ('purchase_id', '!=', False),
                                                            ('procure_method', '=', 'make_to_order'), ('date_planned', '<=', maxdate)], offset=offset, limit=50, order='priority, date_planned', context=context)
                     for proc in procurement_obj.browse(cr, uid, ids):
+                        _logger.info("_procure_confirm_mto_running_to_mts: Product %s procurement %s - begin" % (proc.product_id.id, proc.id))
                         max_qty = stock_prod_loc.get(proc.location_id.id)
                         if max_qty is not None and proc.product_qty >= max_qty:
+                            _logger.info("_procure_confirm_mto_running_to_mts: Product %s procurement %s - skipping due to max qty %s >= %s" % (proc.product_id.id, proc.id, proc.product_qty, max_qty))
                             continue
                         cr.execute('SAVEPOINT mto_to_stock')
                         try:
                             procurement_obj.write(cr, uid, [proc.id], {'purchase_id': False,}, context=context)
+                            proc.refresh()
+                            if proc.state == 'exception':
+                                wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
+                                proc.refresh()
                             wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
                             proc.refresh()
                             # Moved to exception since no MTS stock is available, rollback and try the next one
                             if proc.state == 'exception':
                                 cr.execute('ROLLBACK TO SAVEPOINT mto_to_stock')
                                 stock_prod_loc[proc.location_id.id] = proc.product_qty
+                                _logger.info("_procure_confirm_mto_running_to_mts: Product %s procurement %s - checked, state = %s, message = %s" % (proc.product_id.id, proc.id, proc.state, proc.message))
+                            else:
+                                _logger.info("_procure_confirm_mto_running_to_mts: Product %s procurement %s - successful" % (proc.product_id.id, proc.id))
                         except Exception, e: # A variety of errors may prevent this from re-assigning, picking exported to WMS, PO cut-off, etc
+                            _logger.info("_procure_confirm_mto_running_to_mts: Product %s procurement %s - rolling back - Exception %s" % (proc.product_id.id, proc.id, e))
                             cr.execute('ROLLBACK TO SAVEPOINT mto_to_stock')
                         cr.execute('RELEASE SAVEPOINT mto_to_stock')
                     if use_new_cursor:
