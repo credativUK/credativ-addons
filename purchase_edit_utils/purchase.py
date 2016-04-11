@@ -146,7 +146,8 @@ class PurchaseOrderLine(osv.Model):
                         first = False
                         self.write(cr, uid, [line.id], {'product_qty': order_line['product_qty']}, context=context)
                         if orig_moves:
-                            move_id = move_obj.create(cr, uid, purchase_obj._prepare_order_line_move(cr, uid, line.order_id, line, line.order_id.picking_ids[0].id, context=context))
+                            picking_id = ([x for x in line.order_id.picking_ids if x.state not in ('done', 'cancel')] or line.order_id.picking_ids)[0].id
+                            move_id = move_obj.create(cr, uid, purchase_obj._prepare_order_line_move(cr, uid, line.order_id, line, picking_id, context=context))
                             move_obj.write(cr, uid, [move_id,], {'state': move_state}, context=context)
                     else:
                         self.write(cr, uid, [line.id], {'state': 'cancel'}, context=context)
