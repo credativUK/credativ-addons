@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="view_account_sage_tax_report" model="ir.ui.view">
+            <field name="name">Account Sage Tax Report</field>
+            <field name="model">account.vat.declaration</field>
+            <field name="inherit_id" ref="account.view_account_vat_declaration" />
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='display_detail']" position="after">
+                    <field name="sage_tax_report" />
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
