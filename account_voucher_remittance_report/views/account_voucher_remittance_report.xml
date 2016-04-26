@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+  <data>
+
+        <report
+            string="Remittance Advice"
+            id="action_report_account_voucher_remittance"
+            model="account.voucher"
+            report_type="qweb-pdf"
+            name="account_voucher_remittance_report.report_voucherremittance"
+            file="account_voucher_remittance_report.report_voucherremittance"
+            attachment_use="True"
+            attachment="'Remittance Advice'+'.pdf'"
+        />
+
+  </data>
+</openerp>

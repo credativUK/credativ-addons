@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+<data>
+<template id="report_voucherremittance">
+    <t t-call="report.html_container">
+        <t t-foreach="docs" t-as="o">
+            <t t-call="report.external_layout">
+                <div class="page">
+                    <div class="oe_structure"/>
+
+                    <div class="row">
+                        <div class="col-xs-4 col-xs-offset-8">
+                            <span t-raw="'%s &lt;br&gt;' % o.partner_id.name if o.partner_id.name else ''"/>
+                            <span t-raw="'%s &lt;br&gt;' % o.partner_id.street if o.partner_id.street else ''"/>
+                            <span t-raw="'%s &lt;br&gt;' % o.partner_id.street2 if o.partner_id.street2 else ''"/>
+                            <span t-raw="'%s &lt;br&gt;' % o.partner_id.zip if o.partner_id.zip else ''"/>
+                            <span t-raw="'%s &lt;br&gt;' % o.partner_id.city if o.partner_id.city else ''"/>
+                            <span t-raw="'%s &lt;br&gt;' % o.partner_id.state_id.name if o.partner_id.state_id.name else ''"/>
+                            <span t-raw="'%s &lt;br&gt;' % o.partner_id.country_id.name if o.partner_id.country_id.name else ''"/>
+                        </div>
+                    </div>
+
+                    <h2>Payment Order / Payment</h2>
+
+                    <div class="row mt32 mb32">
+                        <div t-if="o.journal_id.name" class="col-xs-2">
+                            <strong>Payment Type:</strong>
+                            <p t-field="o.journal_id.name"/>
+                        </div>
+                        <div t-if="o.reference" class="col-xs-2">
+                            <strong>Reference</strong>
+                            <p t-field="o.reference"/>
+                        </div>
+                        <div t-if="o.journal_id" class="col-xs-2">
+                            <strong>Currency:</strong>
+                            <p t-field="o.journal_id.currency.name if o.journal_id.currency.name else o.journal_id.company_id.currency_id.name"/>
+                        </div>
+                        <div t-if="o.date" class="col-xs-2">
+                            <strong>Date</strong>
+                            <p t-esc="formatLang(o.date,date=True)"/>
+                        </div>
+                    </div>
+
+                    <table class="table table-condensed">
+                        <thead>
+                            <tr>
+                                <th>Doc Type</th>
+                                <th class="text-center">Invoice/Credit Ref</th>
+                                <th class="text-center">Due Date</th>
+                                <th class="text-center">Original Amount</th>
+                                <th class="text-right">Open Balance</th>
+                                <th class="text-right">Amount Paid</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="get_non_zero_lines(o.line_ids)" t-as="line">
+                                <td>
+                                    <span t-esc="'Invoice' if line.type == 'dr' else 'Credit Note'"></span>
+                                </td>
+                                <td class="text-center">
+                                    <span t-esc="line.move_line_id.invoice.number if line.move_line_id.invoice.number else line.move_line_id.name"/>
+                                </td>
+                                <td class="text-center">
+                                    <p t-if="line.date_due"><span t-esc="formatLang(line.date_due,date=True)"/></p>
+                                </td>
+                                <td class="text-center">
+                                    <span t-esc="formatLang(line.amount_original if line.type == 'dr' else -line.amount_original, currency_obj=line.currency_id)"></span>
+                                </td>
+                                <td class="text-right">
+                                    <span t-esc="formatLang(line.amount_unreconciled if line.type == 'dr' else -line.amount_unreconciled, currency_obj=line.currency_id)"></span>
+                                </td>
+                                <td class="text-right">
+                                    <span t-esc="formatLang(line.amount if line.type == 'dr' else -line.amount, currency_obj=line.currency_id)"></span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="row">
+                        <div class="col-xs-4 pull-right">
+                            <table class="table table-condensed">
+                                <tr class="border-black">
+                                    <td><strong>Total</strong></td>
+                                    <td class="text-right">
+                                        <span t-esc="formatLang(get_sum_amount(), currency_obj=get_currency(o))"/>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="oe_structure"/>
+                </div>
+            </t>
+        </t>
+    </t>
+</template>
+</data>
+</openerp>
+
