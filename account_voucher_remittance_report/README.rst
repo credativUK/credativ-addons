@@ -18,7 +18,7 @@ account voucher.
 Usage
 =====
 
-Go to Accounting -> Customers -> Supplier Payments and create a new
+Go to Accounting -> Suppliers -> Supplier Payments and create a new
 record.
 
 Print the report.
