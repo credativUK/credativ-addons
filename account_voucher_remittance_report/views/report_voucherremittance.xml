@@ -33,7 +33,7 @@
                         </div>
                         <div t-if="o.journal_id" class="col-xs-2">
                             <strong>Currency:</strong>
-                            <p t-field="o.journal_id.currency.name if o.journal_id.currency.name else o.journal_id.company_id.currency_id.name"/>
+                            <p t-esc="o.journal_id.currency.name if o.journal_id.currency.name else o.journal_id.company_id.currency_id.name"/>
                         </div>
                         <div t-if="o.date" class="col-xs-2">
                             <strong>Payment Date</strong>
