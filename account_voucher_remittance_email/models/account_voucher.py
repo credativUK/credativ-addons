@@ -46,23 +46,4 @@ class AccountVoucher(models.Model):
         '''
         This function sends email to supplier
         '''
-
-        for voucher in self:
-            email_act = voucher.actionSendEmail()
-            email_ctx = email_act['context']
-            composer_obj = self.env['mail.compose.message'].with_context(email_ctx)
-            composer_values = {}
-            template_values = [
-                    email_ctx.get('default_template_id'),
-                    email_ctx.get('default_composition_mode'),
-                    email_ctx.get('default_model'),
-                    email_ctx.get('default_res_id'),
-                ]
-            composer_values.update(composer_obj.onchange_template_id(*template_values).get('value', {}))
-            if not composer_values.get('email_from'):
-                composer_values['email_from'] = self.company_id.email
-            for key in ['attachment_ids', 'partner_ids']:
-                if composer_values.get(key):
-                    composer_values[key] = [(6, 0, composer_values[key])]
-            composer = composer_obj.create(composer_values)
-            composer.send_mail()
+        return self.actionSendEmail()
