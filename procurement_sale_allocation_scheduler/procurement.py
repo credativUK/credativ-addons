@@ -21,7 +21,7 @@
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from psycopg2.extensions import TransactionRollbackError
+from psycopg2 import OperationalError
 import traceback
 
 from openerp import netsvc
@@ -35,7 +35,28 @@ from openerp import tools
 import logging
 _logger = logging.getLogger(__name__)
 
-MAX_TRIES = 5
+PROC_ERROR = 'Error running procurement scheduler'
+
+class AttemptProcurement(object):
+    def __init__(self, cr, proc):
+        self.cr = cr
+        self.proc = proc
+
+    def __enter__(self):
+        self.cr.execute("SAVEPOINT attempt_procurement")
+        return self.cr
+
+    def __exit__(self, ex_type, ex_value, tb):
+        if ex_type and ex_type != OperationalError: # We have an exception, mark the procurement as such
+            self.cr.execute("ROLLBACK TO SAVEPOINT attempt_procurement")
+            if self.proc.message != PROC_ERROR:
+                self.proc.message_post(body='%s:<br/>\n<br/>\n<pre>%s</pre>' % (PROC_ERROR, traceback.format_exc()))
+                self.proc.write({'message': PROC_ERROR})
+        elif ex_type and ex_type == OperationalError: # We have an exception, but it is just an opperational error, ignore it
+            self.cr.execute("ROLLBACK TO SAVEPOINT attempt_procurement")
+
+        self.cr.execute("RELEASE SAVEPOINT attempt_procurement")
+        return True # Danger, this supresses any exceptions, this is what we want
 
 class ProcurementOrder(osv.Model):
     _inherit = 'procurement.order'
@@ -54,14 +75,14 @@ class ProcurementOrder(osv.Model):
         try:
             if use_new_cursor:
                 cr = pooler.get_db(use_new_cursor).cursor()
+            ids = []
+            prev_ids = []
             while True:
-                report_ids = []
-                ids = procurement_obj.search(cr, uid, [max_sched_condition, ('note', 'not like', '%_mto_to_mts_done_%'), '|',
+                ids = procurement_obj.search(cr, uid, [('date_planned', '<', maxdate), max_sched_condition, ('note', 'not like', '%_mto_to_mts_done_%'), '|',
                                                            '&', ('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order'),
                                                            '&', '&', ('state', 'in', ('confirmed', 'exception')), ('procure_method', '=', 'make_to_stock'), ('note', 'like', '%_mto_to_mts_fail_%')], limit=50, order='priority, date_planned', context=context)
-                _logger.info('Processing procurements %s' % ids)
                 for proc in procurement_obj.browse(cr, uid, ids):
-                    if maxdate >= proc.date_planned:
+                    with AttemptProcurement(cr, proc):
                         ok = True
                         if proc.move_id:
                             # Check if there is qty at this location but do not yet reserve it.
@@ -76,7 +97,6 @@ class ProcurementOrder(osv.Model):
                             proc.refresh()
                             # Moved to exception since another thread might be reserving it instead, rollback and try again later
                             if proc.state == 'exception' and '_mto_to_mts_fail_' not in proc.note:
-                                _logger.info('Procurement %s entered exception state.' % proc.id)
                                 cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id = %s""", ('\n\n_mto_to_mts_fail_',proc.id))
                         else:
                             # No stock is available, continue
@@ -87,7 +107,10 @@ class ProcurementOrder(osv.Model):
                                 procurement_obj.write(cr, uid, [proc.id], {'procure_method': 'make_to_order'}, context=context)
                 if use_new_cursor:
                     cr.commit()
-                if not ids: break
+                if not ids or prev_ids == ids:
+                    break
+                else:
+                    prev_ids = ids
         finally:
             if use_new_cursor:
                 try:
@@ -107,15 +130,15 @@ class ProcurementOrder(osv.Model):
         maxdate = (datetime.today() + relativedelta(days=company.schedule_range)).strftime(tools.DEFAULT_SERVER_DATE_FORMAT)
         max_sched_condition = context.get('_sched_max_proc_id') and ('id', '<=', context.get('_sched_max_proc_id')) or ('id', '!=', 0)
         try:
-            offset = 0
             if use_new_cursor:
                 cr = pooler.get_db(use_new_cursor).cursor()
             exclude_prod_loc = [] # List of (product_id, location_id) for indicating no stock is available
+            ids = []
+            prev_ids = []
             while True:
-                report_ids = []
-                ids = procurement_obj.search(cr, uid, [max_sched_condition, ('state', 'in', ('confirmed', 'exception')), ('procure_method', '=', 'make_to_stock')], offset=offset, limit=50, order='priority, date_planned', context=context)
+                ids = procurement_obj.search(cr, uid, [('date_planned', '<', maxdate), max_sched_condition, ('state', 'in', ('confirmed', 'exception')), ('procure_method', '=', 'make_to_stock')], limit=50, order='priority, date_planned', context=context)
                 for proc in procurement_obj.browse(cr, uid, ids):
-                    if maxdate >= proc.date_planned:
+                    with AttemptProcurement(cr, proc):
                         # We already know there are no POs available, skip
                         if (proc.product_id.id, proc.location_id.id) in exclude_prod_loc:
                             continue
@@ -145,7 +168,10 @@ class ProcurementOrder(osv.Model):
                                 break
                 if use_new_cursor:
                     cr.commit()
-                offset += len(ids)
+                if not ids or prev_ids == ids:
+                    break
+                else:
+                    prev_ids = ids
                 if not ids: break
         finally:
             if use_new_cursor:
@@ -185,44 +211,35 @@ class ProcurementOrder(osv.Model):
                         GROUP BY pp.id ORDER BY pp.date_mto_mts_allocate""", (maxdate,))
             product_ids = [x[0] for x in cr.fetchall()]
             for product_id in product_ids:
-                offset = 0
                 stock_prod_loc = {} # Dict of {location_id: qty} for last stock failure qty, anything >= should skip
+                ids = []
+                prev_ids = []
                 while True:
-                    report_ids = []
                     ids = procurement_obj.search(cr, uid, [max_sched_condition, ('product_id', '=', product_id), ('state', '=', 'running'), ('purchase_id', '!=', False),
-                                                           ('procure_method', '=', 'make_to_order'), ('date_planned', '<=', maxdate)], offset=offset, limit=50, order='priority, date_planned', context=context)
+                                                           ('procure_method', '=', 'make_to_order'), ('date_planned', '<=', maxdate)], limit=50, order='priority, date_planned', context=context)
                     for proc in procurement_obj.browse(cr, uid, ids):
-                        _logger.info("_procure_confirm_mto_running_to_mts: Product %s procurement %s - begin" % (proc.product_id.id, proc.id))
                         max_qty = stock_prod_loc.get(proc.location_id.id)
                         if max_qty is not None and proc.product_qty >= max_qty:
-                            _logger.info("_procure_confirm_mto_running_to_mts: Product %s procurement %s - skipping due to max qty %s >= %s" % (proc.product_id.id, proc.id, proc.product_qty, max_qty))
                             continue
                         cr.execute('SAVEPOINT mto_to_stock')
                         try:
                             procurement_obj.write(cr, uid, [proc.id], {'purchase_id': False,}, context=context)
-                            proc.refresh()
-                            if proc.state == 'exception':
-                                wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
-                                proc.refresh()
                             wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
                             proc.refresh()
                             # Moved to exception since no MTS stock is available, rollback and try the next one
                             if proc.state == 'exception':
                                 cr.execute('ROLLBACK TO SAVEPOINT mto_to_stock')
                                 stock_prod_loc[proc.location_id.id] = proc.product_qty
-                                _logger.info("_procure_confirm_mto_running_to_mts: Product %s procurement %s - checked, state = %s, message = %s" % (proc.product_id.id, proc.id, proc.state, proc.message))
-                            else:
-                                _logger.info("_procure_confirm_mto_running_to_mts: Product %s procurement %s - successful" % (proc.product_id.id, proc.id))
                         except Exception, e: # A variety of errors may prevent this from re-assigning, picking exported to WMS, PO cut-off, etc
-                            _logger.info("_procure_confirm_mto_running_to_mts: Product %s procurement %s - rolling back - Exception %s" % (proc.product_id.id, proc.id, e))
                             cr.execute('ROLLBACK TO SAVEPOINT mto_to_stock')
                         cr.execute('RELEASE SAVEPOINT mto_to_stock')
                     if use_new_cursor:
                         cr.commit()
-                    offset += len(ids)
-                    if not ids:
+                    if not ids or prev_ids == ids:
                         product_obj.write(cr, uid, [product_id], {'date_mto_mts_allocate': current_datetime}, context=context)
                         break
+                    else:
+                        prev_ids = ids
         finally:
             if use_new_cursor:
                 try:
@@ -265,17 +282,10 @@ class ProcurementOrder(osv.Model):
             while True:
                 ids = procurement_obj.search(cr, uid, [max_sched_condition, ('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order'), ('date_planned', '<', maxdate)], limit=100, order='priority, date_planned', context=context)
                 for proc in procurement_obj.browse(cr, uid, ids, context=context):
-                    try:
+                    with AttemptProcurement(cr, proc):
                         wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
-
-                        if use_new_cursor:
-                            cr.commit()
-                    except OperationalError:
-                        if use_new_cursor:
-                            cr.rollback()
-                            continue
-                        else:
-                            raise
+                if use_new_cursor:
+                    cr.commit()
                 if not ids or prev_ids == ids:
                     break
                 else:
@@ -285,17 +295,10 @@ class ProcurementOrder(osv.Model):
             while True:
                 ids = procurement_obj.search(cr, uid, [max_sched_condition, ('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_stock'), ('date_planned', '<', maxdate)], limit=100)
                 for proc in procurement_obj.browse(cr, uid, ids):
-                    try:
+                    with AttemptProcurement(cr, proc):
                         wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
-
-                        if use_new_cursor:
-                            cr.commit()
-                    except OperationalError:
-                        if use_new_cursor:
-                            cr.rollback()
-                            continue
-                        else:
-                            raise
+                if use_new_cursor:
+                    cr.commit()
                 if not ids or prev_ids == ids:
                     break
                 else:
@@ -327,18 +330,14 @@ class ProcurementOrder(osv.Model):
         context['_sched_max_proc_id'] = cr.fetchall()[0][0]
         exceptions = []
         for func in functions:
-            tries = 0
-            while tries < MAX_TRIES:
-                try:
-                    func(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
-                    break
-                except TransactionRollbackError, e:
-                    exception = "Serialisation error %s while running scheduler, continue [%s]:\n\n%s" % (e, use_new_cursor, traceback.format_exc())
-                    _logger.error(exception)
-                    if not use_new_cursor:
-                        raise
-                    tries += 1
-                    continue
+            try:
+                func(cr, uid, ids=ids, use_new_cursor=use_new_cursor, context=context)
+            except OperationalError, e:
+                exception = "OperationalError while %s running scheduler, continue [%s]:\n\n%s" % (e, use_new_cursor, traceback.format_exc())
+                _logger.error(exception)
+                exceptions.append(exception)
+                if not use_new_cursor:
+                    raise e
 
         return True
 
