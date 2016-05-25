@@ -145,6 +145,8 @@ class StockPicking(osv.Model):
                             'picking_id' : new_picking,
                             'state': 'assigned',
                             'move_dest_id': move.move_dest_id.id,
+                            'move_history_ids': [(6, 0, [x.id for x in move.move_history_ids])],
+                            'move_history_ids2': [(6, 0, [x.id for x in move.move_history_ids2])],
                             'price_unit': move.price_unit,
                             'product_uom': product_uoms[move.id]
                     }
