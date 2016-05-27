@@ -28,6 +28,6 @@ class res_partner(orm.Model):
         'purchase_auto_invoice' : fields.boolean('Automatic Purchase Invoice', help='If set, the purchase invoice will be created when possible according to the invoice type'),
     }
 
-    _default = {
+    _defaults = {
         'purchase_auto_invoice': True,
     }
