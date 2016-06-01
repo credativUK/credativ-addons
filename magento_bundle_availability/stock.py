@@ -28,6 +28,29 @@ class StockPicking(osv.Model):
     _name = 'stock.picking'
     _inherit = 'stock.picking'
 
+
+    def to_bundles(self, cr, uid, ids, context=None):
+        """ Groups together bundled lines, returning
+        """
+
+        if hasattr(ids, '__iter__'):
+            return {id : self.to_bundles(cr, uid, id, context=context) for id in ids}
+
+        bundles = {}
+        non_bundled_moves = []
+        pick = self.browse(cr, uid, ids, context=context)
+        for move in pick.move_lines:
+            bundle_id = move.sale_parent_line_id.id
+            if bundle_id:
+                bundle = str(bundle_id)
+                if bundles.get(bundle) is None:
+                    bundles.update({bundle : []})
+                bundles[bundle].append(move)
+            else:
+                non_bundled_moves.append(move)
+        return bundles, non_bundled_moves
+
+
     def test_assigned(self, cr, uid, ids):
         # Call super in case any other hooks need to be triggered
         res = super(StockPicking, self).test_assigned(cr, uid, ids)
@@ -42,20 +65,10 @@ class StockPicking(osv.Model):
             if pick.type == 'in' or not mt == 'direct':
                 return res
 
-            bundles = {}
-            non_bundled_moves = []
-            for move in pick.move_lines:
-                # super() should have called check_assign() for 'waiting' moves
-                bundle_id = move.sale_parent_line_id.id
-                if bundle_id:
-                    bundle = str(bundle_id)
-                    if bundles.get(bundle) is None:
-                        bundles.update({bundle : []})
-                    bundles[bundle].append(move)
-                else:
-                    non_bundled_moves.append(move)
+            bundles, non_bundled_moves = self.to_bundles(cr, uid, pick.id)
 
             for bundle in bundles:
+                # super() should have called check_assign() for 'waiting' moves
                 move_states = [move.state for move in bundles[bundle]]
                 move_states_with_qty = [move.state for move in bundles[bundle] if move.product_qty]
                 if all(state == 'assigned' for state in move_states_with_qty):
