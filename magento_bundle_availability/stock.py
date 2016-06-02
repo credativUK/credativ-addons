@@ -40,9 +40,8 @@ class StockPicking(osv.Model):
         non_bundled_moves = []
         pick = self.browse(cr, uid, ids, context=context)
         for move in pick.move_lines:
-            bundle_id = move.sale_parent_line_id.id
-            if bundle_id:
-                bundle = str(bundle_id)
+            bundle = move.sale_parent_line_id.id
+            if bundle:
                 if bundles.get(bundle) is None:
                     bundles.update({bundle : []})
                 bundles[bundle].append(move)
