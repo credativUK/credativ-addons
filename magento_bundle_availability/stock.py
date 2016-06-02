@@ -30,7 +30,12 @@ class StockPicking(osv.Model):
 
 
     def to_bundles(self, cr, uid, ids, context=None):
-        """ Groups together bundled lines, returning
+        """ Groups together bundled moves within a picking, returning:
+            - A dictionary mapping each distinct sale_parent_line_id
+              to a list of the corresponding moves.
+            - A list of the moves which do not belong to a bundle.
+            If multiple ids are provided, a dictionary is returned
+            mapping each picking id to the above values.
         """
 
         if hasattr(ids, '__iter__'):
