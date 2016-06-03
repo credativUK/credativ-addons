@@ -81,6 +81,7 @@ class ProcurementOrder(osv.Model):
                 ids = procurement_obj.search(cr, uid, [('date_planned', '<', maxdate), max_sched_condition, ('note', 'not like', '%_mto_to_mts_done_%'), '|',
                                                            '&', ('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order'),
                                                            '&', '&', ('state', 'in', ('confirmed', 'exception')), ('procure_method', '=', 'make_to_stock'), ('note', 'like', '%_mto_to_mts_fail_%')], limit=50, order='priority, date_planned', context=context)
+                _logger.info('Processing procurements %s' % ids)
                 for proc in procurement_obj.browse(cr, uid, ids):
                     with AttemptProcurement(cr, proc):
                         ok = True
@@ -97,6 +98,7 @@ class ProcurementOrder(osv.Model):
                             proc.refresh()
                             # Moved to exception since another thread might be reserving it instead, rollback and try again later
                             if proc.state == 'exception' and '_mto_to_mts_fail_' not in proc.note:
+                                _logger.info('Procurement %s entered exception state.' % proc.id)
                                 cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id = %s""", ('\n\n_mto_to_mts_fail_',proc.id))
                         else:
                             # No stock is available, continue
