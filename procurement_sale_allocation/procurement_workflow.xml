@@ -116,5 +116,9 @@
             <field name="condition">True</field>
         </record>
 
+        <record id="purchase.trans_buy_cancel" model="workflow.transition">
+            <field name="condition">False</field>
+        </record>
+
     </data>
 </openerp>
