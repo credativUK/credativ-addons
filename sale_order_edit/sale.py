@@ -43,6 +43,11 @@ class SaleOrder(osv.osv, OrderEdit):
         oe_id = oe_obj.create(cr, uid, {}, context=context)
         return oe_obj.edit_order(cr, uid, [oe_id], context=context)
 
+    def copy_for_edit(self, cr, uid, id_, context=None):
+        edit_id = super(SaleOrder, self).copy_for_edit(cr, uid, id_, context=context)
+        self._fixup_created_lines(cr, uid, edit_id, context=context)
+        return edit_id
+
     def copy_data(self, cr, uid, id_, default=None, context=None):
         if not default:
             default = {}
@@ -191,6 +196,11 @@ class SaleOrder(osv.osv, OrderEdit):
 
         return True
 
+    def _fixup_created_lines(self, cr, uid, edit_id, context=None):
+        ''' Hook for amending lines after creation
+        '''
+        return
+
     def _fixup_created_picking(self, cr, uid, line_moves, remain_moves, context):
         # This is a post confirm hook
         # - post-action hook: replace new stuff generated in the action with old stuff
@@ -272,5 +282,17 @@ class SaleOrder(osv.osv, OrderEdit):
             move_pool.action_cancel(cr, uid, cancel_moves)
 
         return True
+
+class SaleOrderLine(osv.osv):
+    _inherit = 'sale.order.line'
+
+    _columns = {
+        'order_line_edit_id': fields.many2one('sale.order.line', 'Edit of Order Line', readonly=True)
+    }
+
+    def copy_data(self, cr, uid, id_, default=None, context=None):
+        res = super(SaleOrderLine, self).copy_data(cr, uid, id_, default, context=context)
+        res.update({'order_line_edit_id' : id_})
+        return res
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
