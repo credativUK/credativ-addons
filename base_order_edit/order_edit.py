@@ -43,7 +43,7 @@ class OrderEdit(object):
         done_totals = {}
         moves = []
         done_states = ['done']
-        key2old_lines = {}
+        key2old_lines = defaultdict(lambda : defaultdict(dict))
         new_id2old_lines = {}
 
         if self._name == 'sale.order':
@@ -110,10 +110,6 @@ class OrderEdit(object):
 
             key = tuple(key)
             edit_totals[key] = edit_totals.setdefault(key, 0) + qty
-            if not key2old_lines.get(key):
-                key2old_lines.update({key:{}})
-            if not key2old_lines.get(key).get(line.id):
-                key2old_lines[key].update({line.id:{}})
 
             # Retain requested line data for reference during fixup after records have been unlinked.
             # TODO: Could allow fields_noted_for_fixup to be a list of functions for greater adaptability.
