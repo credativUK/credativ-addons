@@ -91,7 +91,7 @@ class OrderEdit(object):
         # Get a list of lines for each product in the edit sale order
         edit_totals = {}
         for line in order.order_line:
-            if line.product_id.id == False or line.product_id.type == 'service':
+            if line.product_id.id == False:
                 continue
             if self._name == 'sale.order':
                 qty = line.product_uom_qty
@@ -127,7 +127,7 @@ class OrderEdit(object):
 
         new_vals = {}
         for line in order.order_line:
-            if line.product_id.id == False or line.product_id.type == 'service':
+            if line.product_id.id == False:
                 continue
             new_vals[(line.product_id.id, line.price_unit)] = {'price_unit': line.price_unit}
             if self._name == 'purchase.order':
