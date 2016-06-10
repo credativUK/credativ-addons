@@ -75,7 +75,7 @@ class StockPicking(osv.Model):
                 # super() should have called check_assign() for 'waiting' moves
                 move_states = [move.state for move in bundles[bundle]]
                 move_states_with_qty = [move.state for move in bundles[bundle] if move.product_qty]
-                if all(state == 'assigned' for state in move_states_with_qty):
+                if all(state in OK_STATES for state in move_states_with_qty):
                     return True
                 if not set(move_states).issubset(OK_STATES):
                     ok = False
