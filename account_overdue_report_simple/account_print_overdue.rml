@@ -138,20 +138,24 @@
     <para style="terp_default_9">Customer Ref: [[ o.ref or ' ']]</para>
     <para style="terp_default_9">Customer Phone: [[ addr['phone'] or removeParentNode('para') ]]</para>
     <para style="terp_default_9">
-      <font color="white"> </font><br/>
+      <font color="white"> </font>
     </para>
+    <spacer length="10">[[]]</spacer>
     <para style="terp_default_9">Dear Sir/Madam,<br/></para>
     <para style="terp_default_9">
-      <font color="white"> </font><br/>
+      <font color="white"> </font>
     </para>
+    <spacer length="10">[[ ]]</spacer>
     <para style="terp_default_9">[[ message(o, company) ]]</para>
     <para style="terp_default_9">
-      <font color="white"> </font><br/>
+      <font color="white"> </font>
     </para>
+    <spacer length="10">[[ ]]</spacer>
     <para style="terp_default_9">Best regards.</para>
     <para style="terp_default_9">
-      <font color="white"> </font><br/>
+      <font color="white"> </font>
     </para>
+    <spacer length="10">[[ ]]</spacer>
     <blockTable colWidths="80.0,80.0,190.0,80.0,80.0" style="Table1">
       <tr>
         <td>
