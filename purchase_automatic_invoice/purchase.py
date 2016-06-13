@@ -20,6 +20,7 @@
 ##############################################################################
 
 import sys
+import time
 import traceback
 import logging
 from contextlib import closing
@@ -28,6 +29,7 @@ from openerp.osv import fields, orm
 from openerp import pooler
 
 _logger = logging.getLogger(__name__)
+
 
 class purchase_order(orm.Model):
     _inherit = 'purchase.order'
@@ -38,9 +40,14 @@ class purchase_order(orm.Model):
         context = context.copy()
         wizard_obj = self.pool.get('purchase.order.line_invoice')
         for purchase in self.browse(cr, uid, ids, context=context):
+            start = time.time()
+            _logger.info("Started creating automatic invoice for PO %s", purchase.name)
             context.update({'active_ids' :  [line.id for line in purchase.order_line if line.invoiced != True]})
             wizard_id = wizard_obj.create(cr, uid, {}, context=context)
             wizard_obj.makeInvoices(cr, uid, [wizard_id], context=context)
+            _logger.info(
+                "Finished creating automatic invoice for PO %s. Took: %s", purchase.name, str(time.time() - start)
+            )
         return True
 
     def _auto_invoice(self, cr, uid, ids, context=None):
