@@ -68,9 +68,15 @@ class purchase_order(orm.Model):
                 ON rp.id = po.partner_id
             INNER JOIN purchase_order_line pol
                 ON pol.order_id = po.id
+            LEFT OUTER JOIN purchase_invoice_rel pil
+                ON pil.purchase_id = po.id
+            LEFT OUTER JOIN account_invoice ai
+                ON pil.invoice_id = ai.id
+                AND ai.state != 'cancel'
             WHERE po.invoice_method IN ('manual', 'order')
             AND po.state = 'approved'
             AND rp.purchase_auto_invoice = True
+            AND ai.id IS NULL
             GROUP BY po.id
                 HAVING bool_or(pol.invoiced = False);""")
 
