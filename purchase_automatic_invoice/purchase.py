@@ -59,7 +59,7 @@ class purchase_order(orm.Model):
 
         ## The field 'invoiced' is not searchable so using SQL instead
         # purchase_ids = self.search(cr, uid, [('partner_id.purchase_auto_invoice', '=', True),
-        #                                      ('invoice_method', 'in', ('manual', 'order')),
+        #                                      ('invoice_method', 'in', ('manual')),
         #                                      ('invoiced', '=', False)], context=context)
 
         cr.execute("""SELECT po.id
@@ -73,7 +73,7 @@ class purchase_order(orm.Model):
             LEFT OUTER JOIN account_invoice ai
                 ON pil.invoice_id = ai.id
                 AND ai.state != 'cancel'
-            WHERE po.invoice_method IN ('manual', 'order')
+            WHERE po.invoice_method IN ('manual')
             AND po.state = 'approved'
             AND rp.purchase_auto_invoice = True
             AND ai.id IS NULL
