@@ -199,6 +199,7 @@ class ProcurementOrder(osv.Model):
                     self.message_post(cr, uid, [proc_data[0]], body=message, context=context)
 
             if po_unlink_ids:
+                purchase_obj.action_cancel(cr, uid, po_unlink_ids, context=context)
                 purchase_obj.unlink(cr, uid, po_unlink_ids, context=context)
 
         return res
