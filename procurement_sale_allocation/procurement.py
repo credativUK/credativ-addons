@@ -213,13 +213,11 @@ class ProcurementOrder(osv.Model):
             pol_ids = purchase_line_obj.search(cr, uid, [('move_dest_id', '=', False), ('state', '!=', 'cancel'), ('order_id', '=', proc.purchase_id.id), ('product_id', '=', proc.product_id.id)], order="date_planned desc, product_qty asc", context=context)
             pol_assign_id = False
             for line in purchase_line_obj.browse(cr, uid, pol_ids, context=context):
-                if any([move.state in ('done', 'cancel') for move in line.move_ids]):
-                    # Only allow allocation to lines with no moves (draft) or available moves (in progress)
-                    continue
                 purchase_uom_qty = uom_obj._compute_qty(cr, uid, proc.product_uom.id, proc.product_qty, line.product_uom.id)
                 if line.product_qty >= purchase_uom_qty:
-                    pol_assign_id = line.id
-                    break
+                    if not line.move_ids or (sum([x.product_qty for x in line.move_ids if x.state == 'assigned'])) >= purchase_uom_qty:
+                        pol_assign_id = line.id
+                        break
             if not pol_assign_id:
                 raise osv.except_osv(_('Error!'),_("The purchase order %s does not have enough space to allocate procurement %s.") % (proc.purchase_id.name, proc.name))
             # If qty < pol.qty, duplicate POL and move and divide the qty

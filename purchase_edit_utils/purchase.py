@@ -40,47 +40,58 @@ class PurchaseOrder(osv.Model):
         for purchase in self.browse(cr, uid, ids, context=context):
             if purchase.state in states:
                 restricted_ids.append(purchase.id)
-            for line in purchase.order_line:
-                if line.state in states:
-                    restricted_ids.append(purchase.id)
-                if not context.get('psa_skip_moves'):
-                    for move in line.move_ids:
-                        if move.state in states:
-                            restricted_ids.append(purchase.id)
         return list(set(restricted_ids))
 
 class PurchaseOrderLine(osv.Model):
     _inherit = 'purchase.order.line'
 
-    def do_split(self, cr, uid, id, qty, context=None):
+    def do_split(self, cr, uid, id, qty, move_state='assigned', context=None):
         purchase_obj = self.pool.get('purchase.order')
         move_obj = self.pool.get('stock.move')
         line = self.browse(cr, uid, id, context=context)
         new_line_id = False
+        new_line_ids = []
         if line.product_qty > qty:
             orig_moves = [m.id for m in line.move_ids]
-            move_states = list(set([m.state for m in line.move_ids]))
-            if len(move_states) == 1:
-                move_state = move_states[0]
-            elif len(move_states) > 1:
-                raise osv.except_osv(_('Error!'),_('Unable to split purchase line %s when it has a combination of moves in different states: %s') % (line.id, move_states))
+            # Get list of move states, qty and ids
+            move_state_qtys = {}
+            for move in line.move_ids:
+                move_state_qtys[move.state] = move_state_qtys.get(move.state, 0) + move.product_qty
+
+            if orig_moves and move_state_qtys.get(move_state, 0) < qty:
+                raise osv.except_osv(_('Error!'),_('Unable to split purchase line into a greater quantity than it has in state %s') % (move_state,))
+
+            # Update the main line with the requested amount and state
             self.write(cr, uid, [line.id], {'product_qty': qty}, context=context)
-            new_line_id = self.copy(cr, uid, line.id, {'product_qty': line.product_qty - qty}, context=context)
-            self.write(cr, uid, [new_line_id], {'state': line.state}, context=context)
-            if line.state not in ('draft', 'cancel'):
+            if line.state not in ('draft', 'cancel') and orig_moves:
                 line = self.browse(cr, uid, line.id, context=context)
-                if orig_moves:
-                    move_id = move_obj.create(cr, uid, purchase_obj._prepare_order_line_move(cr, uid, line.order_id, line, line.order_id.picking_ids[0].id, context=context))
-                    move_obj.write(cr, uid, [move_id,], {'state': move_state}, context=context)
+                picking_ids = [x.id for x in line.order_id.picking_ids if x.state == move_state]
+                picking_id = picking_ids and picking_ids[0] or line.order_id.picking_ids[0]
+                move_id = move_obj.create(cr, uid, purchase_obj._prepare_order_line_move(cr, uid, line.order_id, line, picking_id, context=context))
+                move_obj.write(cr, uid, [move_id,], {'state': move_state}, context=context)
+
+            # Iterate all remaining states and qtys and create lines for them
+            for new_state, new_qty in move_state_qtys.iteritems():
+                if new_state == move_state:
+                    new_qty -= qty
+                if not new_qty:
+                    continue
+                new_line_id = self.copy(cr, uid, line.id, {'product_qty': new_qty}, context=context)
+                new_line_ids.append(new_line_id)
+                self.write(cr, uid, [new_line_id], {'state': line.state}, context=context)
+                if line.state not in ('draft', 'cancel') and orig_moves:
                     new_line = self.browse(cr, uid, new_line_id, context=context)
-                    move_id = move_obj.create(cr, uid, purchase_obj._prepare_order_line_move(cr, uid, new_line.order_id, new_line, new_line.order_id.picking_ids[0].id, context=context))
-                    move_obj.write(cr, uid, [move_id,], {'state': move_state}, context=context)
+                    picking_ids = [x.id for x in new_line.order_id.picking_ids if x.state == new_state]
+                    picking_id = picking_ids and picking_ids[0] or new_line.order_id.picking_ids[0]
+                    move_id = move_obj.create(cr, uid, purchase_obj._prepare_order_line_move(cr, uid, new_line.order_id, new_line, picking_id, context=context))
+                    move_obj.write(cr, uid, [move_id,], {'state': new_state}, context=context)
+
             if orig_moves:
                 move_obj.write(cr, uid, orig_moves, {'move_dest_id': False, 'purchase_line_id': False, 'picking_id': False}, context=context)
                 move_obj.action_cancel(cr, uid, orig_moves, context=context)
         elif line.product_qty < qty:
             raise osv.except_osv(_('Error!'),_('Unable to split purchase line into a greater quantity than it has'))
-        return line.id, new_line_id
+        return line.id, new_line_ids and new_line_ids[0] or False
 
     def do_merge(self, cr, uid, ids, context=None):
         def make_key(br, fields): # Copied from module purchase function do_merge

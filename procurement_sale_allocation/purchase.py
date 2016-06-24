@@ -43,8 +43,9 @@ class PurchaseOrder(osv.Model):
             for line in purchase_line_obj.browse(cr, uid, pol_ids, context=context):
                 purchase_uom_qty = uom_obj._compute_qty(cr, uid, proc.product_uom.id, proc.product_qty, line.product_uom.id)
                 if line.product_qty >= purchase_uom_qty:
-                    pol_assign_id = line.id
-                    break
+                    if not line.move_ids or (sum([x.product_qty for x in line.move_ids if x.state == 'assigned'])) >= purchase_uom_qty:
+                        pol_assign_id = line.id
+                        break
             if not pol_assign_id:
                 return False
         return True
