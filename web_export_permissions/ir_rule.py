@@ -23,7 +23,7 @@ import logging
 from openerp.osv import fields,osv
 from openerp.osv.orm import except_orm, browse_record
 from openerp.tools.translate import _
-
+from openerp import tools
 
 _logger = logging.getLogger(__name__)
 
@@ -63,6 +63,7 @@ class ir_model_access(osv.osv):
                         a.perm_export''', (model_name,))
         return [('%s/%s' % x) if x[0] else x[1] for x in cr.fetchall()]
 
+    @tools.ormcache()
     def check(self, cr, uid, model, mode='read', raise_exception=True, context=None):
         try:
             # Passing args as keywords fails as the ormcache doesn't allow for it.
