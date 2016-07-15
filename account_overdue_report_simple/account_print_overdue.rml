@@ -119,7 +119,7 @@
           <para style="terp_default_9">[[ o.title.name or '' ]] [[ o.name ]]</para>
           <para style="terp_default_9">[[ addr['street'] ]]</para>
           <para style="terp_default_9">[[ addr['street2'] or removeParentNode('para') ]]</para>
-          <para style="terp_default_9">[[ addr['zip'] ]] [[ addr['city'] ]]</para>
+          <para style="terp_default_9">[[ [[ addr['city'] ]] addr['zip'] ]]</para>
           <para style="terp_default_9">[[ addr['state_id'] or removeParentNode('para')]]</para>
           <para style="terp_default_9">[[ addr['country_id'] ]]</para>
           <para style="terp_default_9">
