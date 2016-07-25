@@ -281,7 +281,7 @@ class StockOverviewReportLine(osv.osv_memory):
 
     _columns = {
         'wizard_id': fields.many2one('stock.overview.report', 'Stock Overview Report'),
-        'product_id': fields.many2one('product.product', 'Product'),
+        'product_id': fields.many2one('product.product', 'Product', select=True),
         'categ_id': fields.many2one('product.category', string='Primary Category', readonly=True),
         'categ_ids': fields.related('product_id', 'categ_ids', type='many2many', relation='product.category', string='Product Categories', readonly=True),
         'company_id': fields.many2one('res.company', 'Company'),
