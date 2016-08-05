@@ -21,7 +21,7 @@
 
 {
         'name' : 'Purchase Automatic Invoice',
-        'version' : '7.0.1.0',
+        'version' : '7.20160805.2',
         'author' : 'credativ Ltd',
         'description' : '''
 Allows invoices to be automatically created for purchase orders
