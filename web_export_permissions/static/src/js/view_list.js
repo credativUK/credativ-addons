@@ -3,7 +3,7 @@ openerp.web_export_permissions = function(instance) {
     instance.web.ListView.include({
         load_list: function() {
             var res = this._super.apply(this, arguments);
-            if (!this.is_action_enabled('export')) {
+            if (!this.is_action_enabled('export') && typeof this.sidebar !== 'undefined') {
                 var items = this.sidebar.items["other"];
                 for (var i in items) {
                     if (items[i].label == "Export") {
