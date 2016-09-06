@@ -20,7 +20,10 @@
 #
 ##############################################################################
 
+from collections import defaultdict
+
 from openerp import models, fields, api
+
 
 class ResPartner(models.Model):
     _inherit = 'res.partner'
@@ -31,42 +34,44 @@ class ResPartner(models.Model):
     @api.multi
     def _credit_debit_get(self):
         sale_obj = self.env['sale.order']
-
-        def amount_not_invoiced(order):
-            order_currency = order.currency_id
-            company_currency = order.company_id.currency_id
-
-            invoices = order.invoice_ids
-            invoices &= invoices.search([('state', 'not in', ['draft', 'cancel'])])
-
-            #Quick fix
-            # Code "invoiced = sum(invoices.mapped('amount_total'))" is
-            # prefetching all invoices amount_total with force compute method
-            # Takes 10-16 secs to execute for single partner
-            #TODO Find the code bug in the code and remove below code block
-            invoice_ids = [invoice.id for invoice in invoices]
-            invoiced = 0.0
-            if invoice_ids:
-                self.env.cr.execute(
-                    "SELECT COALESCE(SUM(amount_total), 0.0) as sum "
-                    "FROM account_invoice "
-                    "WHERE id IN %s",
-                    (tuple(invoice_ids),))
-                invoiced = sum(i.values()[0] for i in self.env.cr.dictfetchall())
-            #End
-
-            return order_currency.compute(order.amount_total - invoiced, company_currency)
+        invoice_obj = self.env['account.invoice']
+        currency_obj = self.env['res.currency']
 
         # old API expects more arguments that we ever receive
         res = super(ResPartner, self)._credit_debit_get(['debit','credit'], None)
 
         for partner in self:
-            orders = sale_obj.search([
-                                      ('partner_id', 'child_of', partner.id),
-                                      ('state', 'not in', ['draft', 'sent', 'cancel']),
-                                      ('invoiced', '=', False),
-                                     ])
-            uninvoiced_total = sum(amount_not_invoiced(order) for order in orders)
+            order_domain = [
+                ('partner_id', 'child_of', partner.id),
+                ('state', 'not in', ['draft', 'sent', 'cancel']),
+                ('invoiced', '=', False),
+            ]
+
+            uninvoiced_total = 0.0
+            for group in sale_obj.read_group(order_domain,
+                                             ['company_id'], ['company_id']):
+                orders = sale_obj.search(group['__domain'])
+                company_currency = orders[0].company_id.currency_id
+
+                invoice_domain = [
+                    ('state', 'not in', ['draft', 'cancel']),
+                    ('sale_ids', 'in', list(orders._ids)),
+                ]
+
+                currency_total = defaultdict(lambda: 0.0)
+
+                for order in orders:
+                    currency_total[order.currency_id.id] += order.amount_total
+
+                for invoice_data in invoice_obj.read_group(invoice_domain,
+                                                           ['currency_id', 'amount_total'],
+                                                           ['currency_id']):
+                    currency_total[invoice_data['currency_id'][0]] -= invoice_data['amount_total']
+
+                uninvoiced_total += sum(
+                    currency_obj.browse(currency_id).compute(total, company_currency)
+                    for currency_id, total
+                    in currency_total.iteritems())
 
             partner.credit = res[partner.id]['credit'] + uninvoiced_total
             partner.debit = res[partner.id]['debit']
