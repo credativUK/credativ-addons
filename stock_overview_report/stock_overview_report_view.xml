@@ -62,7 +62,7 @@
             <field name="model">stock.overview.report.line</field>
             <field name="arch" type="xml">
                 <search string="Search Stock Overview Report Lines">
-                    <filter icon="terp-check" name="has_stock" string="Has Stock" domain="['|', '|', ('qty_available','!=',0.0), ('incoming_qty','!=',0.0), ('outgoing_qty','!=',0.0), ('virtual_available','!=',0.0)]" help="Only show product which currently has stock"/>
+                    <filter icon="terp-check" name="has_stock" string="Has Stock" domain="[('qty_available','>',0.0)]" help="Only show product which currently has stock"/>
                     <field name="product_id"/>
                     <field name="categ_id" filter_domain="['|',('categ_id','child_of', self),('categ_ids','child_of',self)]"/> 
                     <field name="uom_id" groups="product.group_uom"/>
