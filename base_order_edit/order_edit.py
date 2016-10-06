@@ -20,7 +20,7 @@
 #
 ##############################################################################
 
-from osv import osv, fields
+from osv import orm, osv, fields
 import netsvc
 from tools.translate import _
 
@@ -30,7 +30,7 @@ from collections import defaultdict
 
 class OrderEdit(object):
 
-    def _consolidate_edit_lines(self, cr, uid, original, order, context=None):
+    def _consolidate_edit_lines(self, cr, uid, original, order, context=None, non_consolidable_fields=None, fields_noted_for_fixup=None):
         """
         Given an original order, and an edit order:
          * Check that no done lines are reduced.
@@ -43,8 +43,28 @@ class OrderEdit(object):
         done_totals = {}
         moves = []
         done_states = ['done']
+        key2old_lines = defaultdict(lambda : defaultdict(dict))
+        new_id2old_lines = {}
+
         if self._name == 'sale.order':
             done_states.append('assigned')
+
+        if non_consolidable_fields is None:
+            non_consolidable_fields = set()
+
+        if fields_noted_for_fixup is None:
+            fields_noted_for_fixup = set()
+
+        def _list_browse_to_id(l):
+            l = l[:]
+            for i in range(len(l)):
+                if isinstance(l[i], orm.browse_record):
+                    l[i] = l[i].id
+                elif isinstance(l[i], orm.browse_null):
+                    l[i] = False
+                elif isinstance(l[i], list):
+                    l[i] = tuple(_list_browse_to_id(l[i]))
+            return l
 
         for picking in original.picking_ids:
             for move in picking.move_lines:
@@ -53,11 +73,19 @@ class OrderEdit(object):
                     if self._name == 'sale.order':
                         tax = tuple([x.id for x in move.sale_line_id.tax_id])
                         discount = move.sale_line_id.discount
-                        key = (move.product_id, move.sale_line_id.price_unit, tax, discount)
+                        key = [move.product_id, move.sale_line_id.price_unit, tax, discount]
                     else:
                         tax = tuple([x.id for x in move.purchase_line_id.taxes_id])
                         discount = 0
-                        key = (move.product_id, move.purchase_line_id.price_unit, tax, discount)
+                        key = [move.product_id, move.purchase_line_id.price_unit, tax, discount]
+
+                    # Extend key to discriminate between differing non-consolidable values
+                    line = self._name == 'sale.order' and move.sale_line_id or move.purchase_line_id
+                    key_additional = [getattr(line, field) for field in non_consolidable_fields]
+                    key_additional = _list_browse_to_id(key_additional)
+                    key.append(tuple(key_additional))
+
+                    key = tuple(key)
                     done_totals[key] = done_totals.setdefault(key, 0) + move.product_qty
 
         # Get a list of lines for each product in the edit sale order
@@ -73,11 +101,23 @@ class OrderEdit(object):
                 qty = line.product_qty
                 tax = tuple([x.id for x in line.taxes_id])
                 discount = 0
-            edit_totals[(line.product_id, line.price_unit, tax, discount)] = edit_totals.setdefault((line.product_id, line.price_unit, tax, discount), 0) + qty
+            key = [line.product_id, line.price_unit, tax, discount]
+
+            # Extend key to discriminate between differing non-consolidable values
+            key_additional = [getattr(line, field) for field in non_consolidable_fields]
+            key_additional = _list_browse_to_id(key_additional)
+            key.append(tuple(key_additional))
+
+            key = tuple(key)
+            edit_totals[key] = edit_totals.setdefault(key, 0) + qty
+
+            # Retain requested line data for reference during fixup after records have been unlinked.
+            # TODO: Could allow fields_noted_for_fixup to be a list of functions for greater adaptability.
+            key2old_lines[key][line.id].update({f:getattr(line,f) for f in fields_noted_for_fixup})
 
         # Check that the totals in the edit aren't less than the shipped qty
-        for (product, price_unit, tax, discount), done_total in done_totals.iteritems():
-            if edit_totals.get((product, price_unit, tax, discount), 0) < done_total:
+        for (product, price_unit, tax, discount, preserve_vals), done_total in done_totals.iteritems():
+            if edit_totals.get((product, price_unit, tax, discount, preserve_vals), 0) < done_total:
                 raise osv.except_osv(_('Error !'),
                                      _('There must be at least %d of %s in'
                                        ' the edited order with unit price %s'
@@ -143,11 +183,15 @@ class OrderEdit(object):
                 other_moves[(m.product_id.id, price_unit, discount)].append(m)
 
         remain_moves = {}
-        for (product, price_unit, tax, discount), edit_total in edit_totals.iteritems():
-            remainder = edit_total - done_totals.get((product, price_unit, tax, discount), 0)
+        for key, edit_total in edit_totals.iteritems():
+            (product, price_unit, tax, discount, preserved_fields) = key
+            remainder = edit_total - done_totals.get((product, price_unit, tax, discount, preserved_fields), 0)
             if remainder > 0:
                 line_id = add_product_order_line(product.id, price_unit, remainder, tax, discount)
+                new_id2old_lines.update({line_id : key2old_lines.get(key)})
                 remain_moves[line_id] = other_moves[(product.id, price_unit, tax, discount)]
+
+        self._fixup_consolidated_lines(cr, uid, order, new_id2old_lines, context=context)
 
         return line_moves, remain_moves
 
@@ -160,8 +204,17 @@ class OrderEdit(object):
         remain_moves = None
         for order in self.browse(cr, uid, ids, context=context):
             if order.order_edit_id:
-                line_moves, remain_moves = self._consolidate_edit_lines(cr, uid, order.order_edit_id, order, context)
+                line_moves, remain_moves = self._consolidate_edit_lines(cr, uid, order.order_edit_id, order, context=context)
         return line_moves, remain_moves
+
+    def _fixup_consolidated_lines(self, cr, uid, order, preserved_fields, context=None):
+        ''' Hook point for amending lines post-consolidation
+            @param order: Browse record of order edit
+            @param preserved_fields: Dict mapping consolidated line ids to selected
+                                     field values of old ids. Fields selected with
+                                     fields_noted_for_fixup passed to _consolidate_edit_lines()
+        '''
+        return
 
     def copy_for_edit(self, cr, uid, id_, context=None):
         if context is None:
