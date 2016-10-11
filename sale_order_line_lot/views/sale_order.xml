@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="view_order_form_sale_order_lots" model="ir.ui.view">
+            <field name="name">sale.order.form.lots</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale_stock.view_order_form_inherit_sale_stock"/>
+            <field name="arch" type="xml">
+                <data>
+                    <xpath expr="//field[@name='order_line']/form/group/group/field[@name='route_id']" position="before">
+                        <field name="lot_id" groups="stock.group_production_lot"/>
+                    </xpath>
+                    <xpath expr="//field[@name='order_line']/tree/field[@name='route_id']" position="before">
+                        <field name="lot_id" groups="stock.group_production_lot"/>
+                    </xpath>
+                </data>
+           </field>
+        </record>
+
+        <record id="view_order_line_tree_lots" model="ir.ui.view">
+            <field name="name">sale.order.line.tree.lots</field>
+            <field name="inherit_id" ref="sale_stock.view_order_line_tree_inherit_sale_stock"/>
+            <field name="model">sale.order.line</field>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='route_id']" position="before">
+                    <field name="lot_id" groups="stock.group_production_lot"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>

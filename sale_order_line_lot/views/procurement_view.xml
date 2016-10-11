@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="view_procurement_form_lot" model="ir.ui.view">
+            <field name="name">procurement.order.form.lot</field>
+            <field name="model">procurement.order</field>
+            <field name="inherit_id" ref="stock.view_procurement_form_stock_inherit"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='route_ids']" position="after">
+                    <field name="lot_id" groups="stock.group_production_lot"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_procurement_tree_lot" model="ir.ui.view">
+            <field name="name">procurement.order.tree.lot</field>
+            <field name="model">procurement.order</field>
+            <field name="inherit_id" ref="procurement.procurement_tree_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='product_qty']" position="before">
+                    <field name="lot_id" groups="stock.group_production_lot"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
