@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="view_partner_form_trusted_supplier" model="ir.ui.view">
+            <field name="name">view.partner.form.trusted.supplier</field>
+            <field name="model">res.partner</field>
+            <field name="priority">32</field>
+            <field name="inherit_id" ref="base.view_partner_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//page[@string='Sales &amp; Purchases']//field[@name='supplier']" position="after">
+                    <field name="trusted_supplier" attrs="{'invisible': [('supplier', '=', False)]}"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
