@@ -40,59 +40,87 @@ MAX_TRIES = 5
 class ProcurementOrder(osv.Model):
     _inherit = 'procurement.order'
 
-    def _procure_confirm_mto_confirmed_to_mts(self, cr, uid, ids=None, use_new_cursor=False, context=None):
-        if context is None:
-            context = {}
+    def _procure_confirm_mto_confirmed_to_mts_proc(self, cr, uid, ids, context=None):
+        # Run the action on all procurements
         procurement_obj = self.pool.get('procurement.order')
         location_obj = self.pool.get('stock.location')
         wf_service = netsvc.LocalService("workflow")
+
+        res = {
+               'pass': [], # Procurement assigned to stock
+               'fail': [], # Procurement could not be assigned to stock
+               'temp': [], # Temporary failure due to serialisation
+              }
+
+        _logger.info('Processing procurements %s' % ids)
+        for proc in procurement_obj.browse(cr, uid, ids):
+            ok = True
+            if proc.move_id:
+                # Check if there is qty at this location but do not yet reserve it.
+                # Reservation can fail due to transient errors, we want to keep retrying these
+                ok = location_obj._product_reserve(cr, uid, [proc.move_id.location_id.id], proc.move_id.product_id.id, proc.move_id.product_qty, {'uom': proc.move_id.product_uom.id}, lock=False)
+            if ok:
+                if proc.state == 'exception':
+                    wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
+                if proc.procure_method != 'make_to_stock':
+                    procurement_obj.write(cr, uid, [proc.id], {'procure_method': 'make_to_stock'}, context=context)
+                wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
+                proc.refresh()
+                # Moved to exception since another thread might be reserving it instead, rollback and try again later
+                if proc.state == 'exception' and '_mto_to_mts_fail_' not in proc.note:
+                    _logger.info('Procurement %s entered exception state.' % proc.id)
+                    cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id = %s""", ('\n\n_mto_to_mts_fail_',proc.id))
+                    res['temp'].append(proc.id)
+                else:
+                    res['pass'].append(proc.id)
+            else:
+                # No stock is available, continue
+                cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id = %s""", ('\n\n_mto_to_mts_done_',proc.id))
+                if proc.state == 'exception':
+                    wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
+                if proc.procure_method != 'make_to_order':
+                    procurement_obj.write(cr, uid, [proc.id], {'procure_method': 'make_to_order'}, context=context)
+                res['fail'].append(proc.id)
+        return res
+
+    def _procure_confirm_mto_confirmed_to_mts_group(self, cr, uid, ids, use_new_cursor=False, context=None):
+        # Split ids into groups of 50 before passing to the _procure_confirm_mto_confirmed_to_mts_proc function
+        try:
+            for id_group in [ids[x:x+50] for x in xrange(0, len(ids), 50)]:
+                # Re-search for the IDs to make sure they have not been modified in the meantime
+                id_group = self._procure_confirm_mto_confirmed_to_mts_search(cr, uid, [('id', 'in', id_group)], context=context)
+                self._procure_confirm_mto_confirmed_to_mts_proc(cr, uid, id_group, context=context)
+                if use_new_cursor:
+                    cr.commit()
+        finally:
+            if use_new_cursor:
+                cr.close()
+
+    def _procure_confirm_mto_confirmed_to_mts_search(self, cr, uid, params, context=None):
+        # A generic search wrapper so we can re-search procurements easily between commits to make sure they have not been
+        # changed elsewhere which would cause a serialisation error
+        if context is None:
+            context = {}
+        procurement_obj = self.pool.get('procurement.order')
         company = self.pool.get('res.users').browse(cr, uid, uid, context=context).company_id
         maxdate = (datetime.today() + relativedelta(days=company.schedule_range)).strftime(tools.DEFAULT_SERVER_DATE_FORMAT)
         max_sched_condition = context.get('_sched_max_proc_id') and ('id', '<=', context.get('_sched_max_proc_id')) or ('id', '!=', 0)
+        conditions = params + [max_sched_condition, ('date_planned', '<=', maxdate), ('note', 'not like', '%_mto_to_mts_done_%'), '|',
+                '&', ('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order'),
+                '&', '&', ('state', 'in', ('confirmed', 'exception')), ('procure_method', '=', 'make_to_stock'),
+                ('note', 'like', '%_mto_to_mts_fail_%')]
+        return procurement_obj.search(cr, uid, conditions, order='priority, date_planned', context=context)
 
+    def _procure_confirm_mto_confirmed_to_mts(self, cr, uid, ids=None, use_new_cursor=False, context=None):
         # Allocate confirmed MTO to MTS if stock available
-        try:
-            if use_new_cursor:
-                cr = pooler.get_db(use_new_cursor).cursor()
-            while True:
-                report_ids = []
-                ids = procurement_obj.search(cr, uid, [max_sched_condition, ('date_planned', '<=', maxdate), ('note', 'not like', '%_mto_to_mts_done_%'), '|',
-                                                           '&', ('state', '=', 'confirmed'), ('procure_method', '=', 'make_to_order'),
-                                                           '&', '&', ('state', 'in', ('confirmed', 'exception')), ('procure_method', '=', 'make_to_stock'), ('note', 'like', '%_mto_to_mts_fail_%')], limit=50, order='priority, date_planned', context=context)
-                _logger.info('Processing procurements %s' % ids)
-                for proc in procurement_obj.browse(cr, uid, ids):
-                    ok = True
-                    if proc.move_id:
-                        # Check if there is qty at this location but do not yet reserve it.
-                        # Reservation can fail due to transient errors, we want to keep retrying these
-                        ok = location_obj._product_reserve(cr, uid, [proc.move_id.location_id.id], proc.move_id.product_id.id, proc.move_id.product_qty, {'uom': proc.move_id.product_uom.id}, lock=False)
-                    if ok:
-                        if proc.state == 'exception':
-                            wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
-                        if proc.procure_method != 'make_to_stock':
-                            procurement_obj.write(cr, uid, [proc.id], {'procure_method': 'make_to_stock'}, context=context)
-                        wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_check', cr)
-                        proc.refresh()
-                        # Moved to exception since another thread might be reserving it instead, rollback and try again later
-                        if proc.state == 'exception' and '_mto_to_mts_fail_' not in proc.note:
-                            _logger.info('Procurement %s entered exception state.' % proc.id)
-                            cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id = %s""", ('\n\n_mto_to_mts_fail_',proc.id))
-                    else:
-                        # No stock is available, continue
-                        cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id = %s""", ('\n\n_mto_to_mts_done_',proc.id))
-                        if proc.state == 'exception':
-                            wf_service.trg_validate(uid, 'procurement.order', proc.id, 'button_restart', cr)
-                        if proc.procure_method != 'make_to_order':
-                            procurement_obj.write(cr, uid, [proc.id], {'procure_method': 'make_to_order'}, context=context)
-                if use_new_cursor:
-                    cr.commit()
-                if not ids: break
-        finally:
-            if use_new_cursor:
-                try:
-                    cr.close()
-                except Exception:
-                    pass
+        if use_new_cursor:
+            cr = pooler.get_db(use_new_cursor).cursor()
+
+        # Find the initial set of procurements which require processing
+        ids = self._procure_confirm_mto_confirmed_to_mts_search(cr, uid, [], context=context)
+        # Pass these to be grouped and processed
+        self._procure_confirm_mto_confirmed_to_mts_group(cr, uid, ids, use_new_cursor=use_new_cursor, context=context)
+
         return True
 
     def _procure_confirm_mts_exception_to_mto(self, cr, uid, ids=None, use_new_cursor=False, context=None):
