@@ -21,6 +21,7 @@
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from psycopg2 import OperationalError
 from psycopg2.extensions import TransactionRollbackError
 import traceback
 
