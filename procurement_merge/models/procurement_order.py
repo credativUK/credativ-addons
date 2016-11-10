@@ -13,6 +13,8 @@ class ProcurementOrder(models.Model):
         considered for merging"""
         return [
             'state',
+            'company_id',
+            'product_id',
             'rule_id',
             'group_id',
             'priority',
@@ -30,7 +32,9 @@ class ProcurementOrder(models.Model):
 
     def _prepare_merged_values(self):
         return {'product_qty': sum(self.mapped('product_qty')),
-                'product_uos_qty': sum(self.mapped('product_uos_qty'))}
+                'product_uos_qty': sum(self.mapped('product_uos_qty')),
+                'date_planned': min(self.mapped('date_planned')),
+        }
 
     @api.multi
     def _merge_orders(self, to_merge):
