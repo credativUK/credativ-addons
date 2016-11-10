@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<template>
+    <t t-extend="Exists.ExportList" t-name="Exists.ExportList">
+        <t t-jquery="button" t-operation="replace">
+            <button class="oe_button oe_export_button_export" id="delete_export_list_confirm" type="button">Delete</button>
+        </t>
+    </t>
+</template>
