@@ -22,6 +22,7 @@
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from psycopg2.extensions import TransactionRollbackError
+from psycopg2 import OperationalError
 import traceback
 
 from openerp import netsvc
