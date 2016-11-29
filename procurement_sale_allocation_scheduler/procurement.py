@@ -225,6 +225,7 @@ class ProcurementOrder(osv.Model):
                         max_qty = stock_prod_loc.get(proc.location_id.id)
                         if max_qty is not None and proc.product_qty >= max_qty:
                             _logger.info("_procure_confirm_mto_running_to_mts: Product %s procurement %s - skipping due to max qty %s >= %s" % (proc.product_id.id, proc.id, proc.product_qty, max_qty))
+                            offset += 1
                             continue
                         cr.execute('SAVEPOINT mto_to_stock')
                         try:
