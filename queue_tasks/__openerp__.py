@@ -21,7 +21,7 @@
 
 {
         'name' : 'Queue Tasks',
-        'version' : '7.0.1.0',
+        'version' : '7.20161201.0',
         'author' : 'credativ Ltd',
         'description' : '''
 The module allows any function called by the user to be deferred to
