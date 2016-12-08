@@ -33,6 +33,7 @@ class ProcurementOrder(osv.Model):
             return
 
         bundle_ids = set()
+        cr_orig = cr
 
         try:
             if use_new_cursor:
@@ -53,7 +54,7 @@ class ProcurementOrder(osv.Model):
             bundle_procs = cr.fetchall()
 
             for parent_sol_id, procurement_ids in bundle_procs:
-                bundle_procs.update(procurement_ids)
+                bundle_ids.update(procurement_ids)
 
                 cr.execute('SAVEPOINT mto_to_mts_group')
 
@@ -61,6 +62,7 @@ class ProcurementOrder(osv.Model):
                 res = self._procure_confirm_mto_confirmed_to_mts_proc(cr, uid, procurement_ids, context=context)
 
                 # Search for related procurements not included which are in an incompatible state
+                # Any results from here means we cannot allocate the bundle procurements to stock
                 cr.execute("""SELECT
                                 proc.id
                             FROM procurement_order proc
@@ -77,7 +79,6 @@ class ProcurementOrder(osv.Model):
                 bad_proc_ids = [x[0] for x in cr.fetchall()]
 
                 if res['fail'] or bad_proc_ids: # If any fail OR any others are not running MTS, draft, cancel, done or ready then fail
-                    ok = False
                     cr.execute('ROLLBACK TO SAVEPOINT mto_to_mts_group')
                     cr.execute("""UPDATE procurement_order set note = TRIM(both E'\n' FROM COALESCE(note, '') || %s) WHERE id in %s""", ('\n\n_mto_to_mts_done_', tuple(procurement_ids),))
                 elif res['temp']: # May just be a temporary issue, rollback anyway then skip
@@ -92,9 +93,10 @@ class ProcurementOrder(osv.Model):
             if use_new_cursor:
                 cr.commit()
                 cr.close()
+                cr = cr_orig
 
         # For all other ids which are not part of a bundle, call super
-        non_bundle_ids = list(set(ids).difference(bundle_procs))
+        non_bundle_ids = list(set(ids).difference(bundle_ids))
         return super(self, ProcurementOrder)._procure_confirm_mto_confirmed_to_mts_group(cr, uid, non_bundle_ids, use_new_cursor=use_new_cursor, context=context)
 
 
