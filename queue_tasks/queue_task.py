@@ -147,7 +147,7 @@ class queue_task(orm.Model):
         session = ConnectorSession(cr, uid, context=context)
         res = False
         for job in self.browse(cr, uid, ids, context=context):
-            job_uuid = _run_task_proxy.delay(session, 'queue.job', job.id)
+            job_uuid = _run_task_proxy.delay(session, 'queue.job', job.id, priority=20)
             job_ids = job_obj.search(cr, SUPERUSER_ID, [('uuid', '=', job_uuid)], context=context, limit=1)
             if not job_ids:
                 raise orm.except_orm('Could not queue job', 'Job could not be queued in the background')
