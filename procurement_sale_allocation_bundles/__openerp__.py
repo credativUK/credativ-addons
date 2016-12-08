@@ -34,7 +34,6 @@ Groups procurements by bundles and attempts to make them all MTS or MTO together
     'init_xml' : [],
     'demo_xml' : [],
     'update_xml' : [
-        "purchase_view.xml",
     ],
     'active': False,
     'installable': True

@@ -97,6 +97,22 @@ class ProcurementOrder(osv.Model):
 
         # For all other ids which are not part of a bundle, call super
         non_bundle_ids = list(set(ids).difference(bundle_ids))
-        return super(self, ProcurementOrder)._procure_confirm_mto_confirmed_to_mts_group(cr, uid, non_bundle_ids, use_new_cursor=use_new_cursor, context=context)
+        return super(ProcurementOrder, self)._procure_confirm_mto_confirmed_to_mts_group(cr, uid, non_bundle_ids, use_new_cursor=use_new_cursor, context=context)
 
-
+    def _get_mto_running_ids(self, cr, uid, conditions, offset, context=None):
+        # Prevent bundle MTO procurements moving to MTS automatically
+        # TODO: Future improvement, allow allocation to MTS if all bundle procurements can also be allocated or are already done/cancelled/assigned
+        ids = super(ProcurementOrder, self)._get_mto_running_ids(cr, uid, conditions, offset, context=context)
+        if ids:
+            cr.execute("""
+                SELECT proc.id
+                FROM procurement_order proc
+                INNER JOIN stock_move sm
+                    ON sm.id = proc.move_id
+                INNER JOIN sale_order_line sol
+                    ON sol.id = sm.sale_line_id
+                WHERE proc.id IN %s
+                AND sol.line_parent_id IS NULL
+                """, (tuple(ids),))
+            ids = [x[0] for x in cr.fetchall()]
+        return ids

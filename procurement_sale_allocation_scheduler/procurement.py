@@ -184,6 +184,11 @@ class ProcurementOrder(osv.Model):
                     pass
         return True
 
+    def _get_mto_running_ids(self, cr, uid, conditions, offset, context=None):
+        procurement_obj = self.pool.get('procurement.order')
+        ids = procurement_obj.search(cr, uid,  conditions, offset=offset, limit=50, order='priority, date_planned', context=context)
+        return ids
+
     def _procure_confirm_mto_running_to_mts(self, cr, uid, ids=None, use_new_cursor=False, context=None):
         if context is None:
             context = {}
@@ -218,8 +223,9 @@ class ProcurementOrder(osv.Model):
                 stock_prod_loc = {} # Dict of {location_id: qty} for last stock failure qty, anything >= should skip
                 while True:
                     report_ids = []
-                    ids = procurement_obj.search(cr, uid, [max_sched_condition, ('product_id', '=', product_id), ('state', '=', 'running'), ('purchase_id', '!=', False),
-                                                           ('procure_method', '=', 'make_to_order'), ('date_planned', '<=', maxdate)], offset=offset, limit=50, order='priority, date_planned', context=context)
+                    ids = self._get_mto_running_ids(cr, uid, [max_sched_condition, ('product_id', '=', product_id), ('state', '=', 'running'),
+                                                              ('purchase_id', '!=', False), ('procure_method', '=', 'make_to_order'), ('date_planned', '<=', maxdate)],
+                                                    offset, context=context)
                     for proc in procurement_obj.browse(cr, uid, ids):
                         _logger.info("_procure_confirm_mto_running_to_mts: Product %s procurement %s - begin" % (proc.product_id.id, proc.id))
                         max_qty = stock_prod_loc.get(proc.location_id.id)
