@@ -20,7 +20,7 @@
 {
     'name': 'Web Export Confirm Delete',
     'application': False,
-    'version': '1.0',
+    'version': '7.20161213.0',
     'category': 'Web',
     'description': '''
 Adds a confirmation message before deleting a saved export
