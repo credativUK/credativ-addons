@@ -47,6 +47,7 @@ class purchase_order(orm.Model):
 
     _columns = {
             'auto_confirm_date': fields.date('Confirm On (if trusted)', help="Date on which this RFQ can be auto-confirmed if the supplier is marked as trusted.", readonly=True, states={'draft': [('readonly', False)]}),
+            'trusted_supplier': fields.related('partner_id', 'trusted_supplier', type='boolean', string='Trusted Supplier'),
     }
 
     def trusted_auto_confirm(self, cr, uid, ids, context=None):
