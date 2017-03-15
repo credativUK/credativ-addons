@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+-->
+<openerp>
+    <data>
+
+        <record model="ir.ui.view" id="service_quotations_revision_form_view">
+            <field name="name">service.quotation.form</field>
+            <field name="model">service.quotation</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="pc_service_quotation.serv_quot_allquotations_form_view"/>
+            <field name="arch" type="xml">
+                <data>
+                    <xpath expr="//field[@name='active']" position="after">
+                        <field name="parent_id" readonly="1" attrs="{'invisible': [('parent_id', '=', False)]}"/>
+                    </xpath>
+                    <xpath expr="/form/notebook/page[@string='Rooms']" position="after" >
+                        <page string="Revisions History" attrs="{'invisible': [('parent_id', '!=', False)]}">
+                            <field name="revision_ids" colspan="4" nolabel="1"/>
+                        </page>
+                    </xpath>
+
+                </data>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="service_quotations_revision_form_view2">
+            <field name="name">service.quotation.form2</field>
+            <field name="model">service.quotation</field>
+            <field name="type">form</field>
+            <field name="inherit_id" ref="pc_contracts.serv_quot_allquotations_form_view"/>
+            <field name="arch" type="xml">
+                <data>
+                    <xpath expr="//button[@name='%(pc_contracts.action_quotation_wizard)d']" position="replace">
+                        <button name="%(pc_contracts.action_quotation_wizard)d"
+                                type="action"
+                                string="Revise quotation"
+                                attrs="{'invisible': [('state', '!=', 'won')]}"
+                                icon="icon-repeat" icon_color="red"/>
+                    </xpath>
+                    <xpath expr="//button[@name='open_assignment']" position="replace">
+                        <button name="open_assignment"
+                                type="object"
+                                string="Open Assignment"
+                                attrs="{'invisible': ['|', ('contract_assignment_id', '=', False), ('state', '=', 'revised')]}"
+                                colspan="1" icon="icon-opennewwindow" icon_color="Red"/>
+                    </xpath>
+                </data>
+            </field>
+        </record>
+
+    </data>
+</openerp>

@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+		
+		<!-- nodes -->
+
+        <record model="workflow.activity" id="act_revise">
+            <field name="wkf_id" ref="pc_service_quotation.wkf_sq" />
+            <field name="name">revise</field>
+            <field name="kind">function</field>
+            <field name="action">action_revise()</field>
+        </record>
+
+		<!-- transitions -->
+
+        <record model="workflow.transition" id="t9">
+            <field name="act_from" ref="pc_service_quotation.act_won" />
+            <field name="act_to" ref="act_revise" />
+            <field name="signal">sq_revise</field>
+        </record>
+
+    </data>
+</openerp>
