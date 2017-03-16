@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_export_product_images" model="ir.ui.view">
+            <field name="name">Export Product Images View</field>
+            <field name="model">export.product.images</field>
+            <field name="arch" type="xml">
+             <form string="Export Product Images">
+             <group>
+                <group>
+                <p class="oe_grey">
+                    Selected Products Images shall be saved to the specified Location.
+                </p>
+                </group>
+              </group>  
+               <group>
+                <group>
+                <field name="location" required="1"/>
+                </group>
+                <group>
+                    <field name="image_size" required="1"/>
+                </group>
+              </group>     
+                <footer>
+                    <button name="export_images" string="Export Images" type="object" class="oe_highlight"/>
+                    or
+                    <button string="Cancel" class="oe_link" special="cancel" />
+                </footer>
+                 
+            </form>
+            </field>
+        </record>
+
+        <record id="action_export_product_images" model="ir.actions.act_window">
+            <field name="name">Export Product Images</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">export.product.images</field>
+            <field name="src_model">product.product</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_export_product_images"/>
+            <field name="target">new</field>
+            <field name="multi">True</field>
+        </record>
+
+        <record model="ir.values" id="export_product_images">
+            <field name="model_id" ref="product.model_product_template" />
+            <field name="name">Export Product Images</field>
+            <field name="key2">client_action_multi</field>
+            <field name="value" eval="'ir.actions.act_window,' + str(ref('action_export_product_images'))" />
+            <field name="key">action</field>
+            <field name="model">product.template</field>
+        </record>
+    </data>
+    
+</openerp>
