@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2017 credativ Ltd (<http://credativ.co.uk>).
+#    Copyright (C) 2004-2010 Tiny SPRL (<http://tiny.be>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -32,9 +32,10 @@ Export selected product images to a specified directory
 This application allows you to Export selected product images to a specified directory.
     """,
     'author': 'credativ software (India) pvt ltd',
-    'depends': ['product'],
+    'depends': ['product','document'],
     'data': [
         'wizard/export_product_images_view.xml',
+        'wizard/document_view.xml',
     ],
     'demo': [],
     'test': [

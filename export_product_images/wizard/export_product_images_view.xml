@@ -9,16 +9,16 @@
              <group>
                 <group>
                 <p class="oe_grey">
-                    Selected Products Images shall be saved to the specified Location.
+                    Selected Products Images shall be saved with specified Image Size.
                 </p>
                 </group>
               </group>  
                <group>
                 <group>
-                <field name="location" required="1"/>
+                <field name="image_size" required="1"/>
                 </group>
                 <group>
-                    <field name="image_size" required="1"/>
+                <field name="location" required="0" invisible="1"/>                    
                 </group>
               </group>     
                 <footer>
